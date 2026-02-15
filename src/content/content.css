@@ -1342,8 +1342,8 @@ body[data-su-theme="dark"] #su-metrics-floating-tooltip i { color: #fff; }
 
 .su-coauthor-dots { text-align: center; }
 .su-co-col-rank { width: 20px; }
-.su-co-col-author { width: 92px; }
-.su-co-col-papers { width: 60px; }
+.su-co-col-author { width: 90px; }
+.su-co-col-papers { width: 72px; }
 .su-co-col-cites { width: 60px; }
 .su-co-col-h { width: 56px; }
 .su-co-col-dots { width: 56px; }
@@ -1370,7 +1370,7 @@ body[data-su-theme="dark"] #su-metrics-floating-tooltip i { color: #fff; }
   flex-direction: column;
   gap: 6px;
   padding-top: 22px;
-  min-width: 140px;
+  min-width: 220px;
 }
 .su-top-venues-label {
   font-size: 12px;
@@ -1386,12 +1386,17 @@ body[data-su-theme="dark"] #su-metrics-floating-tooltip i { color: #fff; }
   color: #202124;
   font-size: 12px;
   line-height: 1.2;
-  max-width: 150px;
+  max-width: 250px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   user-select: none;
+}
+.su-top-venue-text {
+  display: inline-block;
+  transform: translateX(0);
+  will-change: transform;
 }
 .su-top-venue-chip:hover { background: #e8eaed; }
 .su-top-venue-chip.su-top-venue-chip-active {

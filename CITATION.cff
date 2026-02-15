@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: Scholar Utility Belt
+version: 0.2.5
+date-released: 2026-01-01
+authors:
+  - family-names: Ampel
+    given-names: Benjamin M.
+    orcid: https://orcid.org/0000-0003-0603-0270
+message: "If you use this software, please cite it."

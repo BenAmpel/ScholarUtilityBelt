@@ -3984,6 +3984,27 @@
           document.getElementById("su-metrics-floating-tooltip")?.classList.remove("su-metrics-floating-tooltip-visible");
         }
       }, true);
+
+      // Venue chip hover scroll
+      statsContainer.addEventListener("mouseenter", (e) => {
+        const chip = e.target.closest(".su-top-venue-chip");
+        if (!chip) return;
+        const textEl = chip.querySelector(".su-top-venue-text");
+        if (!textEl) return;
+        const max = textEl.scrollWidth - chip.clientWidth;
+        if (max > 2) {
+          textEl.style.transition = "transform 2.4s linear";
+          textEl.style.transform = `translateX(-${max}px)`;
+        }
+      }, true);
+      statsContainer.addEventListener("mouseleave", (e) => {
+        const chip = e.target.closest(".su-top-venue-chip");
+        if (!chip) return;
+        const textEl = chip.querySelector(".su-top-venue-text");
+        if (!textEl) return;
+        textEl.style.transition = "transform 0.25s ease";
+        textEl.style.transform = "translateX(0px)";
+      }, true);
     }
 
     if (isLoading) {
@@ -4222,10 +4243,12 @@
       const topVenueHtml = topVenues.length
         ? `<div class="su-top-venues"><span class="su-top-venues-label">Top venues:</span>${topVenues.map(v => {
             const label = String(v.venue || "").trim();
+            const count = Number(v.count) || 0;
             const key = label.toLowerCase();
             const isActive = activeVenue && key === activeVenue;
-            return `<span class="su-top-venue-chip${isActive ? " su-top-venue-chip-active" : ""}" data-venue-filter="${escapeHtml(key)}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
-          }).join("")}${activeVenue ? `<span class="su-top-venue-chip su-top-venue-chip-clear" data-venue-filter="" title="Clear venue filter">Clear</span>` : ""}</div>`
+            const display = `${label} (${count})`;
+            return `<span class="su-top-venue-chip${isActive ? " su-top-venue-chip-active" : ""}" data-venue-filter="${escapeHtml(key)}" title="${escapeHtml(display)}"><span class="su-top-venue-text">${escapeHtml(display)}</span></span>`;
+          }).join("")}${activeVenue ? `<span class="su-top-venue-chip su-top-venue-chip-clear" data-venue-filter="" title="Clear venue filter"><span class="su-top-venue-text">Clear</span></span>` : ""}</div>`
         : "";
 
       statsContainer.innerHTML = `
