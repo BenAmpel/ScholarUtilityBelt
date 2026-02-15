@@ -1,5 +1,29 @@
 # Scholar Utility Belt (Chrome Extension)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg)](https://doi.org/10.5281/zenodo.18645552)
+
+DOI: [10.5281/zenodo.18645552](https://doi.org/10.5281/zenodo.18645552)
+
+Cite this repository: use GitHub’s **Cite this repository** button (right sidebar) or copy the BibTeX/APA below.
+
+Please cite:
+
+```bibtex
+@software{ampel_2026_scholar_utility_belt,
+  title   = {Scholar Utility Belt},
+  author  = {Ampel, Benjamin M.},
+  year    = {2026},
+  version = {0.2.5},
+  doi     = {10.5281/zenodo.18645552},
+  url     = {https://doi.org/10.5281/zenodo.18645552},
+  publisher = {Zenodo}
+}
+```
+
+```text
+Ampel, B. M. (2026). Scholar Utility Belt (Version 0.2.5) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18645552
+```
+
 Goal: personal productivity features for Google Scholar with **minimal extra requests**.
 
 ## Current features (v0.2)
