@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Scholar Utility Belt",
+  "version": "0.2.5",
+  "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
+  "action": {
+    "default_title": "Scholar Utility Belt",
+    "default_popup": "src/popup/popup.html"
+  },
+  "options_page": "src/options/options.html",
+  "background": {
+    "service_worker": "src/sw.js"
+  },
+  "permissions": ["storage", "unlimitedStorage", "downloads"],
+  "host_permissions": [
+    "https://scholar.google.com/*",
+    "https://scholar.googleusercontent.com/*",
+    "https://api.crossref.org/*",
+    "https://api.openalex.org/*",
+    "https://www.scimagojr.com/*"
+  ],
+  "optional_host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["https://scholar.google.com/*"],
+      "js": ["src/content/content-early.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://scholar.google.com/*"],
+      "js": ["src/content/content.js"],
+      "css": ["src/content/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/common/*.js", "src/content/dom-cache.js", "src/content/worker.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json"],
+      "matches": ["https://scholar.google.com/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

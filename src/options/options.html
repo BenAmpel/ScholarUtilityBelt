@@ -1,0 +1,282 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scholar Utility Belt Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Scholar Utility Belt</h1>
+      <p class="sub">Everything is local-only by default. These settings affect how Scholar pages are annotated.</p>
+
+      <section class="card">
+        <h2>Appearance</h2>
+        <label class="field">
+          <div class="label">Theme</div>
+          <select id="theme">
+            <option value="auto">Auto (follow system)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label class="field">
+          <div class="label">Result view</div>
+          <select id="viewMode">
+            <option value="detailed">Detailed (velocity, skimmability, artifacts, reading load)</option>
+            <option value="minimal">Minimal (quality badges and authorship only)</option>
+          </select>
+        </label>
+        <div class="label">Quality badge types to show</div>
+        <p class="sub">When “Show venue quality badges” is on, only the checked kinds are shown.</p>
+        <div class="quality-badge-kinds">
+          <label class="row"><input type="checkbox" id="qbQuartile" /> Quartile (Q1–Q4)</label>
+          <label class="row"><input type="checkbox" id="qbAbdc" /> ABDC</label>
+          <label class="row"><input type="checkbox" id="qbJcr" /> JCR</label>
+          <label class="row"><input type="checkbox" id="qbFt50" /> FT50</label>
+          <label class="row"><input type="checkbox" id="qbUtd24" /> UTD24</label>
+          <label class="row"><input type="checkbox" id="qbCore" /> CORE</label>
+          <label class="row"><input type="checkbox" id="qbCcf" /> CCF</label>
+          <label class="row"><input type="checkbox" id="qbEra" /> ERA 2023</label>
+          <label class="row"><input type="checkbox" id="qbNorwegian" /> Norwegian</label>
+          <label class="row"><input type="checkbox" id="qbPreprint" /> Preprint</label>
+          <label class="row"><input type="checkbox" id="qbH5" /> h5</label>
+        </div>
+
+        <hr />
+
+        <label class="row">
+          <input type="checkbox" id="highlightSaved" />
+          <span>Highlight saved results on Scholar pages</span>
+        </label>
+
+        <label class="field">
+          <div class="label">Default tags (comma-separated)</div>
+          <input type="text" id="defaultTagsCsv" placeholder="e.g. phishing, auth, detection" />
+        </label>
+
+        <label class="field">
+          <div class="label">Keyword highlights (comma-separated)</div>
+          <input type="text" id="keywordHighlightsCsv" placeholder="e.g. MFA, spear phishing, LLM" />
+        </label>
+
+        <label class="field">
+          <div class="label">Hide results where title matches regex (case-insensitive)</div>
+          <input type="text" id="hideTitleRegex" placeholder="e.g. \bpatent\b" />
+        </label>
+
+        <label class="field">
+          <div class="label">Hide results where authors/venue matches regex (case-insensitive)</div>
+          <input type="text" id="hideAuthorsRegex" placeholder="e.g. \bmedRxiv\b" />
+        </label>
+
+        <h2>Hidden forever</h2>
+        <p class="sub">Items you hid via the "Hide" button on results. Stored locally. Unhide or clear below.</p>
+        <div class="hidden-lists">
+          <div class="hidden-list">
+            <div class="label">Hidden papers <button type="button" id="clearHiddenPapers" class="su-options-small">Clear all</button></div>
+            <ul id="hiddenPapersList"></ul>
+          </div>
+          <div class="hidden-list">
+            <div class="label">Hidden venues <button type="button" id="clearHiddenVenues" class="su-options-small">Clear all</button></div>
+            <ul id="hiddenVenuesList"></ul>
+          </div>
+          <div class="hidden-list">
+            <div class="label">Hidden authors <button type="button" id="clearHiddenAuthors" class="su-options-small">Clear all</button></div>
+            <ul id="hiddenAuthorsList"></ul>
+          </div>
+        </div>
+
+        <label class="row">
+          <input type="checkbox" id="showSemanticExpansion" />
+          <span>Show <strong>Semantic Expansion</strong> panel on search results (suggests synonyms, broader/narrower terms to escape keyword silos)</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showFundingTag" />
+          <span>Show <strong>Funding</strong> tag on hover (detects funding in snippet: government, industry, or generic)</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showHoverSummary" />
+          <span>Show <strong>hover-summary</strong> tooltip: fetch paper landing page on hover and show meta description or abstract (instant expansion without opening “… more”)</span>
+        </label>
+        <p class="sub" id="hoverSummaryPermNote">Hover summary, Copy Bib from publisher pages, and PDF page count need permission to fetch from publisher sites. <button type="button" id="grantOptionalPermission" class="su-options-small">Grant permission</button> <span id="optionalPermStatus"></span></p>
+
+        <label class="row">
+          <input type="checkbox" id="showReadingGuide" />
+          <span>Show <strong>Reading guide</strong> button (visor: dims the page except a band at your cursor for focused screening)</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showRetractionWatch" />
+          <span>Show <strong>Retraction Watch</strong> badge when a result has a DOI that is marked as retracted in Crossref (includes Retraction Watch data). Only results with a DOI in the snippet or links are checked.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showArtifactBadge" />
+          <span>Show <strong>Data &amp; Code</strong> badge (💻/📊) next to the title when the snippet or links mention GitHub, Zenodo, OSF, dataset, supplementary, etc.—quick signal for reproducible papers.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showCSS" />
+          <span>Show <strong>Contribution Signal Score (CSS)</strong> (0–100): composite of citation velocity (log‑normalized), venue tier weight, and artifact novelty. Tooltip shows the formula. Reference entropy omitted (no data).</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showAgeBiasHeatmap" />
+          <span>Show <strong>publication date color-coding</strong>: left border gradient from bright blue (≤2 years) to muted gray (≥10 years) so you can spot freshness at a glance.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showAuthorshipHeatmap" />
+          <span>Show <strong>authorship heatmap</strong>: first author bold+underline (primary), last author dotted border (PI/senior). Spot rising stars vs lab leads at a glance.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showRelevancySparkline" />
+          <span>Show <strong>relevancy sparkline</strong>: small bar chart under each snippet showing where your search terms appear (left = start). Clustered at start suggests the paper focuses on your query.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showSnippetCueEmphasis" />
+          <span>Bold <strong>abstract cues</strong> in snippets (e.g. “We propose…”, “We evaluate…”, “Using X dataset…”, “We find that…”). Visual salience only—no summarization.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showSkimmabilityStrip" />
+          <span>Show <strong>skimmability heat strip</strong>: green = PDF + abstract + citations; yellow = missing abstract or venue; red = no PDF, no citations, odd venue.</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="showReadingLoadEstimator" />
+          <span>Show <strong>reading load</strong> label: skim / read / deep read (from venue type; page count from PDF metadata when you click PDF).</span>
+        </label>
+
+        <label class="row">
+          <input type="checkbox" id="groupVersions" />
+          <span><strong>Group versions</strong>: collapse near-identical titles (preprint + journal + mirror) into one row; show best version first with a chevron to expand.</span>
+        </label>
+        <p class="sub">
+          Version order (which row is shown first): <select id="versionOrder">
+            <option value="journal-first">Journal first</option>
+            <option value="conference-first">Conference first</option>
+            <option value="preprint-first">Preprint first</option>
+          </select>
+        </p>
+
+        <hr />
+        <h2>Power user</h2>
+        <label class="row">
+          <input type="checkbox" id="showNewSinceLastVisit" />
+          <span><strong>Highlight new papers since last visit</strong>: mark results that weren’t on this page the last time you visited (uses a local timestamp cache).</span>
+        </label>
+        <label class="row">
+          <input type="checkbox" id="showCitationSpike" />
+          <span><strong>Detect citation spikes</strong>: show a badge when a paper’s citations increased by more than the threshold in the lookback period (e.g. “↑50% in 6mo”).</span>
+        </label>
+        <p class="sub">
+          Spike threshold: <input type="number" id="citationSpikeThresholdPct" min="10" max="500" step="10" style="width: 60px" /> % &nbsp;
+          Lookback: <input type="number" id="citationSpikeMonths" min="1" max="24" step="1" style="width: 50px" /> months
+        </p>
+        <p class="sub">On author profile pages, use <strong>Compare authors</strong> to open a side‑by‑side overlay (paste another author’s profile URL).</p>
+
+        <hr />
+
+        <label class="row">
+          <input type="checkbox" id="showQualityBadges" />
+          <span>Show venue quality badges under results (local lists)</span>
+        </label>
+
+        <p class="sub">
+          Paste your own lists. Use <code>|</code> for aliases on the same line (example: <code>Management Science|Mgmt Sci</code>).
+          Ranks/quartiles use CSV per line: <code>Venue,Rank</code>.
+        </p>
+
+        <label class="field">
+          <div class="label">FT50 journals (one per line)</div>
+          <textarea id="qualityFt50List" rows="6" placeholder="Example:\nManagement Science\nMIS Quarterly|MISQ"></textarea>
+        </label>
+
+        <label class="field">
+          <div class="label">UTD24 journals (one per line)</div>
+          <textarea id="qualityUtd24List" rows="6" placeholder="Example:\nInformation Systems Research\nJournal of Marketing"></textarea>
+        </label>
+
+        <label class="field">
+          <div class="label">ABDC journal ranks CSV (Venue, A*/A/B/C/D)</div>
+          <textarea id="qualityAbdcRanks" rows="6" placeholder="Example:\nMIS Quarterly,A*\nInformation Systems Research,A*"></textarea>
+        </label>
+
+        <label class="field">
+          <div class="label">Quartiles CSV (Venue, Q1/Q2/Q3/Q4)</div>
+          <textarea id="qualityQuartiles" rows="6" placeholder="Example:\nMIS Quarterly,Q1\nDecision Support Systems,Q1"></textarea>
+        </label>
+
+        <h2>Quartiles At Scale (Q1-Q4)</h2>
+        <p class="sub">
+          For a comprehensive Q1/Q2/Q3/Q4 index, import an export from SCImago Journal Rank (SJR). This is stored as a
+          local lookup table (fast; no impact on Scholar page loading). The small Quartiles CSV box above remains for
+          manual overrides.
+          You can also try the built-in downloader (may be blocked by anti-bot protections).
+        </p>
+        <div class="actions">
+          <label class="fileLabel">
+            Import SJR Export
+            <input id="importScimagoFile" type="file" accept=".xls,.csv,.html,text/html,text/csv,application/vnd.ms-excel" />
+          </label>
+          <input id="scimagoYear" type="number" min="1999" max="2099" step="1" style="width: 110px" />
+          <button id="tryDownloadScimago" type="button">Try Download</button>
+          <button id="clearScimagoQuartiles" type="button">Clear Imported Quartiles</button>
+          <span id="scimagoStatus" class="status"></span>
+        </div>
+        <p class="sub" id="scimagoMeta"></p>
+
+        <h2>JCR Bulk Import (JIF/JCI/AIS Quartiles)</h2>
+        <p class="sub">
+          Download the Clarivate JCR export files (600 records per export) and import all CSVs here at once. The extension
+          merges them into a local journal index and shows badges like <code>JIF Q1</code>, <code>JCI Q2</code>, <code>AIS Q1</code>.
+        </p>
+        <div class="actions">
+          <label class="fileLabel">
+            Import JCR CSVs
+            <input id="importJcrFiles" type="file" accept=".csv,text/csv" multiple />
+          </label>
+          <button id="clearJcrIndex" type="button">Clear JCR Index</button>
+          <span id="jcrStatus" class="status"></span>
+        </div>
+        <p class="sub" id="jcrMeta"></p>
+
+        <label class="field">
+          <div class="label">CORE/ICORE conference ranks CSV (Venue, A*/A/B/C)</div>
+          <textarea id="qualityCoreRanks" rows="6" placeholder="Example:\nIEEE Symposium on Security and Privacy,A*\nUSENIX Security Symposium,A*"></textarea>
+        </label>
+
+        <label class="field">
+          <div class="label">CCF conference ranks CSV (Venue, A/B/C)</div>
+          <textarea id="qualityCcfRanks" rows="6" placeholder="Example:\nACM Conference on Computer and Communications Security|CCS,A\nIEEE Symposium on Security and Privacy|S&P,A"></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="loadQualityDefaults" type="button">Load Built-In Lists</button>
+          <button id="clearQualityLists" type="button">Clear Quality Lists</button>
+          <span id="qualityStatus" class="status"></span>
+        </div>
+        <p class="sub" id="qualityMeta"></p>
+
+        <div class="actions">
+          <button id="save">Save</button>
+          <span id="status" class="status"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Domain Note</h2>
+        <p class="sub">This build only matches <code>https://scholar.google.com/*</code>. If you use another Scholar domain (like <code>scholar.google.ca</code>), we should add it to <code>manifest.json</code>.</p>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

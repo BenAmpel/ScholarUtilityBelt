@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scholar Utility Belt Library</title>
+    <link rel="stylesheet" href="library.css" />
+  </head>
+  <body>
+    <header>
+      <div class="left">
+        <h1>Library</h1>
+        <div class="sub">Local-only list of saved Scholar results</div>
+      </div>
+      <div class="right">
+        <button id="openOptions">Options</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="controls">
+        <input id="q" type="search" placeholder="Search title, authors, tags, notes" />
+        <select id="sort">
+          <option value="savedAt">Sort: Saved time</option>
+          <option value="year">Sort: Year</option>
+          <option value="title">Sort: Title</option>
+        </select>
+      </section>
+
+      <section id="list" class="list"></section>
+
+      <template id="itemTpl">
+        <article class="item">
+          <div class="top">
+            <a class="title" target="_blank" rel="noreferrer"></a>
+            <div class="meta"></div>
+          </div>
+          <div class="actions">
+            <button class="btn" data-act="openScholar">Open Scholar</button>
+            <button class="btn" data-act="openPdf">Open PDF</button>
+            <button class="btn" data-act="tags">Tags</button>
+            <button class="btn" data-act="notes">Notes</button>
+            <button class="btn danger" data-act="remove">Remove</button>
+          </div>
+          <div class="snippet"></div>
+          <div class="footer"></div>
+        </article>
+      </template>
+    </main>
+
+    <script type="module" src="library.js"></script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "fetchedAt": "2026-02-08T00:44:58Z",
+  "sources": {
+    "abdc2022": {
+      "rows": 2680,
+      "url": "https://abdc.edu.au/wp-content/uploads/2023/05/ABDC-JQL-2022-v3-100523.xlsx"
+    },
+    "abs2024": {
+      "rows": 1635,
+      "url": "https://journalranking.org/"
+    },
+    "core_icore2026": {
+      "pages": 20,
+      "rows": 971,
+      "source": "ICORE2026",
+      "url": "https://portal.core.edu.au/conf-ranks/"
+    },
+    "ft50": {
+      "count": 50,
+      "url": "https://www.ft.com/content/3405a512-5cbb-11e1-8f1f-00144feabdc0"
+    },
+    "utd24": {
+      "count": 24,
+      "tls_verify": false,
+      "url": "https://jsom.utdallas.edu/the-utd-top-100-business-school-research-rankings/list-of-journals"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+.DS_Store
+*.mhtml
+*.zip
+__pycache__/
+*.pyc

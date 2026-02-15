@@ -1,0 +1,178 @@
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.sub {
+  color: var(--muted);
+}
+
+.card {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field {
+  display: block;
+  margin-top: 12px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+input[type="text"] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  outline: none;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  margin: 14px 0;
+  border: none;
+  height: 1px;
+  background: var(--line);
+}
+
+button {
+  border: 1px solid var(--line);
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.fileLabel {
+  border: 1px solid var(--line);
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fileLabel:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.fileLabel input {
+  display: none;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  outline: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.su-options-small {
+  font-size: 11px;
+  padding: 4px 8px;
+  margin-left: 8px;
+}
+
+.hidden-lists {
+  margin-top: 12px;
+}
+
+.hidden-list {
+  margin-bottom: 14px;
+}
+
+.hidden-list .label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hidden-list ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.hidden-list li {
+  margin-bottom: 4px;
+}
+
+.hidden-list .su-hidden-item {
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.hidden-list .su-empty {
+  color: var(--muted);
+  list-style: none;
+  margin-left: -20px;
+}

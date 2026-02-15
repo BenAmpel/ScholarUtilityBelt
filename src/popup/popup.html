@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scholar Utility Belt</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="title">Scholar Utility Belt</div>
+      <div class="subtitle">Local-only by default</div>
+    </header>
+
+    <main>
+      <div class="row">
+        <div class="metric">
+          <div class="metricLabel">Saved papers</div>
+          <div class="metricValue" id="savedCount">0</div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="openLibrary">Open Library</button>
+        <button id="openOptions">Options</button>
+      </div>
+
+      <hr />
+
+      <div class="buttons">
+        <button id="exportJson">Export JSON</button>
+        <label class="fileLabel">
+          Import JSON
+          <input id="importJson" type="file" accept="application/json" />
+        </label>
+      </div>
+
+      <div class="hint" id="hint"></div>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

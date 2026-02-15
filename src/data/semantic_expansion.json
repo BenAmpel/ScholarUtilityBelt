@@ -1,0 +1,44 @@
+{
+  "terms": {
+    "machine learning": {
+      "synonyms": ["Statistical Learning", "Inductive Logic Programming", "Predictive Modeling", "Pattern Recognition"],
+      "broader": ["Artificial Intelligence", "Data Science", "Computational Statistics"],
+      "narrower": ["Deep Learning", "Reinforcement Learning", "Supervised Learning", "Unsupervised Learning", "Transfer Learning"]
+    },
+    "deep learning": {
+      "synonyms": ["Neural Networks", "Connectionist Models", "Hierarchical Learning"],
+      "broader": ["Machine Learning", "Artificial Intelligence", "Neural Computation"],
+      "narrower": ["Convolutional Neural Networks", "Recurrent Neural Networks", "Transformers", "Autoencoders"]
+    },
+    "natural language processing": {
+      "synonyms": ["NLP", "Computational Linguistics", "Language Technology"],
+      "broader": ["Artificial Intelligence", "Linguistics", "Text Mining"],
+      "narrower": ["Named Entity Recognition", "Machine Translation", "Sentiment Analysis", "Language Modeling", "Question Answering"]
+    },
+    "information systems": {
+      "synonyms": ["IS", "Management Information Systems", "Business Information Systems"],
+      "broader": ["Computer Science", "Business", "Organizational Studies"],
+      "narrower": ["Enterprise Systems", "Decision Support Systems", "Knowledge Management", "E-Commerce"]
+    },
+    "cybersecurity": {
+      "synonyms": ["Information Security", "Computer Security", "Network Security"],
+      "broader": ["Computer Science", "Information Assurance", "Risk Management"],
+      "narrower": ["Cryptography", "Intrusion Detection", "Malware Analysis", "Security Analytics", "Privacy"]
+    },
+    "human computer interaction": {
+      "synonyms": ["HCI", "Human-Machine Interaction", "User Experience", "UX"],
+      "broader": ["Computer Science", "Psychology", "Design"],
+      "narrower": ["Usability", "Accessibility", "Ubiquitous Computing", "Tangible Interfaces"]
+    },
+    "data mining": {
+      "synonyms": ["Knowledge Discovery", "Predictive Analytics", "Data Analytics"],
+      "broader": ["Machine Learning", "Statistics", "Database Systems"],
+      "narrower": ["Clustering", "Classification", "Association Rules", "Outlier Detection"]
+    },
+    "software engineering": {
+      "synonyms": ["Software Development", "Software Construction"],
+      "broader": ["Computer Science", "Engineering", "Systems Engineering"],
+      "narrower": ["Requirements Engineering", "Software Testing", "DevOps", "Refactoring", "Software Architecture"]
+    }
+  }
+}

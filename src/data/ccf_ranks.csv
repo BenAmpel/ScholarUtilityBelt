@@ -1,0 +1,363 @@
+Venue,Rank
+ACM Conference on Computer and Communications Security|CCS,A
+"ACM International Conference on Applications, Technologies, Architectures, and Protocols for Computer Communication|SIGCOMM",A
+ACM International Conference on Mobile Computing and Networking|MobiCom,A
+ACM SIGPLAN Symposium on Principles & Practice of Parallel Programming|PPoPP,A
+ACM Symposium on Theory of Computing|STOC,A
+ACM Transactions on Architecture and Code Optimization|TACO,A
+ACM Transactions on Computer Systems|TOCS,A
+ACM Transactions on Database Systems|TODS,A
+ACM Transactions on Information Systems|TOIS,A
+ACM Transactions on Storage|TOS,A
+ACM-SIAM Symposium on Discrete Algorithms|SODA,A
+ACM/IEEE Symposium on Logic in Computer Science|LICS,A
+Artificial Intelligence|AI,A
+Conference on Web and Internet Economics|WINE,A
+Design Automation Conference|DAC,A
+European Conference on Computer Systems|EuroSys,A
+IEEE Annual Symposium on Foundations of Computer Science|FOCS,A
+IEEE International Conference on Computer Communications|INFOCOM,A
+IEEE International Symposium on High Performance Computer Architecture|HPCA,A
+IEEE Journal on Selected Areas in Communications|JSAC,A
+IEEE Real-Time Systems Symposium|RTSS,A
+IEEE Symposium on Security and Privacy|S&P,A
+IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems|TCAD,A
+IEEE Transactions on Computers|TC,A
+IEEE Transactions on Dependable and Secure Computing|TDSC,A
+IEEE Transactions on Information Forensics and Security|TIFS,A
+IEEE Transactions on Information Theory|TIT,A
+IEEE Transactions on Knowledge and Data Engineering|TKDE,A
+IEEE Transactions on Mobile Computing|TMC,A
+IEEE Transactions on Parallel and Distributed Systems|TPDS,A
+IEEE Transactions on Pattern Analysis and Machine Intelligence|TPAMI,A
+IEEE/ACM International Symposium on Microarchitecture|MICRO,A
+IEEE/ACM Transactions on Networking|TON,A
+Information and Computation|IANDC,A
+"International Conference for High Performance Computing, Networking, Storage, and Analysis|SC",A
+International Conference on Architectural Support for Programming Languages ​​and Operating Systems|ASPLOS,A
+International Conference on Computer Aided Verification|CAV,A
+International Conference on the Theory and Applications of Cryptographic Techniques|EUROCRYPT,A
+International Cryptology Conference|CRYPTO,A
+International Journal of Computer Vision|IJCV,A
+International Symposium on Computer Architecture|ISCA,A
+International World Wide Web Conference|WWW,A
+Journal of Cryptology,A
+Journal of Machine Learning Research|JMLR,A
+Journal of the ACM|JACM,A
+Network and Distributed System Security Symposium|NDSS,A
+Proceedings of the IEEE|Proc. IEEE,A
+Science China Information Sciences|SCIS,A
+SIAM Journal on Computing|SICOMP,A
+Symposium on Network System Design and Implementation|NSDI,A
+The VLDB Journal|VLDBJ,A
+USENIX Annual Technical Conference|USENIX ATC,A
+USENIX Conference on File and Storage Technologies|FAST,A
+USENIX Security Symposium|USENIX Security,A
+ACM Conference on Embedded Networked Sensor Systems|SenSys,B
+ACM International Conference on emerging Networking EXperiments and Technologies|CoNEXT,B
+"ACM International Conference on Mobile Systems, Applications, and Services|MobiSys",B
+ACM Internet Measurement Conference|IMC,B
+ACM Symposium on Cloud Computing|SOCC,B
+ACM Symposium on Parallelism in Algorithms and Architectures|SPAA,B
+ACM Symposium on Principles of Distributed Computing|PODC,B
+ACM Transactions on Algorithms|TALG,B
+ACM Transactions on Applied Perception|TAP,B
+ACM Transactions on Autonomous and Adaptive Systems|TAAS,B
+ACM Transactions on Computational Logic|TOCL,B
+ACM Transactions on Design Automation of Electronic Systems|TODAES,B
+ACM Transactions on Embedded Computing Systems|TECS,B
+ACM Transactions on Internet Technology|TOIT,B
+ACM Transactions on Knowledge Discovery from Data|TKDD,B
+ACM Transactions on Mathematical Software|TOMS,B
+"ACM Transactions on Multimedia Computing, Communications and Applications|TOMM",B
+ACM Transactions on Privacy and Security|TOPS,B
+ACM Transactions on Reconfigurable Technology and Systems|TRETS,B
+ACM Transactions on Sensor Networks|TOSN,B
+ACM Transactions on the Web|TWEB,B
+ACM/SIGDA International Symposium on Field-Programmable Gate Arrays|FPGA,B
+Advanced Engineering Informatics|AEI,B
+Algorithmica,B
+Annual Computer Security Applications Conference|ACSAC,B
+Annual International Conference on Research in Computational Molecular Biology|RECOMB,B
+Annual International Conference on the Theory and Application of Cryptology and Information Security|ASIACRYPT,B
+Annual Meeting of the Cognitive Science Society|CogSci,B
+Autonomous Agents and Multi-Agent Systems|AAMAS,B
+Bioinformatics,B
+Briefings in Bioinformatics,B
+Cognition,B
+Computational complexity|CC,B
+Computational Linguistics,B
+Computer Networks|CN,B
+Computer Vision and Image Understanding|CVIU,B
+Computers & Security,B
+Conference on Computational Complexity|CCC,B
+Data & Knowledge Engineering|DKE,B
+Data Mining and Knowledge Discovery|DMKD,B
+"Design, Automation & Test in Europe|DATE",B
+"Designs, Codes and Cryptography",B
+European Conference on Parallel and Distributed Computing|Euro-Par,B
+European Journal of Information Systems|EJIS,B
+European Symposium on Algorithms|ESA,B
+European Symposium on Research in Computer Security|ESORICS,B
+Evolutionary Computation,B
+Fast Software Encryption|FSE,B
+Formal Aspects of Computing|FAC,B
+Formal Methods in System Design|FMSD,B
+Frontiers of Computer Science|FCS,B
+GeoInformatica,B
+Hot Chips: A Symposium on High Performance Chips|HOT CHIPS,B
+IEEE Computer Security Foundations Workshop|CSFW,B
+IEEE International Conference on Bioinformatics and Biomedicine|BIBM,B
+IEEE International Conference on Cluster Computing|CLUSTER,B
+IEEE International Conference on Distributed Computing Systems|ICDCS,B
+IEEE International Conference on Network Protocols|ICNP,B
+"IEEE International Conference on Sensing, Communication, and Networking|SECON",B
+IEEE International Parallel & Distributed Processing Symposium|IPDPS,B
+IEEE International Symposium on Reliable Distributed Systems|SRDS,B
+IEEE Real-Time and Embedded Technology and ApplicationsSymposium|RTAS,B
+IEEE Transactions on Affective Computing|TAC,B
+IEEE Transactions on Automation Science and Engineering|TASAE,B
+IEEE Transactions on Communications|TCOM,B
+IEEE Transactions on Cybernetics,B
+IEEE Transactions on Evolutionary Computation|TEC,B
+IEEE Transactions on Fuzzy Systems|TFS,B
+IEEE Transactions on Geoscience and Remote Sensing|TGARS,B
+IEEE Transactions on Intelligent Transportation Systems|TITS,B
+IEEE Transactions on Medical Imaging|TMI,B
+IEEE Transactions on Neural Networks and learning systems|TNNLS,B
+IEEE Transactions on Robotics|TR,B
+IEEE Transactions on Very Large Scale Integration (VLSI) Systems|TVLSI,B
+IEEE Transactions on Wireless Communications|TWC,B
+IEEE-ACM Transactions on Computational Biology and Bioinformatics|TCBB,B
+IEEE/ACM International Workshop on Quality of Service|IWQoS,B
+"IEEE/ACM Transactions on Audio, Speech and Language Processing|TASLP",B
+Information Processing and Management|IPM,B
+Information Sciences,B
+Information Systems|IS,B
+INFORMS Journal on Computing|INFORMS,B
+"International Colloquium on Automata, Languages ​​and Programming|ICALP",B
+International Computing and Combinatorics Conference|COCOON,B
+International Conference on Automated Deduction/International Joint Conference on Automated Reasoning,B
+International Conference on Computer Design|ICCD,B
+International Conference on Computer-Aided Design|ICCAD,B
+International Conference on Concurrency Theory|CONCUR,B
+International Conference on Cryptographic Hardware and Embedded Systems|CHES,B
+International Conference on Dependable Systems and Networks|DSN,B
+International Conference on Embedded Software|EMSOFT,B
+International Conference on Hardware/Software Co-design and System Synthesis|CODES+ISSS,B
+International Conference on High Performance and Embedded Architectures and Compilers|HiPEAC,B
+International Conference on Hybrid Systems: Computation and Control|HSCC,B
+International Conference on Information Processing in Sensor Networks|IPSN,B
+International conference on Intelligent Systems for Molecular Biology|ISMB,B
+International Conference on Measurement and Modeling of Computer Systems|SIGMETRICS,B
+International Conference on Medical Image Computing and Computer-Assisted Intervention|MICCAI,B
+International Conference on Parallel Architectures and Compilation Techniques|PACT,B
+International Conference on Parallel Processing|ICPP,B
+International Conference on Supercomputing|ICS,B
+International Conference on Theory and Applications of Satisfiability Testing|SAT,B
+International Conference on Virtual Execution Environments|VEE,B
+International Journal of Approximate Reasoning|IJAR,B
+International Symposium on Computational Geometry|SoCG,B
+"International Symposium on Computer Performance, Modeling, Measurements and Evaluation|Performance",B
+International Symposium on Recent Advances in Intrusion Detection|RAID,B
+"International Symposium on Theory, Algorithmic Foundations, and Protocol Design for Mobile Networks and Mobile Computing|MobiHoc",B
+International Workshop on Network and Operating System Support for Digital Audio and Video|NOSSDAV,B
+International Workshop on Practice and Theory in Public Key Cryptography|PKC,B
+Journal of Artificial Intelligence Research|JAIR,B
+Journal of Automated Reasoning,B
+Journal of Computer and System Sciences|JCSS,B
+Journal of Computer Science and Technology|JCST,B
+Journal of Computer Security|JCS,B
+Journal of Global Optimization|JGO,B
+Journal of Parallel and Distributed Computing|JPDC,B
+"Journal of Speech, Language, and Hearing Research|JSLHR",B
+Journal of Symbolic Computation|JSC,B
+Journal of Systems Architecture: Embedded Software Design|JSA,B
+Journal of the American Medical Informatics Association|JAMIA,B
+Journal of the Association for Information Science and Technology|JASIST,B
+Journal of Web Semantics|JWS,B
+Knowledge and Information Systems|KAIS,B
+Machine Learning,B
+Mathematical Structures in Computer Science|MSCS,B
+Neural Computation,B
+Neural Networks,B
+Parallel Computing,B
+Pattern Recognition|PR,B
+Performance Evaluation: An International Journal,B
+PLOS Computational Biology,B
+The Computer Journal,B
+The International Symposium on Code Generation and Optimization|CGO,B
+Theoretical Computer Science|TCS,B
+Theory of Cryptography Conference|TCC,B
+World Wide Web|WWW,B
+ACM International Conference on Computing Frontiers|CF,C
+ACM International Systems and Storage Conference|SYSTOR,C
+ACM Journal on Emerging Technologies in Computing Systems|JETC,C
+ACM Special Interest Group on Spatial Information|SIGSPATIAL,C
+ACM The Workshop on Hot Topics in Networks|HotNets,C
+ACM Transactions on Asian and Low-Resource Language Information Processing|TALLIP,C
+ACM Transactions on Computing Education|TOCE,C
+ACM Transactions on Cyber-Physical Systems|TCPS,C
+ACM Transactions on Interactive Intelligent Systems|TIIS,C
+ACM/IEEE International Symposium on Networks-on-Chip|NOCS,C
+ACM/IEEE Symposium on Architectures for Networking and Communication Systems|ANCS,C
+Acta Informatica|ACTA,C
+Ad hoc Networks,C
+American Medical Informatics Association Annual Symposium|AMIA,C
+Annals of Pure and Applied Logic|APAL,C
+Applied Intelligence,C
+Artificial Intelligence in Medicine|AIM,C
+Artificial Life,C
+Asia and South Pacific Design Automation Conference|ASP-DAC,C
+Asia Pacific Bioinformatics Conference|APBC,C
+Asia-Pacific Network Operations and Management Symposium|APNOMS,C
+Asia-Pacific Workshop on Networking|APNet,C
+BMC Bioinformatics,C
+CCF Transactions on High Performance Computing|CCF-THPC,C
+Computational Intelligence,C
+Computer Communications|CC,C
+Computer Law & Security Review|CLSR,C
+Computer Science Logic|CSL,C
+Computer Speech & Language,C
+Concurrency and Computation: Practice and Experience,C
+Connection Science,C
+Cybernetics and Systems,C
+Cybersecurity,C
+Data Science and Engineering|DSE,C
+Decision Support Systems|DSS,C
+Discrete Applied Mathematics|DAM,C
+Distributed and Parallel Databases|DPD,C
+Distributed Computing|DC,C
+Engineering Applications of Artificial Intelligence|EAAI,C
+EURASIP Journal on Information Security,C
+Expert Systems,C
+Expert Systems with Applications|ESWA,C
+Formal Method in Computer-Aided Design|FMCAD,C
+Foundations of Software Technology and Theoretical Computer Science|FSTTCS,C
+Frontiers of Information Technology & Electronic Engineering|FITEE,C
+Fundamenta Informaticae|FUIN,C
+Future Generation Computer Systems|FGCS,C
+Fuzzy Sets and Systems,C
+Great Lakes Symposium on VLSI|GLSVLSI,C
+IEEE Asian Test Symposium|ATS,C
+IEEE Conference on Local Computer Networks|LCN,C
+IEEE European Test Symposium|ETS,C
+IEEE Geoscience and Remote Sensing Letters,C
+IEEE Global Communications Conference|GLOBECOM,C
+"IEEE International Conference on Application-Specific Systems, Architectures, and Processors|ASAP",C
+IEEE International Conference on Big Data|IEEE BigData,C
+IEEE International Conference on Cloud Computing|IEEE CLOUD,C
+IEEE International Conference on Communications|ICC,C
+IEEE International Conference on Computer Communications and Networks|ICCCN,C
+IEEE International Conference on Data Science and Advanced Analytics|DSAA,C
+IEEE International Conference on High Performance Computing and Communications|HPCC,C
+"IEEE International Conference on High Performance Computing, Data and Analytics|HiPC",C
+IEEE International Conference on Mobile Ad-hoc and Sensor Systems|MASS,C
+IEEE International Conference on P2P Computing|P2P,C
+"IEEE International Conference on Systems, Man, and Cybernetics|SMC",C
+IEEE International Performance Computing and Communications Conference|IPCCC,C
+IEEE International Symposium on a World of Wireless Mobile and Multimedia Networks|WoWMoM,C
+IEEE International Symposium on Parallel and Distributed Processing with Applications|ISPA,C
+IEEE Internet of Things Journal|IoT,C
+IEEE Journal of Biomedical and Health Informatics|JBHI,C
+IEEE Symposium on Computers and Communications|ISCC,C
+IEEE Symposium on Field-Programmable Custom Computing Machines|FCCM,C
+IEEE Transactions on Big Data|TBD,C
+IEEE Transactions on Circuits and Systems I: Regular Papers|TCASI,C
+IEEE Transactions on Cloud Computing|TCC,C
+IEEE Transactions on Computational Social Systems|TCSS,C
+IEEE Transactions on Games|TG,C
+IEEE Transactions on Industrial Informatics|TII,C
+IEEE Transactions on Network and Service Management|TNSM,C
+IEEE Transactions on Reliability,C
+IEEE Transactions on Sustainable Computing|TSUSC,C
+IEEE VLSI Test Symposium|VTS,C
+IEEE Wireless Communications and Networking Conference|WCNC,C
+"IEEE/ACM International Symposium on Cluster, Cloud and Grid Computing|CCGRID",C
+IET Communications,C
+IET Computer Vision|IET-CVI,C
+IET Information Security,C
+IET Intelligent Transport Systems,C
+IET Signal Processing,C
+IFIP International Conference on Network and Parallel Computing|NPC,C
+IFIP International Conferences on Networking|Networking,C
+IFIP/IEEE International Symposium on Integrated Network Management|IM,C
+Image and Vision Computing|IVC,C
+Information & Management|I&M,C
+Information and Computer Security|IMCS,C
+Information Processing Letters|IPL,C
+Information Retrieval Journal|IR,C
+"Integration, the VLSI Journal|Integration",C
+Intelligent Data Analysis|IDA,C
+International Colloquium on Theoretical Aspects of Computing|ICTAC,C
+International Conference on Algorithms and Architectures for Parallel Processing|ICA3PP,C
+"International Conference on Compilers, Architectures, and Synthesis for Embedded Systems|CASES",C
+International Conference on Field-Programmable Logic and Applications|FPL,C
+International Conference on Field-Programmable Technology|FPT,C
+"International Conference on Formal Techniques for Distributed Objects, Components, and Systems|FORTE",C
+International Conference on Integer Programming and Combinatorial Optimization|IPCO,C
+International Conference on Intelligent Computing|ICIC,C
+International Conference on Mathematical Foundations of Computer Science|MFCS,C
+"International Conference on Mobility, Sensing and Networking|MSN",C
+"International Conference on Modeling, Analysis and Simulation of Wireless and Mobile Systems|MSWiM",C
+International Conference on Parallel and Distributed Systems|ICPADS,C
+International Conference on Rewriting Techniques and Applications|RTA,C
+International Conference on Spatial Information Theory|COSIT,C
+International Journal of Computational Intelligence and Applications|IJCIA,C
+International Journal of Cooperative Information Systems|IJCIS,C
+International Journal of Geographical Information Science|IJGIS,C
+International Journal of Information and Computer Security|IJICS,C
+International Journal of Information Security and Privacy|IJISP,C
+International Journal of Intelligent Systems|IJIS,C
+International Journal of Knowledge Management|IJKM,C
+International Journal of Neural Systems|IJNS,C
+International Journal of Pattern Recognition and Artificial Intelligence|IJPRAI,C
+"International Journal of Uncertainty,Fuzziness and Knowledge-Based Systems|IJUFKS",C
+International Journal on Document Analysis and Recognition|IJDAR,C
+International Journal on Semantic Web and Information Systems|IJSWIS,C
+International Symposium on Algorithmic Game Theory|SAGT,C
+International Symposium on Algorithms and Computation|ISAAC,C
+International Symposium on Bioinformatics Research and Applications|ISBRA,C
+"International Symposium on Dependable Software Engineering: Theories, Tools, and Applications|SETTA",C
+"International Symposium on Modeling, Analysis, andSimulation of Computer and Telecommunication Systems|MASCOTS",C
+International Test Conference in Asia|ITC-Asia,C
+Journal of Biomedical Informatics|JBI,C
+Journal of Complexity|JCOMPLEXITY,C
+Journal of Computer Information Systems|JCIS,C
+Journal of Database Management|JDM,C
+Journal of Electronic Testing-Theory and Applications|JETTA,C
+Journal of Experimental and Theoretical Artificial Intelligence|JETAI,C
+Journal of Global Information Technology Management|JGITM,C
+Journal of Information Security and Applications|JISA,C
+Journal of Intelligent Information Systems|JIIS,C
+Journal of Logic and Computation|LOGCOM,C
+Journal of Network and Computer Applications|JNCA,C
+Knowledge-Based Systems|KBS,C
+Logical Methods in Computer Science|LMCS,C
+Machine Translation,C
+Machine Vision and Applications,C
+Medical Image Analysis,C
+Mobile Networks and Applications|MONET,C
+Natural Computing,C
+Natural Language Engineering|NLE,C
+Networks,C
+Neural Computing and Applications|NCA,C
+Neural Processing Letters|NPL,C
+Neurocomputing,C
+Pattern Analysis and Applications|PAA,C
+Pattern Recognition Letters|PRL,C
+Peer-to-Peer Networking and Applications|PPNA,C
+Real-Time Systems|RTS,C
+Security and Communication Networks|SCN,C
+SIAM Journal on Discrete Mathematics|SIDMA,C
+Soft Computing,C
+Symposium on Theoretical Aspects of Computer Science|STACS,C
+The International Conference on Wireless Artificial Intelligent Computing Systems and Applications|WASA,C
+The Journal of Grid Computing|JGC,C
+The Journal of Strategic Information Systems|JSIS,C
+The Journal of Supercomputing|TJSC,C
+The Journal of Symbolic Logic|JSL,C
+Theory of Computing Systems,C
+Web Intelligence|WI,C
+Wireless Communications and Mobile Computing|WCMC,C
+Wireless Networks,C
