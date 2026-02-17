@@ -13,7 +13,7 @@ Please cite:
   title   = {Scholar Utility Belt},
   author  = {Ampel, Benjamin M.},
   year    = {2026},
-  version = {0.2.5},
+  version = {0.2.6},
   doi     = {10.5281/zenodo.18645552},
   url     = {https://doi.org/10.5281/zenodo.18645552},
   publisher = {Zenodo}
@@ -21,7 +21,7 @@ Please cite:
 ```
 
 ```text
-Ampel, B. M. (2026). Scholar Utility Belt (Version 0.2.5) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18645552
+Ampel, B. M. (2026). Scholar Utility Belt (Version 0.2.6) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18645552
 ```
 
 Goal: personal productivity features for Google Scholar with **minimal extra requests**.
