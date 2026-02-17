@@ -2919,10 +2919,13 @@
 
   function generateAuthorNameVariations(fullName) {
     // Generate variations like "BM Ampel", "B Ampel", "Benjamin M. Ampel", etc.
-    const variations = new Set([fullName]);
+    const baseName = stripNameCredentials(fullName);
+    const baseNoSuffix = stripTrailingSuffixTokens(baseName);
+    const variations = new Set([fullName, baseName]);
+    if (baseNoSuffix && baseNoSuffix !== baseName) variations.add(baseNoSuffix);
     
     // Split name into parts
-    const parts = fullName.split(/\s+/).filter(p => p.length > 0);
+    const parts = baseName.split(/\s+/).filter(p => p.length > 0);
     if (parts.length >= 2) {
       const lastName = parts[parts.length - 1];
       const firstNames = parts.slice(0, -1);
@@ -3059,27 +3062,220 @@
     // Split by comma and clean up
     return authorsText
       .split(",")
-      .map(a => a.trim())
-      .filter(a => a.length > 0);
+      .map(a => stripNameCredentials(a.trim()))
+      .filter(a => a.length > 0 && !isCredentialOnly(a))
+      .filter(a => !isEllipsisAuthor(a));
+  }
+
+  function isEllipsisAuthor(name) {
+    const cleaned = String(name || "").replace(/\s+/g, "").replace(/\.+/g, ".").trim();
+    if (!cleaned) return true;
+    if (cleaned === "." || cleaned === ".." || cleaned === "...") return true;
+    if (cleaned === "…" || cleaned === "…." || cleaned === "…") return true;
+    return false;
+  }
+
+  const SU_AUTHOR_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
+  const SU_AUTHOR_PREFIXES = new Set([
+    "dr", "prof", "professor", "mr", "mrs", "ms", "miss", "sir", "dame"
+  ]);
+  const SU_AUTHOR_CREDENTIALS = new Set([
+    "phd", "dphil", "md", "mba", "jd", "esq", "dds", "dmd", "dvm", "pharmd", "do", "dnp", "dpt", "od",
+    "ms", "ma", "msc", "mcs", "mse", "meng", "m.eng", "mph", "mpa", "mpp", "msw",
+    "bs", "ba", "bsc", "beng", "b.eng",
+    "cpa", "cfa", "cissp", "cism", "cisa", "csp", "pe", "peng", "p.eng",
+    "rn", "lcsw", "lmft", "lpc", "np", "pa",
+    "facp", "facc", "facs", "frcpc", "frcs", "frs"
+  ]);
+
+  function normalizeNameToken(token) {
+    return String(token || "")
+      .replace(/[^a-z0-9]/gi, "")
+      .toLowerCase();
+  }
+
+  function isCredentialToken(token) {
+    const t = normalizeNameToken(token);
+    if (!t) return false;
+    if (SU_AUTHOR_CREDENTIALS.has(t)) return true;
+    // Handle "P.Eng" / "P.E." and similar dotted abbreviations.
+    if (t === "peng" && SU_AUTHOR_CREDENTIALS.has("p.eng")) return true;
+    return false;
+  }
+
+  function isCredentialOnly(name) {
+    const tokens = String(name || "").split(/\s+/).map(normalizeNameToken).filter(Boolean);
+    return tokens.length > 0 && tokens.every((t) => SU_AUTHOR_CREDENTIALS.has(t));
+  }
+
+  function stripNameCredentials(name) {
+    if (!name) return "";
+    const base = stripLeadingTitles(String(name).replace(/\*+$/, "").trim());
+    if (!base) return "";
+    const parts = base.split(/\s*[,，‚‛﹐﹑;]+\s*/).map(p => p.trim()).filter(Boolean);
+    const primary = parts[0] || "";
+    const kept = [];
+    for (let i = 1; i < parts.length; i++) {
+      const segment = parts[i];
+      const tokens = segment.split(/\s+/).filter(Boolean);
+      const normalized = tokens.map(normalizeNameToken).filter(Boolean);
+      if (normalized.length === 1 && SU_AUTHOR_SUFFIXES.has(normalized[0])) {
+        kept.push(segment);
+        continue;
+      }
+      if (tokens.length > 0 && tokens.every(isCredentialToken)) {
+        continue;
+      }
+      kept.push(segment);
+    }
+    const joined = kept.length ? `${primary}, ${kept.join(", ")}` : primary;
+    return stripTrailingCredentialsNoComma(joined);
+  }
+
+  function stripTrailingSuffixTokens(name) {
+    const tokens = String(name || "").trim().split(/\s+/).filter(Boolean);
+    while (tokens.length > 1) {
+      const last = normalizeNameToken(tokens[tokens.length - 1].replace(/[.,]+$/g, ""));
+      if (last && SU_AUTHOR_SUFFIXES.has(last)) {
+        tokens.pop();
+        continue;
+      }
+      break;
+    }
+    return tokens.join(" ");
+  }
+
+  function stripLeadingTitles(name) {
+    const tokens = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return "";
+    while (tokens.length > 1) {
+      const raw = tokens[0].replace(/^[^a-z0-9]+/i, "").replace(/[.,]+$/g, "");
+      const norm = normalizeNameToken(raw);
+      if (norm && SU_AUTHOR_PREFIXES.has(norm)) {
+        tokens.shift();
+        continue;
+      }
+      break;
+    }
+    return tokens.join(" ");
+  }
+  function stripTrailingCredentialsNoComma(name) {
+    const tokens = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (tokens.length <= 1) return String(name || "").trim();
+    while (tokens.length > 1) {
+      const last = tokens[tokens.length - 1].replace(/[.,]+$/, "");
+      if (isCredentialToken(last)) {
+        tokens.pop();
+        continue;
+      }
+      break;
+    }
+    return tokens.join(" ");
+  }
+
+  function runAuthorNameTests() {
+    const cases = [
+      {
+        input: "Amrou Awaysheh, PhD, MBA",
+        stripped: "Amrou Awaysheh",
+        last: "awaysheh"
+      },
+      {
+        input: "Paul Bliese, Ph.D., MBA, CISSP",
+        stripped: "Paul Bliese",
+        last: "bliese"
+      },
+      {
+        input: "Paul Bliese, Ph.D.",
+        stripped: "Paul Bliese",
+        last: "bliese"
+      },
+      {
+        input: "Dr. Paul T. Bartone",
+        stripped: "Paul T. Bartone",
+        last: "bartone"
+      },
+      {
+        input: "J F Nunamaker, Jr.",
+        stripped: "J F Nunamaker, Jr.",
+        last: "nunamaker"
+      },
+      {
+        input: "Jane Q Public, M.D., PhD, FACC",
+        stripped: "Jane Q Public",
+        last: "public"
+      },
+      {
+        input: "John Doe, Jr., PhD",
+        stripped: "John Doe, Jr.",
+        last: "doe"
+      },
+      {
+        input: "Mary Ann Smith Jr., MBA",
+        stripped: "Mary Ann Smith Jr.",
+        last: "smith"
+      },
+      {
+        input: "Carlos M. Ruiz, II, MD, MPH",
+        stripped: "Carlos M. Ruiz, II",
+        last: "ruiz"
+      },
+      {
+        input: "A. B. Chen, MEng, P.Eng",
+        stripped: "A. B. Chen",
+        last: "chen"
+      }
+    ];
+
+    const failures = [];
+    cases.forEach((t) => {
+      const stripped = stripNameCredentials(t.input);
+      const last = extractLastName(t.input);
+      if (stripped !== t.stripped) {
+        failures.push(`stripNameCredentials("${t.input}") => "${stripped}" (expected "${t.stripped}")`);
+      }
+      if (t.last && last !== t.last) {
+        failures.push(`extractLastName("${t.input}") => "${last}" (expected "${t.last}")`);
+      }
+    });
+
+    if (failures.length) {
+      console.warn("[ScholarUtilityBelt] Author name tests failed:", failures);
+    } else {
+      console.log("[ScholarUtilityBelt] Author name tests passed.");
+    }
+  }
+
+  // Optional dev harness: run in console with `window.__SU_RUN_NAME_TESTS = true; location.reload();`
+  if (window.__SU_RUN_NAME_TESTS === true) {
+    try {
+      runAuthorNameTests();
+    } catch (err) {
+      console.warn("[ScholarUtilityBelt] Author name tests crashed:", err);
+    }
   }
 
   function normalizeAuthorName(name) {
     // Normalize author name for comparison (handle variations like "B Ampel" vs "BM Ampel" vs "Benjamin M. Ampel")
     // Also handle cases like "CH Yang" vs "Chi-Heng Yang"
     // Strip "*" markers used by Google Scholar to mark corresponding authors
-    return name.replace(/\*+$/, "").toLowerCase().trim();
+    const cleaned = stripNameCredentials(name);
+    const noSuffix = stripTrailingSuffixTokens(cleaned);
+    return noSuffix.replace(/\*+$/, "").toLowerCase().trim();
   }
 
   function extractLastName(name) {
     // Extract last name (last word) from a name
     // Strip "*" markers that might be attached to the last name
-    const parts = name.replace(/\*+$/, "").trim().split(/\s+/);
+    const cleaned = stripTrailingSuffixTokens(stripNameCredentials(name)).replace(/\*+$/, "").trim();
+    const parts = cleaned.split(/\s+/).filter(Boolean);
     return parts.length > 0 ? parts[parts.length - 1].toLowerCase() : "";
   }
 
   function extractInitials(name) {
     // Extract initials from a name (e.g., "CH Yang" -> "ch", "Chi-Heng Yang" -> "ch")
-    const parts = name.trim().split(/\s+/);
+    const cleaned = stripTrailingSuffixTokens(stripNameCredentials(name)).trim();
+    const parts = cleaned.split(/\s+/);
     if (parts.length === 0) return "";
     
     // Get all parts except the last (which is usually the last name)
@@ -3155,7 +3351,7 @@
       firstAuthorCitations: 0,
       soloCitations: 0,
       years: [],
-      venues: new Map(), // venue -> count
+      venues: new Map(), // venueKey -> { count, display }
       qualityCounts: { q1: 0, q2: 0, q3: 0, q4: 0, a: 0, utd24: 0, ft50: 0, abs4star: 0, core: { "A*": 0, "A": 0, "B": 0, "C": 0 }, era: 0 },
       recentActivity: { last1Year: 0, last3Years: 0, last5Years: 0 },
       coAuthors: new Map(), // co-author name -> count of collaborations
@@ -3283,9 +3479,20 @@
       
       // Track venues
       if (paper.venue) {
-        const venueKey = normalizeProceedingsVenue(paper.venue);
-        const venueCount = stats.venues.get(venueKey) || 0;
-        stats.venues.set(venueKey, venueCount + 1);
+        const venueDisplay = normalizeProceedingsVenue(paper.venue);
+        const venueKey = normalizeVenueKey(venueDisplay);
+        if (!venueKey) {
+          // Skip unusable/empty venue keys
+          continue;
+        }
+        const existingVenue = stats.venues.get(venueKey);
+        if (existingVenue) {
+          existingVenue.count += 1;
+          const nextDisplay = pickVenueDisplay(existingVenue.display, venueDisplay);
+          if (nextDisplay !== existingVenue.display) existingVenue.display = nextDisplay;
+        } else {
+          stats.venues.set(venueKey, { count: 1, display: venueDisplay });
+        }
         
         // Get badges for this venue
         const badges = qualityBadgesForVenue(paper.venue, state.qIndex);
@@ -3422,9 +3629,9 @@
     
     // Get top venues (top 3)
     const topVenues = Array.from(stats.venues.entries())
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1]?.count || 0) - (a[1]?.count || 0))
       .slice(0, 3)
-      .map(([venue, count]) => ({ venue, count }));
+      .map(([venue, meta]) => ({ venue: meta?.display || venue, count: meta?.count || 0, key: venue }));
     
     stats.topVenues = topVenues;
     stats.venueDiversity = stats.venues.size;
@@ -4242,9 +4449,9 @@
       const activeVenue = String(window.suAuthorVenueFilter || "").trim().toLowerCase();
       const topVenueHtml = topVenues.length
         ? `<div class="su-top-venues"><span class="su-top-venues-label">Top venues:</span>${topVenues.map(v => {
-            const label = String(v.venue || "").trim();
+            const label = normalizeVenueDisplay(String(v.venue || "").trim());
             const count = Number(v.count) || 0;
-            const key = label.toLowerCase();
+            const key = String(v.key || label.toLowerCase());
             const isActive = activeVenue && key === activeVenue;
             const display = `${label} (${count})`;
             return `<span class="su-top-venue-chip${isActive ? " su-top-venue-chip-active" : ""}" data-venue-filter="${escapeHtml(key)}" title="${escapeHtml(display)}"><span class="su-top-venue-text">${escapeHtml(display)}</span></span>`;
@@ -4515,16 +4722,136 @@
     const v = String(venue || "").trim();
     if (!v) return v;
     let out = v;
+    // Trim to first segment before commas (drop page numbers / extra descriptors)
+    if (out.includes(",")) {
+      out = out.split(",")[0].trim();
+    }
+    // Strip truncation ellipses
+    out = out.replace(/\u2026/g, "...");
+    out = out.replace(/\s*\.{3}\s*$/, "");
+    out = out.replace(/\s*\.{2,}\s*$/, "");
+    // Normalize common proceedings prefixes
+    out = out.replace(/^\s*proceedings\s+of\s+the\s+/i, "");
+    out = out.replace(/^\s*proceedings\s+of\s+/i, "");
+    out = out.replace(/^\s*proceedings\s+/i, "");
+    out = out.replace(/^\s*proc\.\s+of\s+the\s+/i, "");
+    out = out.replace(/^\s*proc\.\s+of\s+/i, "");
+    out = out.replace(/^\s*proc\.\s+/i, "");
+    out = out.replace(/^\s*in:\s*/i, "");
     // Remove any standalone years (19xx or 20xx) in venue strings
     out = out.replace(/\b(19|20)\d{2}\b/g, "");
     // Remove years in parentheses
     out = out.replace(/\(\s*(19|20)\d{2}\s*\)/g, "");
     // Remove ordinals like 1st, 2nd, 3rd, 4th, 21st, 32nd, 43rd, 5th, 10th, etc.
     out = out.replace(/\b\d+(st|nd|rd|th)\b/gi, "");
+    // Remove bracketed years
+    out = out.replace(/\[\s*(19|20)\d{2}\s*\]/g, "");
     // Normalize whitespace and trim punctuation
     out = out.replace(/\s{2,}/g, " ").trim();
     out = out.replace(/[\s,;-]+$/g, "").trim();
     return out || v;
+  }
+
+  const SU_VENUE_STOPWORDS = new Set([
+    "proceedings", "proceeding", "proc", "conference", "conf", "symposium", "workshop", "meeting",
+    "annual", "international", "intl", "on", "of", "the", "and", "for", "in",
+    "journal", "transactions", "letters", "communications", "review", "reviews",
+    "studies", "research", "science", "sciences", "technology", "technologies",
+    "ieee", "acm", "ais", "association", "institute", "society"
+  ]);
+
+  const SU_VENUE_ACRONYMS = {
+    hicss: "hawaii international conference on system sciences",
+    jmis: "journal of management information systems",
+    misq: "management information systems quarterly",
+    icis: "international conference on information systems",
+    amcis: "americas conference on information systems",
+    pacis: "pacific asia conference on information systems",
+    ecis: "european conference on information systems"
+  };
+
+  function normalizeVenueKey(venue) {
+    const cleaned = normalizeProceedingsVenue(venue);
+    if (!cleaned) return "";
+    let out = String(cleaned).toLowerCase();
+    if (/hawaii/.test(out) && /(conference|hicss|system|international|annual)/.test(out)) {
+      return SU_VENUE_ACRONYMS.hicss;
+    }
+    out = out.replace(/&/g, " and ");
+    out = out.replace(/[^a-z0-9\s]/g, " ");
+    const rawTokens = out.split(/\s+/).filter(Boolean);
+    for (const t of rawTokens) {
+      if (SU_VENUE_ACRONYMS[t]) {
+        return SU_VENUE_ACRONYMS[t];
+      }
+    }
+    const tokens = out
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((t) => {
+        if (t.endsWith("ies") && t.length > 4) return t.slice(0, -3) + "y";
+        if (t.endsWith("s") && t.length > 4) return t.slice(0, -1);
+        return t;
+      })
+      .filter(t => !SU_VENUE_STOPWORDS.has(t))
+      .filter(t => !/^\d+$/.test(t));
+    if (!tokens.length) {
+      if (/^proceedings?$/.test(out.trim())) return "";
+      return out.trim();
+    }
+    return tokens.join(" ");
+  }
+
+  function pickVenueDisplay(current, candidate) {
+    if (!current) return candidate;
+    if (!candidate) return current;
+    if (current === candidate) return current;
+    const score = (s) => {
+      const letters = (s.match(/[A-Za-z]/g) || []).length;
+      const uppers = (s.match(/[A-Z]/g) || []).length;
+      return (uppers * 2) + letters + s.length;
+    };
+    const curScore = score(current);
+    const candScore = score(candidate);
+    if (candScore > curScore) return candidate;
+    return current;
+  }
+
+  const SU_TITLECASE_LOWER = new Set([
+    "a", "an", "and", "as", "at", "but", "by", "for", "if", "in", "nor", "of", "on", "or", "per", "the", "to", "vs", "via"
+  ]);
+
+  function normalizeVenueDisplay(venue) {
+    const v = String(venue || "").trim();
+    if (!v) return v;
+    const acronymMap = {
+      mis: "MIS",
+      jmis: "JMIS",
+      hicss: "HICSS",
+      icis: "ICIS",
+      amcis: "AMCIS",
+      pacis: "PACIS",
+      ecis: "ECIS"
+    };
+    const tokens = v.split(/(\s+|[-/])/);
+    let wordIndex = 0;
+    const out = tokens.map((tok) => {
+      if (/^\s+$/.test(tok) || tok === "-" || tok === "/") return tok;
+      const raw = tok;
+      const word = raw.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
+      if (!word) return raw;
+      const lowerWord = word.toLowerCase();
+      if (acronymMap[lowerWord]) {
+        return raw.replace(word, acronymMap[lowerWord]);
+      }
+      if (/[A-Z]{2,}/.test(word)) return raw; // preserve acronyms
+      const lower = word.toLowerCase();
+      const shouldLower = wordIndex > 0 && SU_TITLECASE_LOWER.has(lower);
+      wordIndex += 1;
+      const cased = shouldLower ? lower : lower.charAt(0).toUpperCase() + lower.slice(1);
+      return raw.replace(word, cased);
+    });
+    return out.join("");
   }
 
   function paperMatchesFilter(paper, filter, state) {
@@ -5659,7 +5986,7 @@
             }
             if (authorTopicFilters.length) show = show && paperMatchesTitleTokens(paper, authorTopicFilters);
             if (authorVenueFilter) {
-              const venueKey = normalizeProceedingsVenue(paper.venue || "").toLowerCase();
+              const venueKey = normalizeVenueKey(paper.venue || "");
               show = show && venueKey === authorVenueFilter;
             }
             r.style.display = show ? "" : "none";
@@ -5856,7 +6183,7 @@
                     if (window.suAuthorPositionFilter && window.suAuthorPositionFilter !== "all") show = show && paperMatchesPositionFilter(paper, window.suAuthorPositionFilter, state.authorVariations);
                     if (authorTopicFilters2.length) show = show && paperMatchesTitleTokens(paper, authorTopicFilters2);
                     if (authorVenueFilter2) {
-                      const venueKey = normalizeProceedingsVenue(paper.venue || "").toLowerCase();
+                      const venueKey = normalizeVenueKey(paper.venue || "");
                       show = show && venueKey === authorVenueFilter2;
                     }
                     r.style.display = show ? "" : "none";
