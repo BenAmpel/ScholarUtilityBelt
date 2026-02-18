@@ -33,6 +33,7 @@
         <div class="quality-badge-kinds">
           <label class="row"><input type="checkbox" id="qbQuartile" /> Quartile (Q1–Q4)</label>
           <label class="row"><input type="checkbox" id="qbAbdc" /> ABDC</label>
+          <label class="row"><input type="checkbox" id="qbVhb" /> VHB</label>
           <label class="row"><input type="checkbox" id="qbJcr" /> JCR</label>
           <label class="row"><input type="checkbox" id="qbFt50" /> FT50</label>
           <label class="row"><input type="checkbox" id="qbUtd24" /> UTD24</label>
@@ -42,6 +43,29 @@
           <label class="row"><input type="checkbox" id="qbNorwegian" /> Norwegian</label>
           <label class="row"><input type="checkbox" id="qbPreprint" /> Preprint</label>
           <label class="row"><input type="checkbox" id="qbH5" /> h5</label>
+        </div>
+
+        <div class="label">Author profile stats row</div>
+        <p class="sub">Choose which badges and stats appear in the top row on author pages.</p>
+        <div class="author-stats-kinds">
+          <label class="row"><input type="checkbox" id="asFilterQ1" /> Q1 badge</label>
+          <label class="row"><input type="checkbox" id="asFilterAbdc" /> ABDC badge</label>
+          <label class="row"><input type="checkbox" id="asFilterVhb" /> VHB badge</label>
+          <label class="row"><input type="checkbox" id="asFilterFt50" /> FT50 badge</label>
+          <label class="row"><input type="checkbox" id="asFilterUtd24" /> UTD24 badge</label>
+          <label class="row"><input type="checkbox" id="asFilterAbs4star" /> ABS 4* badge</label>
+          <label class="row"><input type="checkbox" id="asFilterClear" /> Clear filter badge</label>
+          <label class="row"><input type="checkbox" id="asSortToggle" /> Sort by citations/yr toggle</label>
+          <label class="row"><input type="checkbox" id="asPositionFilters" /> View (author position) filters</label>
+          <label class="row"><input type="checkbox" id="asPapers" /> Papers count</label>
+          <label class="row"><input type="checkbox" id="asCitations" /> Citations count</label>
+          <label class="row"><input type="checkbox" id="asFirstAuthor" /> 1st author count</label>
+          <label class="row"><input type="checkbox" id="asFirstAuthorCites" /> 1st author cites</label>
+          <label class="row"><input type="checkbox" id="asSolo" /> Solo count</label>
+          <label class="row"><input type="checkbox" id="asSoloCites" /> Solo cites</label>
+          <label class="row"><input type="checkbox" id="asCoauthors" /> Co-authors count</label>
+          <label class="row"><input type="checkbox" id="asCollab" /> Collab shape</label>
+          <label class="row"><input type="checkbox" id="asDrift" /> Drift</label>
         </div>
 
         <hr />
@@ -210,6 +234,11 @@
         </label>
 
         <label class="field">
+          <div class="label">VHB JOURQUAL 2024 ranks CSV (Venue, A+/A/B/C/D/E)</div>
+          <textarea id="qualityVhbRanks" rows="6" placeholder="Example:\nMIS Quarterly,A+\nDecision Support Systems,B"></textarea>
+        </label>
+
+        <label class="field">
           <div class="label">Quartiles CSV (Venue, Q1/Q2/Q3/Q4)</div>
           <textarea id="qualityQuartiles" rows="6" placeholder="Example:\nMIS Quarterly,Q1\nDecision Support Systems,Q1"></textarea>
         </label>
@@ -273,7 +302,7 @@
 
       <section class="card">
         <h2>Domain Note</h2>
-        <p class="sub">This build only matches <code>https://scholar.google.com/*</code>. If you use another Scholar domain (like <code>scholar.google.ca</code>), we should add it to <code>manifest.json</code>.</p>
+        <p class="sub">This build matches common Scholar domains (e.g., <code>scholar.google.com</code>, <code>scholar.google.de</code>, <code>scholar.google.co.uk</code>). If you use a different Scholar domain, tell us and we’ll add it.</p>
       </section>
     </main>
 

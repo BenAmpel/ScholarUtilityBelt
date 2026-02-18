@@ -41,6 +41,7 @@
     extractVenueFromAuthorsVenue,
     isPreprintVenue,
     normalizeVenueName,
+    normalizeVhbRank,
     qualityBadgesForVenue,
     venueWeightForVenue
   } = quality;
@@ -269,6 +270,29 @@
       window.__suH5Index = {};
       return {};
     }
+  }
+
+  async function loadVhbIndex() {
+    if (window.__suVhbIndex) return window.__suVhbIndex;
+    const map = new Map();
+    try {
+      const url = chrome.runtime.getURL("src/data/vhb2024.csv");
+      const r = await fetch(url);
+      const text = r.ok ? await r.text() : "";
+      for (const line of (text || "").split(/\r?\n/)) {
+        const idx = line.lastIndexOf(",");
+        if (idx <= 0 || idx >= line.length - 1) continue;
+        const name = line.slice(0, idx).trim();
+        const rank = normalizeVhbRank(line.slice(idx + 1).trim());
+        if (!name || !rank) continue;
+        const n = normalizeVenueName(name);
+        if (n) map.set(n, rank);
+      }
+    } catch (_) {
+      // Ignore; fall back to user list.
+    }
+    window.__suVhbIndex = map;
+    return map;
   }
 
   // ——— Retraction Watch via Crossref API (no Bloom filter; checks live) ———
@@ -1785,6 +1809,7 @@
     const badgeKindTitles = {
       quartile: "SCImago Journal Rank quartile: Q1 = top 25%, Q2 = next 25%, etc.",
       abdc: "ABDC Journal Quality List rank (A*, A, B, C).",
+      vhb: "VHB JOURQUAL 2024 journal ranking (A+, A, B, C, D, E).",
       jcr: "Clarivate JCR (Journal Citation Reports) impact quartile or indicator.",
       ft50: "Financial Times 50 list of top journals used in business school research.",
       utd24: "UT Dallas 24: top journals from the UTD Top 100 Business School Research Rankings.",
@@ -1801,6 +1826,7 @@
       switch (b.kind) {
         case "quartile": return /^Q[1-4]$/i.test(t);
         case "abdc": return /^ABDC\s+(A\*?|[BCD])$/i.test(t);
+        case "vhb": return /^VHB\s+(A\\+?|[BCDE])$/i.test(t);
         case "jcr": return /^(JIF|JCI|AIS|5Y)\s+Q[1-4]$/i.test(t);
         case "core": return /^CORE\s+(A\*?|[ABC])$/i.test(t);
         case "ccf": return /^CCF\s+[ABC]$/i.test(t);
@@ -2520,17 +2546,20 @@
     state.quartilesMeta = quartiles.meta;
     state.jcrIndex = jcr.index;
     state.jcrMeta = jcr.meta;
+    const vhbIndex = await loadVhbIndex();
     
     // Create hash of settings that affect quality index compilation
     const settingsHash = JSON.stringify({
       qualityFt50List: settings.qualityFt50List || "",
       qualityUtd24List: settings.qualityUtd24List || "",
       qualityAbdcRanks: settings.qualityAbdcRanks || "",
+      qualityVhbRanks: settings.qualityVhbRanks || "",
       qualityQuartiles: settings.qualityQuartiles || "",
       qualityCoreRanks: settings.qualityCoreRanks || "",
       qualityCcfRanks: settings.qualityCcfRanks || "",
       quartilesIndexKeys: Object.keys(quartiles.index || {}).length,
-      jcrIndexKeys: Object.keys(jcr.index || {}).length
+      jcrIndexKeys: Object.keys(jcr.index || {}).length,
+      vhbIndexKeys: vhbIndex?.size || 0
     });
     
     // Only recompute quality index if settings changed or cache doesn't exist
@@ -2540,6 +2569,7 @@
       state.qIndex = compileQualityIndex(state.settings, {
         quartilesIndex: state.quartilesIndex,
         jcrIndex: state.jcrIndex,
+        vhbIndex,
         eraSet: eraNorwegian.eraSet,
         absIndex: eraNorwegian.absIndex,
         norwegianMap: eraNorwegian.norwegianMap,
@@ -2915,6 +2945,11 @@
       return nameText.textContent.trim();
     }
     return null;
+  }
+
+  function isScholarHostname(hostname) {
+    const h = String(hostname || "").toLowerCase();
+    return h === "scholar.google.com" || h.startsWith("scholar.google.");
   }
 
   function generateAuthorNameVariations(fullName) {
@@ -3352,7 +3387,7 @@
       soloCitations: 0,
       years: [],
       venues: new Map(), // venueKey -> { count, display }
-      qualityCounts: { q1: 0, q2: 0, q3: 0, q4: 0, a: 0, utd24: 0, ft50: 0, abs4star: 0, core: { "A*": 0, "A": 0, "B": 0, "C": 0 }, era: 0 },
+      qualityCounts: { q1: 0, q2: 0, q3: 0, q4: 0, a: 0, vhb: 0, utd24: 0, ft50: 0, abs4star: 0, core: { "A*": 0, "A": 0, "B": 0, "C": 0 }, era: 0 },
       recentActivity: { last1Year: 0, last3Years: 0, last5Years: 0 },
       coAuthors: new Map(), // co-author name -> count of collaborations
       soloAuthored: 0,
@@ -3510,6 +3545,8 @@
             if (rank === "A*" || rank === "A") {
               stats.qualityCounts.a++;
             }
+          } else if (badge.kind === "vhb") {
+            stats.qualityCounts.vhb++;
           } else if (badge.kind === "utd24") {
             stats.qualityCounts.utd24++;
           } else if (badge.kind === "ft50") {
@@ -4226,78 +4263,92 @@
     // Build stats HTML with badge-style boxes
     const parts = [];
     const qc = stats.qualityCounts;
+    const vis = window.suState?.settings?.authorStatsVisible || {};
+    const show = (key) => vis[key] !== false;
 
-    // Quality badges (existing) - make them clickable for filtering
+    const groups = [];
+    const filterParts = [];
+    let filterBadgeCount = 0;
     const activeFilter = window.suActiveFilter || null;
-    if ((qc.q1 || 0) > 0) {
+    if (show("filterQ1") && (qc.q1 || 0) > 0) {
       const isActive = activeFilter === "q1";
-      parts.push(`<span class="su-stat-badge su-badge su-quartile ${isActive ? 'su-filter-active' : ''}" data-filter="q1" style="cursor: pointer;" title="Click to filter by Q1 papers"><span class="su-stat-label">Q1:</span> <strong>${qc.q1}</strong></span>`);
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-quartile ${isActive ? 'su-filter-active' : ''}" data-filter="q1" style="cursor: pointer;" title="Click to filter by Q1 papers"><span class="su-stat-label">Q1:</span> <strong>${qc.q1}</strong></span>`);
     }
-    if ((qc.a || 0) > 0) {
+    if (show("filterAbdc") && (qc.a || 0) > 0) {
       const isActive = activeFilter === "a";
-      parts.push(`<span class="su-stat-badge su-badge su-abdc ${isActive ? 'su-filter-active' : ''}" data-filter="a" style="cursor: pointer;" title="Click to filter by A-ranked papers"><span class="su-stat-label">ABDC:</span> <strong>${qc.a}</strong></span>`);
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-abdc ${isActive ? 'su-filter-active' : ''}" data-filter="a" style="cursor: pointer;" title="Click to filter by A-ranked papers"><span class="su-stat-label">ABDC:</span> <strong>${qc.a}</strong></span>`);
     }
-    if ((qc.ft50 || 0) > 0) {
+    if (show("filterVhb") && (qc.vhb || 0) > 0) {
+      const isActive = activeFilter === "vhb";
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-vhb ${isActive ? 'su-filter-active' : ''}" data-filter="vhb" style="cursor: pointer;" title="Click to filter by VHB-ranked papers"><span class="su-stat-label">VHB:</span> <strong>${qc.vhb}</strong></span>`);
+    }
+    if (show("filterFt50") && (qc.ft50 || 0) > 0) {
       const isActive = activeFilter === "ft50";
-      parts.push(`<span class="su-stat-badge su-badge su-ft50 ${isActive ? 'su-filter-active' : ''}" data-filter="ft50" style="cursor: pointer;" title="Click to filter by FT50 papers"><span class="su-stat-label">FT50:</span> <strong>${qc.ft50}</strong></span>`);
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-ft50 ${isActive ? 'su-filter-active' : ''}" data-filter="ft50" style="cursor: pointer;" title="Click to filter by FT50 papers"><span class="su-stat-label">FT50:</span> <strong>${qc.ft50}</strong></span>`);
     }
-    if ((qc.utd24 || 0) > 0) {
+    if (show("filterUtd24") && (qc.utd24 || 0) > 0) {
       const isActive = activeFilter === "utd24";
-      parts.push(`<span class="su-stat-badge su-badge su-utd24 ${isActive ? 'su-filter-active' : ''}" data-filter="utd24" style="cursor: pointer;" title="Click to filter by UTD24 papers"><span class="su-stat-label">UTD24:</span> <strong>${qc.utd24}</strong></span>`);
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-utd24 ${isActive ? 'su-filter-active' : ''}" data-filter="utd24" style="cursor: pointer;" title="Click to filter by UTD24 papers"><span class="su-stat-label">UTD24:</span> <strong>${qc.utd24}</strong></span>`);
     }
-    if ((qc.abs4star || 0) > 0) {
+    if (show("filterAbs4star") && (qc.abs4star || 0) > 0) {
       const isActive = activeFilter === "abs4star";
-      parts.push(`<span class="su-stat-badge su-badge su-abs4star ${isActive ? 'su-filter-active' : ''}" data-filter="abs4star" style="cursor: pointer;" title="Click to filter by ABS 4* papers"><span class="su-stat-label">ABS 4*:</span> <strong>${qc.abs4star}</strong></span>`);
+      filterBadgeCount += 1;
+      filterParts.push(`<span class="su-stat-badge su-badge su-abs4star ${isActive ? 'su-filter-active' : ''}" data-filter="abs4star" style="cursor: pointer;" title="Click to filter by ABS 4* papers"><span class="su-stat-label">ABS 4*:</span> <strong>${qc.abs4star}</strong></span>`);
     }
-    
-    // Add "Clear filter" button if a filter is active
-    if (activeFilter) {
-      parts.push(`<span class="su-stat-badge su-badge" style="cursor: pointer; opacity: 0.7;" data-filter="clear" title="Click to clear filter">Clear filter</span>`);
+    if (activeFilter && show("filterClear")) {
+      filterParts.push(`<span class="su-stat-badge su-badge" style="cursor: pointer; opacity: 0.7;" data-filter="clear" title="Click to clear filter">Clear filter</span>`);
     }
-    // Sort by citations/year toggle (author pages only)
-    const sortByVelocity = !!window.suAuthorSortByVelocity;
-    if (parts.length > 0) parts.push('<span class="su-stat-separator">|</span>');
-    parts.push(`<span id="su-sort-toggle" class="su-stat-badge su-badge" data-sort-toggle="1" style="cursor: pointer;" title="Toggle sort by citations per year">${sortByVelocity ? "Sort: citations/yr ✓" : "Sort by citations/yr"}</span>`);
-    // Citation view by author position
-    const posFilter = window.suAuthorPositionFilter || "all";
-    const posOptions = [
-      { value: "all", label: "All" },
-      { value: "first", label: "1st only" },
-      { value: "last", label: "Last only" },
-      { value: "middle", label: "Middle only" },
-      { value: "first+last", label: "1st+Last" },
-      { value: "first+middle+last", label: "1st+Mid+Last" }
-    ];
-    parts.push('<span class="su-stat-separator">|</span>');
-    parts.push('<span class="su-stat-item"><span class="su-stat-label">View:</span></span>');
-    for (const opt of posOptions) {
-      const active = posFilter === opt.value ? " su-filter-active" : "";
-      parts.push(`<span class="su-stat-badge su-badge su-position-filter${active}" data-position-filter="${opt.value}" style="cursor: pointer;" title="Show stats for ${opt.label}">${opt.label}</span>`);
-    }
+    if (filterParts.length) groups.push(filterParts);
 
-    // Add separator if we have quality badges and other stats
-    if (parts.length > 0 && (stats.totalPublications || 0) > 0) {
-      parts.push('<span class="su-stat-separator">|</span>');
+    const sortParts = [];
+    if (show("sortToggle")) {
+      const sortByVelocity = !!window.suAuthorSortByVelocity;
+      sortParts.push(`<span id="su-sort-toggle" class="su-stat-badge su-badge" data-sort-toggle="1" style="cursor: pointer;" title="Toggle sort by citations per year">${sortByVelocity ? "Sort: citations/yr ✓" : "Sort by citations/yr"}</span>`);
     }
-    
-    // Citation and publication stats
-    if ((stats.totalPublications || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">Papers:</span> <strong>${stats.totalPublications}</strong></span>`);
+    if (sortParts.length) groups.push(sortParts);
+
+    const viewParts = [];
+    if (show("positionFilters")) {
+      const posFilter = window.suAuthorPositionFilter || "all";
+      const posOptions = [
+        { value: "all", label: "All" },
+        { value: "first", label: "1st only" },
+        { value: "last", label: "Last only" },
+        { value: "middle", label: "Middle only" },
+        { value: "first+last", label: "1st+Last" },
+        { value: "first+middle+last", label: "1st+Mid+Last" }
+      ];
+      viewParts.push('<span class="su-stat-item"><span class="su-stat-label">View:</span></span>');
+      for (const opt of posOptions) {
+        const active = posFilter === opt.value ? " su-filter-active" : "";
+        viewParts.push(`<span class="su-stat-badge su-badge su-position-filter${active}" data-position-filter="${opt.value}" style="cursor: pointer;" title="Show stats for ${opt.label}">${opt.label}</span>`);
+      }
     }
-    if ((stats.totalCitations || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">Citations:</span> <strong>${stats.totalCitations}</strong></span>`);
+    if (viewParts.length) groups.push(viewParts);
+
+    const statsParts = [];
+    if (show("papers") && (stats.totalPublications || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Papers:</span> <strong>${stats.totalPublications}</strong></span>`);
     }
-    if ((stats.firstAuthor || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">1st Author:</span> <strong>${stats.firstAuthor}</strong></span>`);
+    if (show("citations") && (stats.totalCitations || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Citations:</span> <strong>${stats.totalCitations}</strong></span>`);
     }
-    if ((stats.firstAuthorCitations || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">1st Author Cites:</span> <strong>${stats.firstAuthorCitations}</strong></span>`);
+    if (show("firstAuthor") && (stats.firstAuthor || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">1st Author:</span> <strong>${stats.firstAuthor}</strong></span>`);
     }
-    if ((stats.soloAuthored || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">Solo:</span> <strong>${stats.soloAuthored}</strong></span>`);
+    if (show("firstAuthorCites") && (stats.firstAuthorCitations || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">1st Author Cites:</span> <strong>${stats.firstAuthorCitations}</strong></span>`);
     }
-    if ((stats.soloCitations || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">Solo Cites:</span> <strong>${stats.soloCitations}</strong></span>`);
+    if (show("solo") && (stats.soloAuthored || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Solo:</span> <strong>${stats.soloAuthored}</strong></span>`);
+    }
+    if (show("soloCites") && (stats.soloCitations || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Solo Cites:</span> <strong>${stats.soloCitations}</strong></span>`);
     }
     const metricsItems = [];
     if ((stats.hIndex || 0) > 0) {
@@ -4377,12 +4428,12 @@
         : "";
 
     // Co-author stats
-    if ((stats.uniqueCoAuthors || 0) > 0) {
-      parts.push(`<span class="su-stat-item"><span class="su-stat-label">Co-authors:</span> <strong>${stats.uniqueCoAuthors}</strong></span>`);
+    if (show("coauthors") && (stats.uniqueCoAuthors || 0) > 0) {
+      statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Co-authors:</span> <strong>${stats.uniqueCoAuthors}</strong></span>`);
     }
-    
+
     // Collaboration shape: % solo / % first / % middle / % last
-    if ((stats.totalPublications || 0) > 0) {
+    if (show("collabShape") && (stats.totalPublications || 0) > 0) {
       const total = stats.totalPublications || 1;
       const soloPct = Math.round(((stats.soloAuthored || 0) / total) * 100);
       const firstPct = Math.round(((stats.firstAuthor || 0) / total) * 100);
@@ -4390,7 +4441,7 @@
       let lastPct = Math.round(((stats.lastAuthor || 0) / total) * 100);
       const sumPct = soloPct + firstPct + middlePct + lastPct;
       if (sumPct !== 100) lastPct = Math.max(0, lastPct + (100 - sumPct));
-      parts.push(`
+      statsParts.push(`
         <span class="su-stat-item su-collab-shape" title="Collaboration shape: % solo, % first-author, % middle-author">
           <span class="su-stat-label">Collab:</span>
           <span class="su-collab-legend">${soloPct}% solo · ${firstPct}% first · ${middlePct}% middle · ${lastPct}% last</span>
@@ -4398,8 +4449,8 @@
       `);
     }
 
-    if (stats.authorshipDrift) {
-      parts.push(`
+    if (show("drift") && stats.authorshipDrift) {
+      statsParts.push(`
         <span class="su-stat-item" title="Authorship drift over time (early vs late papers). Indicates shift from first-author dominance toward last/middle collaboration (or the reverse). ${stats.authorshipDrift.detail}">
           <span class="su-stat-label">Drift:</span>
           <strong>${stats.authorshipDrift.label}</strong>
@@ -4407,10 +4458,17 @@
       `);
     }
 
+    if (statsParts.length) groups.push(statsParts);
+    const hasFilterBadges = filterBadgeCount > 0;
+    for (const group of groups) {
+      if (!group.length) continue;
+      if (parts.length > 0) parts.push('<span class="su-stat-separator">|</span>');
+      parts.push(...group);
+    }
+
     // Close the stats row and add co-author table
     if (parts.length > 0) {
       statsContainer.style.display = "block";
-      const hasFilterBadges = (qc.q1 || 0) > 0 || (qc.a || 0) > 0 || (qc.utd24 || 0) > 0 || (qc.ft50 || 0) > 0 || (qc.abs4star || 0) > 0;
       const coStats = Array.isArray(stats.coAuthorStats) ? stats.coAuthorStats : [];
       const coSort = window.suCoauthorSort || { key: "count", dir: "desc" };
       window.suCoauthorSort = coSort;
@@ -4540,7 +4598,7 @@
           <h3 class="su-author-compare-title">Compare two authors</h3>
           <p class="su-author-compare-desc">Author A is the current page. Paste a Google Scholar author profile URL for Author B.</p>
           <div class="su-author-compare-a">Author A (current): <strong id="su-compare-name-a"></strong></div>
-          <label class="su-author-compare-field">Author B profile URL: <input type="url" id="su-compare-url-b" placeholder="https://scholar.google.com/citations?user=..." class="su-author-compare-input" /></label>
+          <label class="su-author-compare-field">Author B profile URL: <input type="url" id="su-compare-url-b" placeholder="https://scholar.google.[tld]/citations?user=..." class="su-author-compare-input" /></label>
           <div class="su-author-compare-actions">
             <button type="button" id="su-compare-do">Compare</button>
             <button type="button" id="su-compare-close">Close</button>
@@ -4554,9 +4612,15 @@
       overlay.querySelector("#su-compare-do").addEventListener("click", async () => {
         const urlInput = overlay.querySelector("#su-compare-url-b");
         const url = (urlInput?.value || "").trim();
-        if (!url || !url.startsWith("https://scholar.google.com/")) {
+        let parsed = null;
+        try {
+          parsed = url ? new URL(url) : null;
+        } catch {
+          parsed = null;
+        }
+        if (!parsed || parsed.protocol !== "https:" || !isScholarHostname(parsed.hostname)) {
           const resultEl = overlay.querySelector("#su-compare-result");
-          if (resultEl) resultEl.innerHTML = '<p class="su-compare-error">Please enter a Google Scholar author profile URL (https://scholar.google.com/...).</p>';
+          if (resultEl) resultEl.innerHTML = '<p class="su-compare-error">Please enter a Google Scholar author profile URL (https://scholar.google.[tld]/...).</p>';
           return;
         }
         const resultEl = overlay.querySelector("#su-compare-result");
@@ -4726,6 +4790,8 @@
     if (out.includes(",")) {
       out = out.split(",")[0].trim();
     }
+    // Drop trailing standalone numbers (volume/issue) like "Decision Support Systems 114"
+    out = out.replace(/\s+\d{1,4}\s*$/g, "");
     // Strip truncation ellipses
     out = out.replace(/\u2026/g, "...");
     out = out.replace(/\s*\.{3}\s*$/, "");
@@ -4744,6 +4810,8 @@
     out = out.replace(/\(\s*(19|20)\d{2}\s*\)/g, "");
     // Remove ordinals like 1st, 2nd, 3rd, 4th, 21st, 32nd, 43rd, 5th, 10th, etc.
     out = out.replace(/\b\d+(st|nd|rd|th)\b/gi, "");
+    // Remove word ordinals like "Twenty-Third", "Thirtieth", etc.
+    out = out.replace(/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|twenty[-\s]?first|twenty[-\s]?second|twenty[-\s]?third|twenty[-\s]?fourth|twenty[-\s]?fifth|twenty[-\s]?sixth|twenty[-\s]?seventh|twenty[-\s]?eighth|twenty[-\s]?ninth|thirtieth|thirty[-\s]?first|thirty[-\s]?second|thirty[-\s]?third|thirty[-\s]?fourth|thirty[-\s]?fifth|thirty[-\s]?sixth|thirty[-\s]?seventh|thirty[-\s]?eighth|thirty[-\s]?ninth|fortieth|forty[-\s]?first|forty[-\s]?second|forty[-\s]?third|forty[-\s]?fourth|forty[-\s]?fifth|forty[-\s]?sixth|forty[-\s]?seventh|forty[-\s]?eighth|forty[-\s]?ninth|fiftieth|fifty[-\s]?first|fifty[-\s]?second|fifty[-\s]?third|fifty[-\s]?fourth|fifty[-\s]?fifth|fifty[-\s]?sixth|fifty[-\s]?seventh|fifty[-\s]?eighth|fifty[-\s]?ninth|sixtieth|sixty[-\s]?first|sixty[-\s]?second|sixty[-\s]?third|sixty[-\s]?fourth|sixty[-\s]?fifth|sixty[-\s]?sixth|sixty[-\s]?seventh|sixty[-\s]?eighth|sixty[-\s]?ninth|seventieth|seventy[-\s]?first|seventy[-\s]?second|seventy[-\s]?third|seventy[-\s]?fourth|seventy[-\s]?fifth|seventy[-\s]?sixth|seventy[-\s]?seventh|seventy[-\s]?eighth|seventy[-\s]?ninth|eightieth|eighty[-\s]?first|eighty[-\s]?second|eighty[-\s]?third|eighty[-\s]?fourth|eighty[-\s]?fifth|eighty[-\s]?sixth|eighty[-\s]?seventh|eighty[-\s]?eighth|eighty[-\s]?ninth|ninetieth|ninety[-\s]?first|ninety[-\s]?second|ninety[-\s]?third|ninety[-\s]?fourth|ninety[-\s]?fifth|ninety[-\s]?sixth|ninety[-\s]?seventh|ninety[-\s]?eighth|ninety[-\s]?ninth)\b/gi, "");
     // Remove bracketed years
     out = out.replace(/\[\s*(19|20)\d{2}\s*\]/g, "");
     // Normalize whitespace and trim punctuation
@@ -4880,6 +4948,8 @@
           }
           return false;
         });
+      case "vhb":
+        return badges.some(b => b.kind === "vhb");
       case "utd24":
         return badges.some(b => b.kind === "utd24");
       case "ft50":
@@ -6167,7 +6237,7 @@
           (r) => r.style.display !== "none" && !r.classList.contains("su-filtered-out")
         );
         if (!state.allPublicationsLoaded) {
-          renderAuthorStats({ qualityCounts: { q1: 0, a: 0, utd24: 0, ft50: 0, abs4star: 0 }, totalPublications: 0, totalCitations: 0, avgCitations: 0, recentActivity: { last5Years: 0 } }, true);
+          renderAuthorStats({ qualityCounts: { q1: 0, a: 0, vhb: 0, utd24: 0, ft50: 0, abs4star: 0 }, totalPublications: 0, totalCitations: 0, avgCitations: 0, recentActivity: { last5Years: 0 } }, true);
           const runLoadAll = () => {
             loadAllPublicationsRecursively().then(async () => {
               state.allPublicationsLoaded = true;
@@ -6702,7 +6772,7 @@
       if (!url) return;
       try {
         const u = new URL(url);
-        if (u.hostname === "scholar.google.com" || u.hostname?.endsWith(".scholar.google.com")) {
+        if (isScholarHostname(u.hostname)) {
           const realUrl = u.searchParams.get("url") || u.searchParams.get("q") || "";
           if (!realUrl) return;
           try {

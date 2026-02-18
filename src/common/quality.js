@@ -150,10 +150,19 @@ function addSynonymsToMap(map, name, value) {
   }
 }
 
+export function normalizeVhbRank(raw) {
+  let r = String(raw || "").trim().toUpperCase();
+  if (!r) return "";
+  r = r.replace(/\*/g, "+");
+  const m = r.match(/A\+?|[BCDE]/);
+  return m ? m[0] : "";
+}
+
 export function compileQualityIndex(settings, extra = {}) {
   const ft50 = new Set();
   const utd24 = new Set();
   const abdc = new Map(); // venue -> A*/A/B/C/D
+  const vhb = new Map(); // venue -> A+/A/B/C/D/E
   const quartiles = new Map(); // venue -> Q1/Q2/Q3/Q4
   const core = new Map(); // venue -> A*/A/B/C or similar (includes ICORE)
   const ccf = new Map(); // venue -> A/B/C (CCF rankings)
@@ -162,6 +171,7 @@ export function compileQualityIndex(settings, extra = {}) {
 
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   const VALID_ABS = /^4\*?$|^[1234]$/i;
+  const VALID_VHB = /^A\+?$|^[BCDE]$/i;
   const VALID_QUARTILE = /^Q[1-4]$/i;
   const VALID_CORE = /^A\*?$|^[ABC]$/i;
   const VALID_CCF = /^[ABC]$/i;
@@ -175,6 +185,25 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = line.slice(idx + 1).trim();
     if (!name || !rank || !VALID_ABDC.test(rank)) continue;
     addSynonymsToMap(abdc, name, rank);
+  }
+  const extraVhb = extra?.vhbIndex;
+  if (extraVhb && typeof extraVhb === "object") {
+    const entries = extraVhb instanceof Map ? extraVhb.entries() : Object.entries(extraVhb);
+    for (const [name, rank] of entries) {
+      const n = normalizeVenueName(name);
+      const r = normalizeVhbRank(rank);
+      if (n && r && VALID_VHB.test(r)) vhb.set(n, r);
+    }
+  }
+
+  for (const line of parseLines(settings.qualityVhbRanks || "")) {
+    const idx = line.lastIndexOf(",");
+    if (idx <= 0 || idx >= line.length - 1) continue;
+    const name = line.slice(0, idx).trim();
+    const rankRaw = line.slice(idx + 1).trim();
+    const rank = normalizeVhbRank(rankRaw);
+    if (!name || !rank || !VALID_VHB.test(rank)) continue;
+    addSynonymsToMap(vhb, name, rank);
   }
 
   // Large-scale quartiles can be supplied as a prebuilt index (already normalized keys).
@@ -250,7 +279,7 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
-  return { ft50, utd24, abdc, quartiles, core, ccf, jcr, era, norwegian, abs, h5 };
+  return { ft50, utd24, abdc, vhb, quartiles, core, ccf, jcr, era, norwegian, abs, h5 };
 }
 
 
@@ -325,6 +354,14 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (abdc && VALID_ABDC.test(String(abdc).trim())) {
     const r = String(abdc).trim().toUpperCase();
     badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: "ABDC Journal Quality List" } });
+  }
+
+  let vhb = qIndex.vhb?.get?.(v);
+  if (!vhb && qIndex.vhb) vhb = findBestMatch(v, qIndex.vhb);
+  const VALID_VHB = /^A\+?$|^[BCDE]$/i;
+  if (vhb && VALID_VHB.test(String(vhb).trim())) {
+    const r = String(vhb).trim().toUpperCase().replace("*", "+");
+    badges.push({ kind: "vhb", text: `VHB ${r}`, metadata: { rank: r, system: "VHB JOURQUAL 2024" } });
   }
 
   let abs = qIndex.abs?.get?.(v);
@@ -453,6 +490,7 @@ const VENUE_WEIGHT_MAP = {
   ft50: 1,
   utd24: 1,
   abdc: { "a*": 0.95, "a": 0.85, "b": 0.6, "c": 0.4, "d": 0.25 },
+  vhb: { "a+": 0.95, "a": 0.85, "b": 0.6, "c": 0.4, "d": 0.25, "e": 0.15 },
   abs: { "4*": 0.95, "4": 0.8, "3": 0.55, "2": 0.35, "1": 0.2 },
   jcr: { "q1": 0.75, "q2": 0.5, "q3": 0.35, "q4": 0.2 },
   quartile: { "q1": 0.75, "q2": 0.5, "q3": 0.35, "q4": 0.2 },
@@ -473,6 +511,9 @@ export function venueWeightForVenue(venue, qIndex) {
     else if (b.kind === "abdc" && b.metadata?.rank) {
       const r = String(b.metadata.rank).toLowerCase().replace(/\s/g, "");
       w = Math.max(w, VENUE_WEIGHT_MAP.abdc[r] ?? 0.4);
+    } else if (b.kind === "vhb" && b.metadata?.rank) {
+      const r = String(b.metadata.rank).toLowerCase().replace(/\s/g, "");
+      w = Math.max(w, VENUE_WEIGHT_MAP.vhb[r] ?? 0.4);
     } else if (b.kind === "abs" && b.metadata?.rank) {
       const r = String(b.metadata.rank).toLowerCase().replace(/\s/g, "");
       w = Math.max(w, VENUE_WEIGHT_MAP.abs[r] ?? 0.4);

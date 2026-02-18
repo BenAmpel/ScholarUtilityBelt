@@ -13,7 +13,7 @@ Please cite:
   title   = {Scholar Utility Belt},
   author  = {Ampel, Benjamin M.},
   year    = {2026},
-  version = {0.2.6},
+  version = {0.2.7},
   doi     = {10.5281/zenodo.18645552},
   url     = {https://doi.org/10.5281/zenodo.18645552},
   publisher = {Zenodo}
@@ -21,7 +21,7 @@ Please cite:
 ```
 
 ```text
-Ampel, B. M. (2026). Scholar Utility Belt (Version 0.2.6) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18645552
+Ampel, B. M. (2026). Scholar Utility Belt (Version 0.2.7) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18645552
 ```
 
 Goal: personal productivity features for Google Scholar with **minimal extra requests**.
@@ -59,6 +59,7 @@ Goal: personal productivity features for Google Scholar with **minimal extra req
   - `ft50.txt` (FT Research Rank journal list)
   - `utd24.txt` (UT Dallas Top 100 journal list)
   - `abdc2022.csv` (ABDC 2022 JQL)
+  - `vhb2024.csv` (VHB JOURQUAL 2024)
   - `core_icore2026.csv` (ICORE2026 conference ranks)
 - On install, the extension seeds these into Options automatically (you can edit/clear them later).
 - To refresh them from the upstream sites:

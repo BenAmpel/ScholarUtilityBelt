@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = {
   qualityBadgeKinds: {
     quartile: true,
     abdc: true,
+    vhb: true,
     jcr: true,
     ft50: true,
     utd24: true,
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS = {
   qualityFt50List: "",
   qualityUtd24List: "",
   qualityAbdcRanks: "",
+  qualityVhbRanks: "",
   qualityQuartiles: "",
   qualityCoreRanks: "",
   qualityCcfRanks: "",
@@ -62,7 +64,29 @@ export const DEFAULT_SETTINGS = {
   showNewSinceLastVisit: true,
   showCitationSpike: true,
   citationSpikeThresholdPct: 50,
-  citationSpikeMonths: 6
+  citationSpikeMonths: 6,
+
+  // Author profile stats row visibility (top bar)
+  authorStatsVisible: {
+    filterQ1: true,
+    filterAbdc: true,
+    filterVhb: true,
+    filterFt50: true,
+    filterUtd24: true,
+    filterAbs4star: true,
+    filterClear: true,
+    sortToggle: true,
+    positionFilters: true,
+    papers: true,
+    citations: true,
+    firstAuthor: true,
+    firstAuthorCites: true,
+    solo: true,
+    soloCites: true,
+    coauthors: true,
+    collabShape: true,
+    drift: true
+  }
 };
 
 /**

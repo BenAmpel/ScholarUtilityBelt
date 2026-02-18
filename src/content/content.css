@@ -821,6 +821,7 @@
 }
 
 .su-badge.su-abdc { background: #ecfeff; border-color: rgba(14,116,144,0.28); }
+.su-badge.su-vhb { background: #f0f9ff; border-color: rgba(7,89,133,0.28); }
 .su-badge.su-quartile { background: #f0fdf4; border-color: rgba(21,128,61,0.28); }
 .su-badge.su-ft50 { background: #fff7ed; border-color: rgba(154,52,18,0.24); }
 .su-badge.su-utd24 { background: #f5f3ff; border-color: rgba(91,33,182,0.24); }
@@ -2156,6 +2157,7 @@ body[data-su-theme="dark"] .su-badge {
 }
 body[data-su-theme="dark"] .su-badge.su-quartile { background: #1e3a2f; border-color: #2d5a47; }
 body[data-su-theme="dark"] .su-badge.su-abdc { background: #0d3d3d; border-color: #1a5c5c; }
+body[data-su-theme="dark"] .su-badge.su-vhb { background: #0b2e3d; border-color: #1d4a5c; }
 body[data-su-theme="dark"] .su-badge.su-ft50 { background: #3d2e1a; border-color: #5c4a28; }
 body[data-su-theme="dark"] .su-badge.su-utd24 { background: #2d2a3d; border-color: #4a4660; }
 body[data-su-theme="dark"] .su-badge.su-core,

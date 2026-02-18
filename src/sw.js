@@ -118,6 +118,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     !!String(s.qualityFt50List || "").trim() ||
     !!String(s.qualityUtd24List || "").trim() ||
     !!String(s.qualityAbdcRanks || "").trim() ||
+    !!String(s.qualityVhbRanks || "").trim() ||
     !!String(s.qualityQuartiles || "").trim() ||
     !!String(s.qualityCoreRanks || "").trim() ||
     !!String(s.qualityCcfRanks || "").trim();
@@ -134,10 +135,11 @@ chrome.runtime.onInstalled.addListener(async () => {
       const updatedSettings = { ...s };
       
       if (!hasAnyQuality) {
-        const [ft50, utd24, abdc, core, corePortal, ccf] = await Promise.all([
+        const [ft50, utd24, abdc, vhb, core, corePortal, ccf] = await Promise.all([
           fetchExtText("src/data/ft50.txt"),
           fetchExtText("src/data/utd24.txt"),
           fetchExtText("src/data/abdc2022.csv"),
+          fetchExtText("src/data/vhb2024.csv"),
           fetchExtText("src/data/core_icore2026.csv"),
           fetchExtText("src/data/core_portal_ranks.csv"),
           fetchExtText("src/data/ccf_ranks.csv")
@@ -147,6 +149,7 @@ chrome.runtime.onInstalled.addListener(async () => {
         updatedSettings.qualityFt50List = ft50.trim() + "\n";
         updatedSettings.qualityUtd24List = utd24.trim() + "\n";
         updatedSettings.qualityAbdcRanks = abdc.trim() + "\n";
+        updatedSettings.qualityVhbRanks = vhb.trim() + "\n";
         updatedSettings.qualityCoreRanks = [core.trim(), (corePortal || "").trim()].filter(Boolean).join("\n") + "\n";
         updatedSettings.qualityCcfRanks = (ccf && ccf.trim()) ? ccf.trim() + "\n" : "";
       }
@@ -177,6 +180,25 @@ chrome.runtime.onInstalled.addListener(async () => {
         const st = updated.settings || {};
         st.qualityCoreRanks = merged + "\n";
         await chrome.storage.local.set({ settings: st });
+      }
+    } catch {
+      // Ignore; user can paste CSV in Options.
+    }
+  }
+
+  // Seed VHB ranks from built-in CSV if the user hasn't set any yet.
+  if (!String(s.qualityVhbRanks || "").trim()) {
+    try {
+      const url = chrome.runtime.getURL("src/data/vhb2024.csv");
+      const r = await fetch(url);
+      if (r.ok) {
+        const vhb = await r.text();
+        if (vhb && vhb.trim().length > 10) {
+          const updated = await chrome.storage.local.get({ settings: {} });
+          const st = updated.settings || {};
+          st.qualityVhbRanks = vhb.trim() + "\n";
+          await chrome.storage.local.set({ settings: st });
+        }
       }
     } catch {
       // Ignore; user can paste CSV in Options.

@@ -48,6 +48,14 @@ h2 {
   gap: 10px;
 }
 
+.quality-badge-kinds,
+.author-stats-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+
 .field {
   display: block;
   margin-top: 12px;

@@ -33,6 +33,7 @@ async function fetchExtText(path) {
 const QUALITY_BADGE_IDS = {
   quartile: "qbQuartile",
   abdc: "qbAbdc",
+  vhb: "qbVhb",
   jcr: "qbJcr",
   ft50: "qbFt50",
   utd24: "qbUtd24",
@@ -44,6 +45,27 @@ const QUALITY_BADGE_IDS = {
   h5: "qbH5"
 };
 
+const AUTHOR_STATS_IDS = {
+  filterQ1: "asFilterQ1",
+  filterAbdc: "asFilterAbdc",
+  filterVhb: "asFilterVhb",
+  filterFt50: "asFilterFt50",
+  filterUtd24: "asFilterUtd24",
+  filterAbs4star: "asFilterAbs4star",
+  filterClear: "asFilterClear",
+  sortToggle: "asSortToggle",
+  positionFilters: "asPositionFilters",
+  papers: "asPapers",
+  citations: "asCitations",
+  firstAuthor: "asFirstAuthor",
+  firstAuthorCites: "asFirstAuthorCites",
+  solo: "asSolo",
+  soloCites: "asSoloCites",
+  coauthors: "asCoauthors",
+  collabShape: "asCollab",
+  drift: "asDrift"
+};
+
 async function load() {
   const s = await getSettings();
   el("theme").value = s.theme || "auto";
@@ -52,6 +74,11 @@ async function load() {
   for (const [kind, id] of Object.entries(QUALITY_BADGE_IDS)) {
     const input = el(id);
     if (input) input.checked = qb[kind] !== false;
+  }
+  const asv = s.authorStatsVisible || {};
+  for (const [kind, id] of Object.entries(AUTHOR_STATS_IDS)) {
+    const input = el(id);
+    if (input) input.checked = asv[kind] !== false;
   }
   el("highlightSaved").checked = !!s.highlightSaved;
   el("defaultTagsCsv").value = s.defaultTagsCsv || "";
@@ -81,10 +108,24 @@ async function load() {
   el("qualityFt50List").value = s.qualityFt50List || "";
   el("qualityUtd24List").value = s.qualityUtd24List || "";
   el("qualityAbdcRanks").value = s.qualityAbdcRanks || "";
+  el("qualityVhbRanks").value = s.qualityVhbRanks || "";
   el("qualityQuartiles").value = s.qualityQuartiles || "";
   el("qualityCoreRanks").value = s.qualityCoreRanks || "";
   el("qualityCcfRanks").value = s.qualityCcfRanks || "";
   el("scimagoYear").value = String(new Date().getFullYear() - 1);
+
+  // If VHB list is empty (e.g., existing users), auto-seed from built-in CSV.
+  if (!el("qualityVhbRanks").value.trim()) {
+    try {
+      const vhb = await fetchExtText("src/data/vhb2024.csv");
+      if (vhb && vhb.trim().length > 10) {
+        el("qualityVhbRanks").value = vhb.trim() + "\n";
+        await setSettings({ qualityVhbRanks: el("qualityVhbRanks").value });
+      }
+    } catch {
+      // Ignore; user can load manually.
+    }
+  }
 
   // Show metadata about packaged sources if available.
   try {
@@ -425,10 +466,16 @@ el("save").addEventListener("click", async () => {
     const input = el(id);
     qualityBadgeKinds[kind] = input ? input.checked : true;
   }
+  const authorStatsVisible = {};
+  for (const [kind, id] of Object.entries(AUTHOR_STATS_IDS)) {
+    const input = el(id);
+    authorStatsVisible[kind] = input ? input.checked : true;
+  }
   await setSettings({
     theme: el("theme").value || "auto",
     viewMode: el("viewMode").value || "detailed",
     qualityBadgeKinds,
+    authorStatsVisible,
     showNewSinceLastVisit: el("showNewSinceLastVisit").checked,
     showCitationSpike: el("showCitationSpike").checked,
     citationSpikeThresholdPct: Math.max(10, Math.min(500, parseInt(el("citationSpikeThresholdPct").value, 10) || 50)),
@@ -458,6 +505,7 @@ el("save").addEventListener("click", async () => {
     qualityFt50List: el("qualityFt50List").value,
     qualityUtd24List: el("qualityUtd24List").value,
     qualityAbdcRanks: el("qualityAbdcRanks").value,
+    qualityVhbRanks: el("qualityVhbRanks").value,
     qualityQuartiles: el("qualityQuartiles").value,
     qualityCoreRanks: el("qualityCoreRanks").value,
     qualityCcfRanks: el("qualityCcfRanks").value
@@ -591,10 +639,11 @@ el("clearScimagoQuartiles").addEventListener("click", async () => {
 
 el("loadQualityDefaults").addEventListener("click", async () => {
   try {
-    const [ft50, utd24, abdc, core, corePortal] = await Promise.all([
+    const [ft50, utd24, abdc, vhb, core, corePortal] = await Promise.all([
       fetchExtText("src/data/ft50.txt"),
       fetchExtText("src/data/utd24.txt"),
       fetchExtText("src/data/abdc2022.csv"),
+      fetchExtText("src/data/vhb2024.csv"),
       fetchExtText("src/data/core_icore2026.csv"),
       fetchExtText("src/data/core_portal_ranks.csv")
     ]);
@@ -604,6 +653,7 @@ el("loadQualityDefaults").addEventListener("click", async () => {
     if (!el("qualityFt50List").value.trim()) el("qualityFt50List").value = ft50.trim() + "\n";
     if (!el("qualityUtd24List").value.trim()) el("qualityUtd24List").value = utd24.trim() + "\n";
     if (!el("qualityAbdcRanks").value.trim()) el("qualityAbdcRanks").value = abdc.trim() + "\n";
+    if (!el("qualityVhbRanks").value.trim()) el("qualityVhbRanks").value = vhb.trim() + "\n";
     if (!el("qualityCoreRanks").value.trim()) el("qualityCoreRanks").value = coreMerged + "\n";
 
     if (!el("showQualityBadges").checked) el("showQualityBadges").checked = true;
@@ -618,6 +668,7 @@ el("clearQualityLists").addEventListener("click", async () => {
   el("qualityFt50List").value = "";
   el("qualityUtd24List").value = "";
   el("qualityAbdcRanks").value = "";
+  el("qualityVhbRanks").value = "";
   el("qualityQuartiles").value = "";
   el("qualityCoreRanks").value = "";
   setQualityStatus("Cleared (not saved yet).");
