@@ -56,7 +56,17 @@
     "https://scholar.googleusercontent.com/*",
     "https://api.crossref.org/*",
     "https://api.openalex.org/*",
-    "https://www.scimagojr.com/*"
+    "https://www.scimagojr.com/*",
+    "https://api.unpaywall.org/*",
+    "https://api.datacite.org/*",
+    "https://opencitations.net/*",
+    "https://export.arxiv.org/*",
+    "https://www.ebi.ac.uk/*",
+    "https://eutils.ncbi.nlm.nih.gov/*",
+    "https://api.ror.org/*",
+    "https://dblp.org/*",
+    "https://sparql.dblp.org/*",
+    "https://api.semanticscholar.org/*"
   ],
   "optional_host_permissions": ["<all_urls>"],
   "content_scripts": [
@@ -156,7 +166,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/common/*.js", "src/content/dom-cache.js", "src/content/worker.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json"],
+      "resources": ["src/common/*.js", "src/content/dom-cache.js", "src/content/worker.js", "src/content/content-author.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json", "src/data/*.gz", "src/data/*.bin"],
       "matches": [
         "https://scholar.google.com/*",
         "https://scholar.google.ca/*",

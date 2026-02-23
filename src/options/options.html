@@ -10,6 +10,10 @@
     <main>
       <h1>Scholar Utility Belt</h1>
       <p class="sub">Everything is local-only by default. These settings affect how Scholar pages are annotated.</p>
+      <div class="actions actions-top">
+        <button id="saveTop" class="primary">Save changes</button>
+        <span id="statusTop" class="status"></span>
+      </div>
 
       <section class="card">
         <h2>Appearance</h2>
@@ -20,6 +24,262 @@
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+        </label>
+        <label class="field">
+          <div class="label">Badge colors</div>
+          <div class="badge-palette-select" id="badgePaletteSelect">
+            <button type="button" id="badgePaletteTrigger" class="palette-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="palette-trigger-label">Soft (current)</span>
+              <span class="badge-preview-mini" data-badge-palette="soft">
+                <span class="su-badge su-quartile">Q1</span>
+                <span class="su-badge su-abdc">ABDC A*</span>
+                <span class="su-badge su-vhb">VHB A</span>
+                <span class="su-badge su-ft50">FT50</span>
+                <span class="su-badge su-utd24">UTD24</span>
+                <span class="su-badge su-core">CORE A*</span>
+                <span class="su-badge su-ccf">CCF A</span>
+                <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                <span class="su-badge su-era">ERA 2023</span>
+                <span class="su-badge su-norwegian">Level 2</span>
+                <span class="su-badge su-h5">h5 50</span>
+                <span class="su-badge su-preprint">arXiv</span>
+                <span class="su-badge su-abs">ABS 4*</span>
+              </span>
+              <span class="palette-trigger-caret">▼</span>
+            </button>
+            <div id="badgePaletteMenu" class="palette-menu" role="listbox">
+              <button type="button" class="palette-option" role="option" data-value="soft">
+                <span class="palette-option-label">Soft (current)</span>
+                <span class="badge-preview-mini" data-badge-palette="soft">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="bold">
+                <span class="palette-option-label">Bold</span>
+                <span class="badge-preview-mini" data-badge-palette="bold">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="colorblind">
+                <span class="palette-option-label">Colorblind-safe</span>
+                <span class="badge-preview-mini" data-badge-palette="colorblind">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="mono">
+                <span class="palette-option-label">Monochrome</span>
+                <span class="badge-preview-mini" data-badge-palette="mono">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="material">
+                <span class="palette-option-label">Material Bold</span>
+                <span class="badge-preview-mini" data-badge-palette="material">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="fluent">
+                <span class="palette-option-label">Fluent Soft</span>
+                <span class="badge-preview-mini" data-badge-palette="fluent">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="nord">
+                <span class="palette-option-label">Nord</span>
+                <span class="badge-preview-mini" data-badge-palette="nord">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="solarized">
+                <span class="palette-option-label">Solarized</span>
+                <span class="badge-preview-mini" data-badge-palette="solarized">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="monoAccent">
+                <span class="palette-option-label">Mono + Accent</span>
+                <span class="badge-preview-mini" data-badge-palette="monoAccent">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="highContrast">
+                <span class="palette-option-label">High-contrast</span>
+                <span class="badge-preview-mini" data-badge-palette="highContrast">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="inverted">
+                <span class="palette-option-label">Inverted</span>
+                <span class="badge-preview-mini" data-badge-palette="inverted">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+              <button type="button" class="palette-option" role="option" data-value="warm">
+                <span class="palette-option-label">Warm</span>
+                <span class="badge-preview-mini" data-badge-palette="warm">
+                  <span class="su-badge su-quartile">Q1</span>
+                  <span class="su-badge su-abdc">ABDC A*</span>
+                  <span class="su-badge su-vhb">VHB A</span>
+                  <span class="su-badge su-ft50">FT50</span>
+                  <span class="su-badge su-utd24">UTD24</span>
+                  <span class="su-badge su-core">CORE A*</span>
+                  <span class="su-badge su-ccf">CCF A</span>
+                  <span class="su-badge su-jcr">JIF Q1</span>
+                <span class="su-badge su-if su-jcr">IF 12.3</span>
+                  <span class="su-badge su-era">ERA 2023</span>
+                  <span class="su-badge su-norwegian">Level 2</span>
+                  <span class="su-badge su-h5">h5 50</span>
+                  <span class="su-badge su-preprint">arXiv</span>
+                  <span class="su-badge su-abs">ABS 4*</span>
+                </span>
+              </button>
+            </div>
+            <input type="hidden" id="badgePalette" value="soft" />
+          </div>
         </label>
         <label class="field">
           <div class="label">Result view</div>
@@ -35,6 +295,7 @@
           <label class="row"><input type="checkbox" id="qbAbdc" /> ABDC</label>
           <label class="row"><input type="checkbox" id="qbVhb" /> VHB</label>
           <label class="row"><input type="checkbox" id="qbJcr" /> JCR</label>
+          <label class="row"><input type="checkbox" id="qbIf" /> Impact Factor (IF)</label>
           <label class="row"><input type="checkbox" id="qbFt50" /> FT50</label>
           <label class="row"><input type="checkbox" id="qbUtd24" /> UTD24</label>
           <label class="row"><input type="checkbox" id="qbCore" /> CORE</label>
@@ -191,6 +452,17 @@
         </p>
 
         <hr />
+        <h2>Research intelligence</h2>
+        <label class="row">
+          <input type="checkbox" id="showResearchIntel" />
+          <span>Enable <strong>Publish or Perish</strong> metrics + report on author pages</span>
+        </label>
+        <label class="row">
+          <input type="checkbox" id="showAdvancedFilters" />
+          <span>Show <strong>advanced filters</strong> on search results (affiliations, funders, influential cites, cites/year)</span>
+        </label>
+
+        <hr />
         <h2>Power user</h2>
         <label class="row">
           <input type="checkbox" id="showNewSinceLastVisit" />
@@ -295,7 +567,7 @@
         <p class="sub" id="qualityMeta"></p>
 
         <div class="actions">
-          <button id="save">Save</button>
+          <button id="save" class="primary">Save changes</button>
           <span id="status" class="status"></span>
         </div>
       </section>

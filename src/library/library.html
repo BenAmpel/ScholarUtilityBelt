@@ -17,36 +17,119 @@
       </div>
     </header>
 
-    <main>
-      <section class="controls">
-        <input id="q" type="search" placeholder="Search title, authors, tags, notes" />
-        <select id="sort">
-          <option value="savedAt">Sort: Saved time</option>
-          <option value="year">Sort: Year</option>
-          <option value="title">Sort: Title</option>
-        </select>
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-title">Collections</div>
+          <div id="collectionList" class="panel-list"></div>
+          <button id="newCollection" class="btn full">New collection</button>
+        </section>
+        <section class="panel">
+          <div class="panel-title">Saved searches</div>
+          <div id="savedSearchList" class="panel-list"></div>
+          <button id="saveSearch" class="btn full">Save current search</button>
+        </section>
+        <section class="panel">
+          <div class="panel-title">Watched folders</div>
+          <div id="folderList" class="panel-list"></div>
+          <button id="scanFolder" class="btn full">Scan folder</button>
+          <input id="folderPicker" type="file" webkitdirectory multiple hidden />
+        </section>
+        <section class="panel">
+          <div class="panel-title">Sharing</div>
+          <button id="exportLibrary" class="btn full">Export library</button>
+          <button id="importLibrary" class="btn full">Import library</button>
+          <input id="importLibraryFile" type="file" accept="application/json" hidden />
+        </section>
+      </aside>
+
+      <section class="content">
+        <section class="controls">
+          <input id="q" type="search" placeholder="Search title, authors, tags, notes, annotations" />
+          <input id="tagFilter" type="text" placeholder="Filter tags (comma)" />
+          <select id="sort">
+            <option value="savedAt">Sort: Saved time</option>
+            <option value="year">Sort: Year</option>
+            <option value="title">Sort: Title</option>
+            <option value="citations">Sort: Citations</option>
+          </select>
+          <button id="toggleDuplicates" class="btn">Duplicates</button>
+        </section>
+
+        <section id="activeFilters" class="active-filters"></section>
+
+        <section id="list" class="list"></section>
+
+        <template id="itemTpl">
+          <article class="item">
+            <div class="top">
+              <a class="title" target="_blank" rel="noreferrer"></a>
+              <div class="meta"></div>
+            </div>
+            <div class="actions">
+              <button class="btn" data-act="openScholar">Open Scholar</button>
+              <button class="btn" data-act="openPdf">Open PDF</button>
+              <button class="btn" data-act="pdfReader">PDF reader</button>
+              <button class="btn" data-act="collections">Collections</button>
+              <button class="btn" data-act="tags">Tags</button>
+              <button class="btn" data-act="notes">Notes</button>
+              <button class="btn" data-act="cite">Cite</button>
+              <button class="btn danger" data-act="remove">Remove</button>
+            </div>
+            <div class="cite-menu"></div>
+            <div class="snippet"></div>
+            <div class="footer"></div>
+          </article>
+        </template>
       </section>
-
-      <section id="list" class="list"></section>
-
-      <template id="itemTpl">
-        <article class="item">
-          <div class="top">
-            <a class="title" target="_blank" rel="noreferrer"></a>
-            <div class="meta"></div>
-          </div>
-          <div class="actions">
-            <button class="btn" data-act="openScholar">Open Scholar</button>
-            <button class="btn" data-act="openPdf">Open PDF</button>
-            <button class="btn" data-act="tags">Tags</button>
-            <button class="btn" data-act="notes">Notes</button>
-            <button class="btn danger" data-act="remove">Remove</button>
-          </div>
-          <div class="snippet"></div>
-          <div class="footer"></div>
-        </article>
-      </template>
     </main>
+
+    <div id="collectionModal" class="modal">
+      <div class="modal-backdrop" data-modal-close="1"></div>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3>Manage collections</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <div id="collectionModalList" class="modal-list"></div>
+        <div class="modal-row">
+          <input id="collectionModalNew" type="text" placeholder="New collection name" />
+          <button id="collectionModalAdd" class="btn">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdfModal" class="modal">
+      <div class="modal-backdrop" data-modal-close="1"></div>
+      <div class="modal-panel modal-wide">
+        <div class="modal-header">
+          <h3 id="pdfModalTitle">PDF reader</h3>
+          <div class="modal-actions">
+            <button id="pdfModalOpenFile" class="btn">Select local PDF</button>
+            <button class="btn" data-modal-close="1">Close</button>
+          </div>
+        </div>
+        <div class="pdf-layout">
+          <iframe id="pdfFrame" class="pdf-frame"></iframe>
+          <div class="pdf-side">
+            <label class="pdf-label">Summary</label>
+            <textarea id="pdfSummary" placeholder="Add a short summary..."></textarea>
+            <div class="pdf-highlights">
+              <div class="pdf-label">Highlights</div>
+              <div id="pdfHighlightList" class="pdf-highlight-list"></div>
+              <div class="pdf-highlight-form">
+                <input id="pdfHighlightPage" type="text" placeholder="Page" />
+                <input id="pdfHighlightQuote" type="text" placeholder="Quote" />
+                <input id="pdfHighlightNote" type="text" placeholder="Note" />
+                <button id="pdfHighlightAdd" class="btn">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input id="localPdfPicker" type="file" accept="application/pdf" hidden />
 
     <script type="module" src="library.js"></script>
   </body>

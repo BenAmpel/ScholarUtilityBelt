@@ -167,6 +167,7 @@ export function compileQualityIndex(settings, extra = {}) {
   const core = new Map(); // venue -> A*/A/B/C or similar (includes ICORE)
   const ccf = new Map(); // venue -> A/B/C (CCF rankings)
   const jcr = new Map(); // venue -> { jifQ, jciQ, aisQ, fiveYJifQ, ... }
+  const impact = new Map(); // venue -> impact factor (numeric)
   const abs = new Map(); // venue -> 4*/4/3/2/1 (ABS 2024 AJG)
 
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
@@ -228,6 +229,16 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
+  const extraImpact = extra?.impactIndex || null;
+  if (extraImpact && typeof extraImpact === "object") {
+    const entries = extraImpact instanceof Map ? extraImpact.entries() : Object.entries(extraImpact);
+    for (const [name, value] of entries) {
+      const n = normalizeVenueName(name);
+      const num = typeof value === "number" ? value : parseFloat(String(value || "").replace(/[^0-9.]/g, ""));
+      if (n && Number.isFinite(num) && num > 0) impact.set(n, num);
+    }
+  }
+
   for (const line of parseLines(settings.qualityQuartiles || "")) {
     const idx = line.lastIndexOf(",");
     if (idx <= 0 || idx >= line.length - 1) continue;
@@ -279,7 +290,7 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
-  return { ft50, utd24, abdc, vhb, quartiles, core, ccf, jcr, era, norwegian, abs, h5 };
+  return { ft50, utd24, abdc, vhb, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
 }
 
 
@@ -340,6 +351,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (!v) return [];
 
   const badges = [];
+  let impactBadge = null;
 
   // Pre-print badge first so it's clearly visible
   const preprint = getPreprintBadge(venue);
@@ -380,6 +392,14 @@ export function qualityBadgesForVenue(venue, qIndex) {
     if (jcr.aisQ && VALID_QUARTILE.test(String(jcr.aisQ))) badges.push({ kind: "jcr", text: `AIS ${String(jcr.aisQ).toUpperCase()}`, metadata: { quartile: jcr.aisQ, system: "JCR Article Influence Score", ais: jcr.ais, jcrData: jcr } });
     if (jcr.fiveYJifQ && VALID_QUARTILE.test(String(jcr.fiveYJifQ)))
       badges.push({ kind: "jcr", text: `5Y ${String(jcr.fiveYJifQ).toUpperCase()}`, metadata: { quartile: jcr.fiveYJifQ, system: "JCR 5-Year Impact Factor", fiveYJif: jcr.fiveYJif, jcrData: jcr } });
+  }
+
+  let impact = qIndex.impact?.get?.(v);
+  if (impact == null && qIndex.impact) impact = findBestMatch(v, qIndex.impact);
+  const impactNum = typeof impact === "number" ? impact : parseFloat(String(impact || "").replace(/[^0-9.]/g, ""));
+  if (Number.isFinite(impactNum) && impactNum > 0) {
+    const display = impactNum.toFixed(1);
+    impactBadge = { kind: "if", text: `IF ${display}`, metadata: { impact: impactNum, system: "Journal Impact Factor (2024)" } };
   }
 
   // Resolve CORE and CCF first so we can treat venue as conference when present
@@ -482,6 +502,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
     badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: "Google Scholar 5-year h-index" } });
   }
 
+  if (impactBadge) badges.push(impactBadge);
   return badges;
 }
 

@@ -5,7 +5,14 @@
 function isContextInvalidated(e) {
   if (!e) return false;
   const msg = String(e?.message ?? e?.toString?.() ?? "").toLowerCase();
-  return msg.includes("context invalidated") || msg.includes("extension context invalidated");
+  return (
+    msg.includes("context invalidated") ||
+    msg.includes("extension context invalidated") ||
+    msg.includes("cannot read properties of undefined (reading 'local')") ||
+    msg.includes("cannot read properties of undefined (reading 'storage')") ||
+    msg.includes("chrome is undefined") ||
+    msg.includes("chrome.storage is undefined")
+  );
 }
 
 export const DEFAULT_SETTINGS = {
@@ -19,12 +26,14 @@ export const DEFAULT_SETTINGS = {
 
   // Appearance
   theme: "auto", // "auto" | "light" | "dark"
+  badgePalette: "soft", // "soft" | "bold"
   viewMode: "detailed", // "minimal" | "detailed"
   qualityBadgeKinds: {
     quartile: true,
     abdc: true,
     vhb: true,
     jcr: true,
+    if: true,
     ft50: true,
     utd24: true,
     core: true,
@@ -57,6 +66,8 @@ export const DEFAULT_SETTINGS = {
   showSnippetCueEmphasis: true,
   showSkimmabilityStrip: true,
   showReadingLoadEstimator: true,
+  showResearchIntel: true,
+  showAdvancedFilters: true,
   groupVersions: true,
   versionOrder: "journal-first", // "journal-first" | "conference-first" | "preprint-first"
 
@@ -87,6 +98,15 @@ export const DEFAULT_SETTINGS = {
     collabShape: true,
     drift: true
   }
+};
+
+const DEFAULT_LIBRARY_STATE = {
+  collections: [],
+  savedSearches: [],
+  watchedFolders: [],
+  activeCollectionId: "",
+  activeSavedSearchId: "",
+  showDuplicates: false
 };
 
 /**
@@ -129,6 +149,26 @@ export async function getSavedPapers() {
     return savedPapers || {};
   } catch (e) {
     if (isContextInvalidated(e)) return {};
+    throw e;
+  }
+}
+
+export async function getLibraryState() {
+  try {
+    const { libraryState } = await chrome.storage.local.get({ libraryState: DEFAULT_LIBRARY_STATE });
+    return { ...DEFAULT_LIBRARY_STATE, ...(libraryState || {}) };
+  } catch (e) {
+    if (isContextInvalidated(e)) return { ...DEFAULT_LIBRARY_STATE };
+    throw e;
+  }
+}
+
+export async function setLibraryState(next) {
+  try {
+    const current = await getLibraryState();
+    await chrome.storage.local.set({ libraryState: { ...current, ...(next || {}) } });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
     throw e;
   }
 }
@@ -518,6 +558,49 @@ export async function setAuthorHIndexSnapshot(profileUrl, hIndex) {
     const pruned = list.filter((e) => e.date >= cutoff).slice(-50);
     data[profileUrl] = pruned;
     await chrome.storage.local.set({ [AUTHOR_HINDEX_SNAPSHOTS_KEY]: data });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+// External signals (Crossref/OpenCitations/DataCite) cache
+const EXTERNAL_SIGNAL_CACHE_KEY = "externalSignalCacheV1";
+const EXTERNAL_SIGNAL_CACHE_MAX = 3000;
+
+function pruneExternalSignalCache(cache) {
+  if (!cache || typeof cache !== "object") return {};
+  const entries = Object.entries(cache).map(([doi, data]) => {
+    const providers = data && typeof data === "object" ? Object.values(data) : [];
+    const latest = providers.reduce((acc, item) => Math.max(acc, Number(item?.ts) || 0), 0);
+    return { doi, latest };
+  });
+  if (entries.length <= EXTERNAL_SIGNAL_CACHE_MAX) return cache;
+  entries.sort((a, b) => b.latest - a.latest);
+  const keep = new Set(entries.slice(0, EXTERNAL_SIGNAL_CACHE_MAX).map((e) => e.doi));
+  const out = {};
+  for (const [doi, data] of Object.entries(cache)) {
+    if (keep.has(doi)) out[doi] = data;
+  }
+  return out;
+}
+
+export async function getExternalSignalCache() {
+  try {
+    const { [EXTERNAL_SIGNAL_CACHE_KEY]: data } = await chrome.storage.local.get({
+      [EXTERNAL_SIGNAL_CACHE_KEY]: {}
+    });
+    return data && typeof data === "object" ? data : {};
+  } catch (e) {
+    if (isContextInvalidated(e)) return {};
+    throw e;
+  }
+}
+
+export async function setExternalSignalCache(cache) {
+  try {
+    const pruned = pruneExternalSignalCache(cache || {});
+    await chrome.storage.local.set({ [EXTERNAL_SIGNAL_CACHE_KEY]: pruned });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;

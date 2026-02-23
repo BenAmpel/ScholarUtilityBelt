@@ -35,6 +35,7 @@ const QUALITY_BADGE_IDS = {
   abdc: "qbAbdc",
   vhb: "qbVhb",
   jcr: "qbJcr",
+  if: "qbIf",
   ft50: "qbFt50",
   utd24: "qbUtd24",
   core: "qbCore",
@@ -66,9 +67,74 @@ const AUTHOR_STATS_IDS = {
   drift: "asDrift"
 };
 
+const BADGE_PALETTE_LABELS = {
+  soft: "Soft (current)",
+  bold: "Bold",
+  colorblind: "Colorblind-safe",
+  mono: "Monochrome",
+  material: "Material Bold",
+  fluent: "Fluent Soft",
+  nord: "Nord",
+  solarized: "Solarized",
+  monoAccent: "Mono + Accent",
+  highContrast: "High-contrast",
+  inverted: "Inverted",
+  warm: "Warm"
+};
+
+function setBadgePaletteUI(value, silent = false) {
+  const v = BADGE_PALETTE_LABELS[value] ? value : "soft";
+  const input = el("badgePalette");
+  if (input) input.value = v;
+  const trigger = el("badgePaletteTrigger");
+  const labelEl = trigger?.querySelector(".palette-trigger-label");
+  const previewEl = trigger?.querySelector(".badge-preview-mini");
+  if (labelEl) labelEl.textContent = BADGE_PALETTE_LABELS[v] || "Soft (current)";
+  if (previewEl) previewEl.setAttribute("data-badge-palette", v);
+  const menu = el("badgePaletteMenu");
+  if (menu) {
+    menu.querySelectorAll(".palette-option").forEach((opt) => {
+      opt.classList.toggle("is-selected", opt.getAttribute("data-value") === v);
+      opt.setAttribute("aria-selected", opt.getAttribute("data-value") === v ? "true" : "false");
+    });
+  }
+  if (!silent) maybeDirty();
+}
+
+function initBadgePaletteDropdown() {
+  const trigger = el("badgePaletteTrigger");
+  const menu = el("badgePaletteMenu");
+  if (!trigger || !menu) return;
+  const closeMenu = () => {
+    menu.classList.remove("open");
+    trigger.setAttribute("aria-expanded", "false");
+  };
+  trigger.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isOpen = menu.classList.toggle("open");
+    trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  });
+  menu.addEventListener("click", (e) => {
+    const opt = e.target.closest(".palette-option");
+    if (!opt) return;
+    const v = opt.getAttribute("data-value") || "soft";
+    setBadgePaletteUI(v);
+    closeMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".badge-palette-select")) return;
+    closeMenu();
+  });
+}
+
 async function load() {
   const s = await getSettings();
   el("theme").value = s.theme || "auto";
+  setBadgePaletteUI(s.badgePalette || "soft", true);
   el("viewMode").value = s.viewMode || "detailed";
   const qb = s.qualityBadgeKinds || {};
   for (const [kind, id] of Object.entries(QUALITY_BADGE_IDS)) {
@@ -98,6 +164,8 @@ async function load() {
   el("showSnippetCueEmphasis").checked = !!s.showSnippetCueEmphasis;
   el("showSkimmabilityStrip").checked = !!s.showSkimmabilityStrip;
   el("showReadingLoadEstimator").checked = !!s.showReadingLoadEstimator;
+  el("showResearchIntel").checked = s.showResearchIntel !== false;
+  el("showAdvancedFilters").checked = s.showAdvancedFilters !== false;
   el("groupVersions").checked = !!s.groupVersions;
   el("versionOrder").value = s.versionOrder || "journal-first";
   el("showNewSinceLastVisit").checked = s.showNewSinceLastVisit !== false;
@@ -113,6 +181,9 @@ async function load() {
   el("qualityCoreRanks").value = s.qualityCoreRanks || "";
   el("qualityCcfRanks").value = s.qualityCcfRanks || "";
   el("scimagoYear").value = String(new Date().getFullYear() - 1);
+
+  // Track initial state for unsaved changes detection.
+  markClean();
 
   // If VHB list is empty (e.g., existing users), auto-seed from built-in CSV.
   if (!el("qualityVhbRanks").value.trim()) {
@@ -186,8 +257,10 @@ async function updateOptionalPermStatus() {
 
 function setStatus(msg) {
   el("status").textContent = msg;
+  if (el("statusTop")) el("statusTop").textContent = msg;
   setTimeout(() => {
     if (el("status").textContent === msg) el("status").textContent = "";
+    if (el("statusTop") && el("statusTop").textContent === msg) el("statusTop").textContent = "";
   }, 2000);
 }
 
@@ -460,7 +533,7 @@ el("grantOptionalPermission")?.addEventListener("click", async () => {
   }
 });
 
-el("save").addEventListener("click", async () => {
+async function handleSave() {
   const qualityBadgeKinds = {};
   for (const [kind, id] of Object.entries(QUALITY_BADGE_IDS)) {
     const input = el(id);
@@ -473,6 +546,7 @@ el("save").addEventListener("click", async () => {
   }
   await setSettings({
     theme: el("theme").value || "auto",
+    badgePalette: el("badgePalette").value || "soft",
     viewMode: el("viewMode").value || "detailed",
     qualityBadgeKinds,
     authorStatsVisible,
@@ -498,6 +572,8 @@ el("save").addEventListener("click", async () => {
     showSnippetCueEmphasis: el("showSnippetCueEmphasis").checked,
     showSkimmabilityStrip: el("showSkimmabilityStrip").checked,
     showReadingLoadEstimator: el("showReadingLoadEstimator").checked,
+    showResearchIntel: el("showResearchIntel").checked,
+    showAdvancedFilters: el("showAdvancedFilters").checked,
     groupVersions: el("groupVersions").checked,
     versionOrder: el("versionOrder").value || "journal-first",
 
@@ -511,6 +587,71 @@ el("save").addEventListener("click", async () => {
     qualityCcfRanks: el("qualityCcfRanks").value
   });
   setStatus("Saved.");
+  markClean();
+}
+
+el("save").addEventListener("click", handleSave);
+el("saveTop")?.addEventListener("click", handleSave);
+
+let isDirty = false;
+let snapshot = "";
+
+function getCurrentSnapshot() {
+  const inputs = Array.from(document.querySelectorAll("input, select, textarea"));
+  const state = {};
+  for (const el of inputs) {
+    if (!el.id) continue;
+    if (el.type === "checkbox") state[el.id] = !!el.checked;
+    else state[el.id] = el.value;
+  }
+  return JSON.stringify(state);
+}
+
+function markDirty() {
+  if (isDirty) return;
+  isDirty = true;
+  const saveBtn = el("save");
+  if (saveBtn) saveBtn.classList.add("su-unsaved");
+  setStatus("Unsaved changes.");
+}
+
+function markClean() {
+  isDirty = false;
+  snapshot = getCurrentSnapshot();
+  const saveBtn = el("save");
+  if (saveBtn) saveBtn.classList.remove("su-unsaved");
+}
+
+function maybeDirty() {
+  const current = getCurrentSnapshot();
+  if (current !== snapshot) markDirty();
+  else markClean();
+}
+
+// Warn on close if there are unsaved changes
+window.addEventListener("beforeunload", (e) => {
+  if (!isDirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+// Track changes.
+// "input" fires on every keystroke — debounce the expensive getCurrentSnapshot()
+// serialization so typing in large text areas (ABDC ranks CSV, etc.) stays snappy.
+let _dirtyDebounceId = null;
+document.addEventListener("input", (e) => {
+  const target = e.target;
+  if (!target || !target.matches("input, select, textarea")) return;
+  clearTimeout(_dirtyDebounceId);
+  _dirtyDebounceId = setTimeout(() => { _dirtyDebounceId = null; maybeDirty(); }, 250);
+});
+// "change" fires once on commit (checkbox toggle, select pick) — run immediately.
+document.addEventListener("change", (e) => {
+  const target = e.target;
+  if (!target || !(target.matches("input, select, textarea"))) return;
+  clearTimeout(_dirtyDebounceId);
+  _dirtyDebounceId = null;
+  maybeDirty();
 });
 
 el("importScimagoFile").addEventListener("change", async (e) => {
@@ -707,4 +848,5 @@ for (const listId of ["hiddenPapersList", "hiddenVenuesList", "hiddenAuthorsList
   });
 }
 
+initBadgePaletteDropdown();
 load();

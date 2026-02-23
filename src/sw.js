@@ -7,6 +7,15 @@ function sanitizeFilenameSegment(s, maxLen) {
   return t || "Unknown";
 }
 
+function isFetchableUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 // Smart-rename PDF: when a PDF download matches a URL we have metadata for (from Scholar result), suggest [Author] - [Year] - [Title].pdf
 if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFilename) {
   chrome.downloads.onDeterminingFilename.addListener(function (downloadItem, suggest) {
@@ -76,7 +85,36 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       });
     return true;
   }
+  if (msg?.action === "fetchExternal" && typeof msg.url === "string") {
+    if (!isFetchableUrl(msg.url)) {
+      sendResponse({ ok: false, error: "unsupported_url" });
+      return true;
+    }
+    const timeout = Number(msg.timeoutMs) > 0 ? Number(msg.timeoutMs) : 10000;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeout);
+    const headers = msg.headers && typeof msg.headers === "object" ? msg.headers : {};
+    const responseType = msg.responseType === "text" ? "text" : "json";
+    fetch(msg.url, { credentials: "omit", headers, signal: ctrl.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return responseType === "text" ? r.text() : r.json();
+      })
+      .then((body) => {
+        clearTimeout(t);
+        sendResponse({ ok: true, body });
+      })
+      .catch((err) => {
+        clearTimeout(t);
+        sendResponse({ ok: false, error: String(err?.message || err) });
+      });
+    return true;
+  }
   if (msg?.action === "fetchPdfPageCount" && typeof msg.url === "string" && typeof msg.paperKey === "string") {
+    if (!isFetchableUrl(msg.url)) {
+      sendResponse({ ok: false, error: "unsupported_url" });
+      return true;
+    }
     const tailBytes = 8192;
     fetch(msg.url, {
       credentials: "omit",
@@ -106,6 +144,122 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       .catch(() => sendResponse({ ok: false }));
     return true;
   }
+  if (msg?.action === "graphMonitorCheck") {
+    const authorId = typeof msg.authorId === "string" ? msg.authorId : "";
+    checkGraphMonitors(authorId).then((res) => sendResponse({ ok: true, result: res })).catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
+    return true;
+  }
+});
+
+const GRAPH_ALERTS_KEY = "authorGraphAlerts";
+const GRAPH_MONITOR_ALARM = "graphMonitorCheck";
+const GRAPH_MONITOR_MINUTES = 24 * 60;
+
+function normalizeOpenAlexId(id) {
+  if (!id) return "";
+  const raw = String(id).trim();
+  const match = raw.match(/W\\d+/i);
+  if (match) return match[0].toUpperCase();
+  return raw;
+}
+
+function formatOpenAlexUrl(url) {
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("mailto")) u.searchParams.set("mailto", "scholar-extension@local");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+async function fetchOpenAlexWork(id) {
+  const norm = normalizeOpenAlexId(id);
+  if (!norm) return null;
+  const url = formatOpenAlexUrl(`https://api.openalex.org/works/${encodeURIComponent(norm)}`);
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+async function fetchOpenAlexWorks(ids) {
+  const cleaned = ids.map((id) => normalizeOpenAlexId(id)).filter(Boolean);
+  if (!cleaned.length) return [];
+  const chunk = cleaned.slice(0, 25);
+  const filter = chunk.map((id) => `https://openalex.org/${id}`).join("|");
+  const url = formatOpenAlexUrl(`https://api.openalex.org/works?filter=ids:${encodeURIComponent(filter)}&per_page=${chunk.length}`);
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data?.results) ? data.results : [];
+}
+
+async function checkGraphMonitors(targetAuthorId) {
+  const stored = await chrome.storage.local.get({ [GRAPH_ALERTS_KEY]: {} });
+  const map = stored[GRAPH_ALERTS_KEY] || {};
+  const keys = targetAuthorId ? [targetAuthorId] : Object.keys(map);
+  const nowIso = new Date().toISOString();
+  for (const authorId of keys) {
+    const entry = map[authorId];
+    if (!entry || !entry.enabled) continue;
+    const seedIds = Array.isArray(entry.seedIds) ? entry.seedIds.slice(0, 6) : [];
+    if (!seedIds.length) continue;
+    const lastCheck = entry.lastCheck || nowIso;
+    const lastDate = new Date(lastCheck);
+    const candidateIds = new Set();
+    for (const seed of seedIds) {
+      const work = await fetchOpenAlexWork(seed);
+      const related = Array.isArray(work?.related_works) ? work.related_works.slice(0, 8) : [];
+      related.forEach((r) => {
+        const id = normalizeOpenAlexId(r);
+        if (id) candidateIds.add(id);
+      });
+    }
+    const candidates = Array.from(candidateIds);
+    const newAlerts = [];
+    for (let i = 0; i < candidates.length; i += 25) {
+      const chunk = candidates.slice(i, i + 25);
+      const works = await fetchOpenAlexWorks(chunk);
+      for (const w of works) {
+        const pubDate = w?.publication_date ? new Date(w.publication_date) : null;
+        if (pubDate && pubDate > lastDate) {
+          const id = normalizeOpenAlexId(w?.id || "");
+          newAlerts.push({
+            id,
+            title: w?.display_name || w?.title || "Untitled",
+            year: w?.publication_year || "",
+            url: w?.id || "",
+            reason: "Related work",
+            foundAt: nowIso
+          });
+        }
+      }
+    }
+    const existing = Array.isArray(entry.alerts) ? entry.alerts : [];
+    const existingIds = new Set(existing.map((a) => a.id));
+    const merged = [...newAlerts.filter((a) => !existingIds.has(a.id)), ...existing].slice(0, 50);
+    entry.alerts = merged;
+    entry.unreadCount = Math.min(50, (Number(entry.unreadCount) || 0) + newAlerts.length);
+    entry.lastCheck = nowIso;
+    map[authorId] = entry;
+  }
+  await chrome.storage.local.set({ [GRAPH_ALERTS_KEY]: map });
+  return true;
+}
+
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    await chrome.alarms.create(GRAPH_MONITOR_ALARM, { periodInMinutes: GRAPH_MONITOR_MINUTES });
+  } catch {}
+});
+
+chrome.runtime.onStartup?.addListener?.(() => {
+  try { chrome.alarms.create(GRAPH_MONITOR_ALARM, { periodInMinutes: GRAPH_MONITOR_MINUTES }); } catch {}
+});
+
+chrome.alarms?.onAlarm?.addListener?.((alarm) => {
+  if (alarm?.name !== GRAPH_MONITOR_ALARM) return;
+  checkGraphMonitors().catch(() => {});
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
