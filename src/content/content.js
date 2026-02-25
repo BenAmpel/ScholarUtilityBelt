@@ -3671,8 +3671,8 @@
       root.setAttribute("data-su-quality", "true");
       const span = document.createElement("span");
       span.className = "su-badge su-retraction-neutral";
-      span.textContent = "Update/Retraction";
-      span.title = "Listed in Retraction Watch (local list)";
+      span.textContent = "Potential update/retraction";
+      span.title = "Potential update/retraction (from Retraction Watch list). Please verify via DOI or publisher.";
       root.appendChild(span);
       if (isAuthorProfile) {
         let inserted = false;
