@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-02-08T00:44:58Z",
+  "fetchedAt": "2026-02-23T14:13:41.765686Z",
   "sources": {
     "abdc2022": {
       "rows": 2680,
@@ -15,10 +15,6 @@
       "source": "ICORE2026",
       "url": "https://portal.core.edu.au/conf-ranks/"
     },
-    "vhb2024": {
-      "rows": 1094,
-      "source": "VHB JOURQUAL 2024 (user-provided PDFs)"
-    },
     "ft50": {
       "count": 50,
       "url": "https://www.ft.com/content/3405a512-5cbb-11e1-8f1f-00144feabdc0"
@@ -27,6 +23,32 @@
       "count": 24,
       "tls_verify": false,
       "url": "https://jsom.utdallas.edu/the-utd-top-100-business-school-research-rankings/list-of-journals"
+    },
+    "vhb2024": {
+      "pdfs": [
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/BA-FI/VHB_Rating_2024_Area_rating_BAFI.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/STEU/VHB_Rating_2024_Area_rating_STEU_e_f.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/STEU/VHB_Rating_2024_Area_rating_STEU_r_n.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/DLM/VHB_Rating_2024_Area_rating_DLM.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/HSM/VHB_Rating_2024_Area_rating_HSM.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/INT/VHB_Rating_2024_Area_rating_INT.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/LOG/VHB_Rating_2024_Area_rating_LOG.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/MARK/VHB_Rating_2024_Area_rating_MARK.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/NAMA/VHB_Rating_2024_Area_rating_NAMA.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/OEBWL/VHB_Rating_2024_Area_rating_OEBWL.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/OR/VHB_Rating_2024_Area_rating_OR.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/ORG/VHB_Rating_2024_Area_rating_ORG.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/PERS/VHB_Rating_2024_Area_rating_PERS.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/PROD/VHB_Rating_2024_Area_rating_PROD.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/RECH/VHB_Rating_2024_Area_rating_RECH.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/STRAT/VHB_Rating_2024_Area_rating_STRAT.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/TIE/VHB_Rating_2024_Area_rating_TIE.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/WI/VHB_Rating_2024_Area_rating_WI.pdf",
+        "https://www.vhbonline.org/fileadmin/vhb/Services/vhb-rating/WEW/VHB_Rating_2024_Area_rating_WEW.pdf"
+      ],
+      "rows": 977,
+      "source": "VHB JOURQUAL 2024 (official VHB area-rating PDFs)",
+      "url": "https://www.vhbonline.org/en/services/vhb-rating-2024/rating-structure"
     }
   }
 }

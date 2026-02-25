@@ -1500,6 +1500,57 @@
     return score;
   }
 
+  function decodeOpenAlexAbstract(index) {
+    if (!index || typeof index !== "object") return null;
+    let maxPos = -1;
+    for (const positions of Object.values(index)) {
+      if (!Array.isArray(positions)) continue;
+      for (const pos of positions) {
+        if (Number.isFinite(pos) && pos > maxPos) maxPos = pos;
+      }
+    }
+    if (maxPos < 0 || maxPos > 20000) return null;
+    const words = new Array(maxPos + 1);
+    for (const [word, positions] of Object.entries(index)) {
+      if (!Array.isArray(positions)) continue;
+      for (const pos of positions) {
+        if (Number.isFinite(pos) && pos >= 0 && pos <= maxPos) words[pos] = word;
+      }
+    }
+    const text = words.filter(Boolean).join(" ");
+    return text.length > 50 ? text : null;
+  }
+
+  async function fetchOpenAlexAbstractForTitle(title, year, authorName) {
+    const q = String(title || "").trim();
+    if (!q) return null;
+    const params = new URLSearchParams();
+    params.set("search", q);
+    params.set("per_page", "5");
+    params.set("select", "display_name,publication_year,authorships,abstract_inverted_index");
+    if (year) {
+      const y = Number(year);
+      if (Number.isFinite(y) && y > 1500) {
+        params.set("filter", `from_publication_date:${y}-01-01,to_publication_date:${y}-12-31`);
+      }
+    }
+    const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
+    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const results = Array.isArray(data?.results) ? data.results : [];
+    if (!results.length) return null;
+    let best = results[0];
+    let bestScore = scoreOpenAlexCandidate(best, q, year, authorName);
+    for (const cand of results.slice(1)) {
+      const score = scoreOpenAlexCandidate(cand, q, year, authorName);
+      if (score > bestScore) {
+        bestScore = score;
+        best = cand;
+      }
+    }
+    if (bestScore < 0.2) return null;
+    return decodeOpenAlexAbstract(best.abstract_inverted_index);
+  }
+
   async function fetchOpenAlexWorkById(id) {
     const norm = normalizeOpenAlexId(id);
     if (!norm) return null;
@@ -3542,34 +3593,216 @@
     return lines.join("\n");
   }
 
-  function ensureAbstractVisible(container) {
+  function ensureSearchAbstractToggle(container) {
     if (!container) return;
+    if (container.querySelector(".su-abstract-wrap")) return;
+
     const fma = container.querySelector(".gs_fma");
-    if (!fma) return;
-    const raw = (fma.textContent || "").trim();
-    if (raw.length < 40) return;
-    fma.classList.add("su-abstract-hidden");
-    let toggle = container.querySelector(".su-abstract-toggle");
-    let panel = container.querySelector(".su-abstract-panel");
-    if (!toggle) {
-      toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "su-abstract-toggle su-badge";
-      toggle.setAttribute("aria-expanded", "false");
-      toggle.textContent = "Abstract ▾";
-      toggle.addEventListener("click", () => {
-        const isOpen = container.classList.toggle("su-abstract-open");
-        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-        toggle.textContent = isOpen ? "Abstract ▴" : "Abstract ▾";
-      });
+    const raw = fma ? (fma.textContent || "").trim() : "";
+    const hasFmaText = raw.length >= 40;
+    if (hasFmaText) fma.classList.add("su-abstract-hidden");
+
+    const snippetEl = container.querySelector(".gs_rs");
+    const snippetText = snippetEl ? (snippetEl.textContent || "").trim() : "";
+    const hasSnippetText = snippetText.length >= 40;
+    if (!hasFmaText && hasSnippetText) snippetEl.classList.add("su-snippet-hidden");
+
+    const wrap = document.createElement("div");
+    wrap.className = "su-abstract-wrap";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "su-abstract-toggle su-badge";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "Abstract ▾";
+
+    const panel = document.createElement("div");
+    panel.className = "su-abstract-panel";
+    if (hasFmaText) panel.textContent = raw.replace(/^Abstract\s*/i, "");
+    else if (hasSnippetText) panel.textContent = snippetText;
+    else panel.textContent = "";
+    if (hasSnippetText && !hasFmaText) panel.dataset.suSnippetFallback = "1";
+
+    toggle.addEventListener("click", async () => {
+      const isOpen = container.classList.toggle("su-abstract-open");
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      toggle.textContent = isOpen ? "Abstract ▴" : "Abstract ▾";
+      if (!isOpen) return;
+      if (panel.textContent && panel.dataset.suFetchDone === "1") return;
+      const titleLink = container.querySelector(".gs_rt a");
+      let url = titleLink?.href || "";
+      if (url) url = resolveScholarRedirectUrl(url);
+      if (!url) {
+        panel.textContent = "Abstract unavailable.";
+        return;
+      }
+      toggle.textContent = "Abstract …";
+      try {
+        const res = await chrome.runtime.sendMessage({ action: "fetchSnippet", url });
+        const summary = res?.ok && res.html ? parseAbstractFromHtml(res.html) : null;
+        if (summary) {
+          if (
+            panel.dataset.suSnippetFallback === "1" &&
+            summary.length > (panel.textContent || "").length + 80
+          ) {
+            panel.textContent = summary;
+          } else if (!panel.textContent) {
+            panel.textContent = summary;
+          }
+        } else if (!panel.textContent) {
+          panel.textContent = "Abstract unavailable.";
+        }
+        panel.dataset.suFetchDone = "1";
+        if (panel.dataset.suSnippetFallback === "1") {
+          const paper = getCachedPaperFast(container) || extractPaperFromResult(container);
+          const title = paper?.title || "";
+          const year = Number(paper?.year) || null;
+          const authorName = pickFirstAuthorName(paper);
+          const oa = await fetchOpenAlexAbstractForTitle(title, year, authorName);
+          if (oa && oa.length > (panel.textContent || "").length + 80) {
+            panel.textContent = oa;
+          }
+        }
+      } catch {
+        if (!panel.textContent) panel.textContent = "Abstract unavailable.";
+      } finally {
+        toggle.textContent = "Abstract ▴";
+      }
+    });
+
+    wrap.appendChild(toggle);
+    wrap.appendChild(panel);
+
+    const quality = container.querySelector(".su-quality");
+    if (quality) {
+      quality.appendChild(wrap);
+      return;
     }
-    if (!panel) {
-      panel = document.createElement("div");
-      panel.className = "su-abstract-panel";
+    const snippet = container.querySelector(".gs_rs");
+    if (snippet) {
+      snippet.insertAdjacentElement("afterend", wrap);
+      return;
     }
-    panel.textContent = raw.replace(/^Abstract\s*/i, "");
-    if (!toggle.isConnected) fma.insertAdjacentElement("afterend", toggle);
-    if (!panel.isConnected) toggle.insertAdjacentElement("afterend", panel);
+    const meta = container.querySelector(".gs_a");
+    if (meta) {
+      meta.insertAdjacentElement("afterend", wrap);
+      return;
+    }
+    const gsRi = container.querySelector(".gs_ri");
+    if (gsRi) {
+      gsRi.appendChild(wrap);
+      return;
+    }
+    container.appendChild(wrap);
+  }
+
+  function resolveScholarRedirectUrl(url) {
+    try {
+      const u = new URL(url);
+      if (!isScholarHostname(u.hostname)) return url;
+      const realUrl = u.searchParams.get("url") || u.searchParams.get("q") || "";
+      if (!realUrl) return url;
+      try {
+        return decodeURIComponent(realUrl);
+      } catch {
+        return realUrl;
+      }
+    } catch {
+      return url;
+    }
+  }
+
+  function parseAbstractFromHtml(html) {
+    if (!html || typeof html !== "string") return null;
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const meta = (name, attr = "name") => doc.querySelector(`meta[${attr}="${name}"]`)?.getAttribute?.("content")?.trim();
+      const scholarAbstract =
+        doc.querySelector("#gsc_oci_descr") ||
+        doc.querySelector(".gsc_oci_abstract") ||
+        doc.querySelector("[data-attrid='description']") ||
+        doc.querySelector("[data-attrid='abstract']");
+      if (scholarAbstract) {
+        const t = (scholarAbstract.textContent || "").trim().replace(/\s+/g, " ");
+        if (t.length > 50) return t;
+      }
+      const citation = meta("citation_abstract");
+      if (citation) return citation;
+      const desc = meta("description");
+      if (desc) return desc;
+      const og = meta("og:description", "property");
+      if (og) return og;
+      const abstractEl = doc.querySelector("[id*='abstract' i], [class*='abstract' i]");
+      if (abstractEl) {
+        const t = (abstractEl.textContent || "").trim().replace(/\s+/g, " ");
+        if (t.length > 50) return t;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  function ensureAuthorAbstractToggle(container, state) {
+    if (!container) return;
+    const titleLink = container.querySelector(".gsc_a_at");
+    if (!titleLink) return;
+    let url = titleLink.getAttribute("href") || "";
+    if (!url) return;
+    if (url.startsWith("/")) {
+      try {
+        url = new URL(url, window.location.origin).toString();
+      } catch {}
+    }
+    url = resolveScholarRedirectUrl(url);
+    if (!url) return;
+    if (container.querySelector(".su-abstract-toggle")) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "su-abstract-wrap";
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "su-abstract-toggle su-badge";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "Abstract ▾";
+
+    const panel = document.createElement("div");
+    panel.className = "su-abstract-panel";
+    panel.textContent = "";
+
+    toggle.addEventListener("click", async () => {
+      const isOpen = container.classList.toggle("su-abstract-open");
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      toggle.textContent = isOpen ? "Abstract ▴" : "Abstract ▾";
+      if (!isOpen) return;
+      if (panel.textContent) return;
+      toggle.textContent = "Abstract …";
+      try {
+        const res = await chrome.runtime.sendMessage({ action: "fetchSnippet", url });
+        const summary = res?.ok && res.html ? parseAbstractFromHtml(res.html) : null;
+        panel.textContent = summary || "Abstract unavailable.";
+      } catch {
+        panel.textContent = "Abstract unavailable.";
+      } finally {
+        toggle.textContent = "Abstract ▴";
+      }
+    });
+
+    wrap.appendChild(toggle);
+    wrap.appendChild(panel);
+
+    const quality = container.querySelector(".su-quality");
+    if (quality) {
+      quality.appendChild(wrap);
+    } else {
+      const titleCell = container.querySelector(".gsc_a_t");
+      if (titleCell) {
+        titleCell.appendChild(wrap);
+      } else {
+        container.appendChild(wrap);
+      }
+    }
   }
 
   function renderQuality(container, paper, state, isAuthorProfile = false) {
@@ -4825,7 +5058,6 @@
       const fma = container.querySelector(".gs_fma");
       if (fma) container.classList.add("su-has-fma");
       else container.classList.remove("su-has-fma");
-      ensureAbstractVisible(container);
     }
 
     const isSaved = !!state.saved[paper.key];
@@ -4833,6 +5065,11 @@
     else container.classList.remove("su-saved");
 
     const isRetracted = renderQuality(container, paper, state, isAuthorProfile);
+    if (!isAuthorProfile) {
+      ensureSearchAbstractToggle(container);
+    } else {
+      ensureAuthorAbstractToggle(container, state);
+    }
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
@@ -12889,6 +13126,7 @@
     let stylesSynced = false;
     let lastValue = null;
     let rafId = null;
+    let isFocused = false;
 
     const syncStyles = () => {
       const cs = window.getComputedStyle(input);
@@ -12916,7 +13154,7 @@
 
     const update = () => {
       const value = input.value || "";
-      if (!value) {
+      if (!isFocused || !value) {
         overlay.style.display = "none";
         input.classList.remove("su-search-highlight-input");
         lastValue = value;
@@ -12947,10 +13185,12 @@
 
     input.addEventListener("input", scheduleUpdate);
     input.addEventListener("focus", () => {
+      isFocused = true;
       stylesSynced = false;
       scheduleUpdate();
     });
     input.addEventListener("blur", () => {
+      isFocused = false;
       overlay.style.display = "none";
       input.classList.remove("su-search-highlight-input");
       lastValue = null;
@@ -15011,28 +15251,6 @@
     const SNIPPET_MAX_LEN = 520;
     let snippetHoverTimer = null;
     let snippetHoverRow = null;
-
-    function parseAbstractFromHtml(html) {
-      if (!html || typeof html !== "string") return null;
-      try {
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const meta = (name, attr = "name") => doc.querySelector(`meta[${attr}="${name}"]`)?.getAttribute?.("content")?.trim();
-        const citation = meta("citation_abstract");
-        if (citation) return citation;
-        const desc = meta("description");
-        if (desc) return desc;
-        const og = meta("og:description", "property");
-        if (og) return og;
-        const abstractEl = doc.querySelector("[id*='abstract' i], [class*='abstract' i]");
-        if (abstractEl) {
-          const t = (abstractEl.textContent || "").trim().replace(/\s+/g, " ");
-          if (t.length > 50) return t;
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    }
 
     let snippetTooltipEl = document.getElementById("su-snippet-tooltip");
     if (!snippetTooltipEl) {

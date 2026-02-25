@@ -16,6 +16,16 @@ function isFetchableUrl(url) {
   }
 }
 
+function isScholarUrl(url) {
+  try {
+    const u = new URL(url);
+    const host = String(u.hostname || "").toLowerCase();
+    return host === "scholar.google.com" || host.startsWith("scholar.google.");
+  } catch {
+    return false;
+  }
+}
+
 // Smart-rename PDF: when a PDF download matches a URL we have metadata for (from Scholar result), suggest [Author] - [Year] - [Title].pdf
 if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFilename) {
   chrome.downloads.onDeterminingFilename.addListener(function (downloadItem, suggest) {
@@ -73,7 +83,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const timeout = 8000;
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeout);
-    fetch(msg.url, { credentials: "omit", signal: ctrl.signal })
+    const credentials = isScholarUrl(msg.url) ? "include" : "omit";
+    fetch(msg.url, { credentials, signal: ctrl.signal })
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((html) => {
         clearTimeout(t);
