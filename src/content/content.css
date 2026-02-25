@@ -858,6 +858,27 @@ body[data-su-theme="dark"] {
   visibility: visible;
 }
 
+/* Ensure Scholar's dynamic abstract blocks remain visible */
+.su-has-fma .gs_fma,
+.su-has-fma .gs_fma * {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+body[data-su-theme="dark"] .su-has-fma .gs_fma,
+body[data-su-theme="dark"] .su-has-fma .gs_fma * {
+  color: #e8eaed !important;
+}
+body[data-su-theme="light"] .su-has-fma .gs_fma,
+body[data-su-theme="light"] .su-has-fma .gs_fma * {
+  color: #202124 !important;
+}
+.su-abstract-fallback {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: inherit;
+}
+
 /* Retraction Watch: neutral badge (amber = concern), no editorializing */
 .su-retraction-badge-link {
   display: inline-block;

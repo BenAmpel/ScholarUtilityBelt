@@ -3542,6 +3542,31 @@
     return lines.join("\n");
   }
 
+  function ensureAbstractVisible(container) {
+    if (!container) return;
+    const fma = container.querySelector(".gs_fma");
+    if (!fma) return;
+    const raw = (fma.textContent || "").trim();
+    const visible = (fma.innerText || "").trim();
+    if (raw.length < 40) return;
+    if (visible.length >= 20 && !/^abstract$/i.test(visible)) return;
+    const toggle = container.querySelector(".gs_fma_sml_a");
+    if (toggle && /show more/i.test(toggle.textContent || "")) {
+      try { toggle.click(); } catch {}
+    }
+    setTimeout(() => {
+      const v2 = (fma.innerText || "").trim();
+      if (v2.length >= 20 && !/^abstract$/i.test(v2)) return;
+      let fallback = container.querySelector(".su-abstract-fallback");
+      if (!fallback) {
+        fallback = document.createElement("div");
+        fallback.className = "su-abstract-fallback";
+        fma.insertAdjacentElement("afterend", fallback);
+      }
+      fallback.textContent = raw.replace(/^Abstract\s*/i, "Abstract: ");
+    }, 50);
+  }
+
   function renderQuality(container, paper, state, isAuthorProfile = false) {
     const venueKey = paper?.venue || "";
     let retracted = false;
@@ -4791,6 +4816,12 @@
     if (newBadge) newBadge.remove();
 
     highlightKeywords(container, state, isAuthorProfile);
+    if (!isAuthorProfile) {
+      const fma = container.querySelector(".gs_fma");
+      if (fma) container.classList.add("su-has-fma");
+      else container.classList.remove("su-has-fma");
+      ensureAbstractVisible(container);
+    }
 
     const isSaved = !!state.saved[paper.key];
     if (isSaved && state.settings.highlightSaved) container.classList.add("su-saved");
