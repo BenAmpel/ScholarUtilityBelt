@@ -3547,24 +3547,29 @@
     const fma = container.querySelector(".gs_fma");
     if (!fma) return;
     const raw = (fma.textContent || "").trim();
-    const visible = (fma.innerText || "").trim();
     if (raw.length < 40) return;
-    if (visible.length >= 20 && !/^abstract$/i.test(visible)) return;
-    const toggle = container.querySelector(".gs_fma_sml_a");
-    if (toggle && /show more/i.test(toggle.textContent || "")) {
-      try { toggle.click(); } catch {}
+    fma.classList.add("su-abstract-hidden");
+    let toggle = container.querySelector(".su-abstract-toggle");
+    let panel = container.querySelector(".su-abstract-panel");
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "su-abstract-toggle su-badge";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.textContent = "Abstract ▾";
+      toggle.addEventListener("click", () => {
+        const isOpen = container.classList.toggle("su-abstract-open");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        toggle.textContent = isOpen ? "Abstract ▴" : "Abstract ▾";
+      });
     }
-    setTimeout(() => {
-      const v2 = (fma.innerText || "").trim();
-      if (v2.length >= 20 && !/^abstract$/i.test(v2)) return;
-      let fallback = container.querySelector(".su-abstract-fallback");
-      if (!fallback) {
-        fallback = document.createElement("div");
-        fallback.className = "su-abstract-fallback";
-        fma.insertAdjacentElement("afterend", fallback);
-      }
-      fallback.textContent = raw.replace(/^Abstract\s*/i, "Abstract: ");
-    }, 50);
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.className = "su-abstract-panel";
+    }
+    panel.textContent = raw.replace(/^Abstract\s*/i, "");
+    if (!toggle.isConnected) fma.insertAdjacentElement("afterend", toggle);
+    if (!panel.isConnected) toggle.insertAdjacentElement("afterend", panel);
   }
 
   function renderQuality(container, paper, state, isAuthorProfile = false) {
