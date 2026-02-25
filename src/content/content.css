@@ -883,6 +883,11 @@ body[data-su-theme="dark"] {
   cursor: pointer;
   position: relative;
 }
+.su-retraction-neutral {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
 .su-retraction-badge:not(.su-retraction-badge-link) {
   cursor: help;
   margin-right: 8px;
@@ -3393,6 +3398,7 @@ body[data-su-theme="dark"] .su-code-badge:hover {
 body[data-su-theme="dark"] .su-velocity { color: var(--su-chip-text); }
 body[data-su-theme="dark"] .su-velocity-accel-down { color: #f28b82; }
 body[data-su-theme="dark"] .su-retraction-badge { background: #3d3020; border-color: #5c4a28; color: #f0b429; }
+body[data-su-theme="dark"] .su-retraction-neutral { background: #2f333a; border-color: #4b5563; color: #e5e7eb; }
 body[data-su-theme="dark"] .su-semantic-expansion {
   background: #35363a;
   border-color: #5f6368;

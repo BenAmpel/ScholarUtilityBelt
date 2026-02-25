@@ -860,8 +860,64 @@
     return map;
   }
 
-  // ——— Retraction Watch via Crossref API (no Bloom filter; checks live) ———
+  // ——— Retraction Watch (local Bloom filter + optional Crossref check) ———
   const retractionCheckCache = new Map();
+
+  function fnv1a32(str) {
+    let h = 2166136261;
+    const prime = 16777619;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, prime);
+    }
+    return h >>> 0;
+  }
+
+  function bloomIndices(doi, m, k) {
+    const s = String(doi).toLowerCase().trim();
+    const h1 = fnv1a32(s);
+    const h2 = (fnv1a32(s + "\u0001salt") | 1) >>> 0;
+    const indices = [];
+    for (let i = 0; i < k; i++) {
+      indices.push(((h1 + i * h2) >>> 0) % m);
+    }
+    return indices;
+  }
+
+  function decodeBloomBits(bitsBase64) {
+    const bin = atob(String(bitsBase64 || ""));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  async function loadRetractionBloom() {
+    if (window.__suRetractionBloom) return window.__suRetractionBloom;
+    try {
+      const url = chrome.runtime.getURL("src/data/retraction_bloom.json");
+      const r = await fetch(url);
+      const data = r.ok ? await r.json() : null;
+      if (!data || !data.bits || !data.m || !data.k) throw new Error("Invalid bloom data");
+      const bits = decodeBloomBits(data.bits);
+      window.__suRetractionBloom = { m: data.m, k: data.k, bits, source: data.source, built: data.built, count: data.count };
+      return window.__suRetractionBloom;
+    } catch (_) {
+      window.__suRetractionBloom = null;
+      return null;
+    }
+  }
+
+  function bloomHasDoi(doi, bloom) {
+    if (!doi || !bloom) return false;
+    const { m, k, bits } = bloom;
+    if (!m || !k || !bits) return false;
+    for (const idx of bloomIndices(doi, m, k)) {
+      const byteIdx = idx >> 3;
+      const mask = 1 << (idx & 7);
+      if ((bits[byteIdx] & mask) === 0) return false;
+    }
+    return true;
+  }
 
   async function checkRetractionStatus(doi) {
     const key = String(doi).toLowerCase().trim();
@@ -3481,6 +3537,7 @@
 
   function renderQuality(container, paper, state, isAuthorProfile = false) {
     const venueKey = paper?.venue || "";
+    let retracted = false;
     // Find the info element - try multiple strategies for robustness
     let info = null;
     if (isAuthorProfile) {
@@ -3576,7 +3633,7 @@
           info = titleEl;
         } else {
           // Can't find insertion point, skip rendering
-          return;
+          return false;
         }
       }
     }
@@ -3584,6 +3641,11 @@
     // Remove ALL existing quality badges to prevent duplicates
     const existingBadges = getCachedElements(container, ".su-quality");
     existingBadges.forEach(badge => badge.remove());
+
+    if (state.settings.showRetractionWatch && state.retractionBloom) {
+      const doi = extractDOIFromResult(container);
+      if (doi && bloomHasDoi(doi, state.retractionBloom)) retracted = true;
+    }
     
     // Get quality badges (only if enabled), using a per-epoch cache to avoid
     // recomputing the same venue's badges for every result on the page.
@@ -3603,8 +3665,58 @@
     const citeUrl = !isAuthorProfile && paper ? getCiteUrlForResult(container, paper) : null;
     const showLookupButton = state.settings.showQualityBadges && !badges.length && citeUrl;
     
+    if (retracted) {
+      const root = document.createElement("div");
+      root.className = "su-quality";
+      root.setAttribute("data-su-quality", "true");
+      const span = document.createElement("span");
+      span.className = "su-badge su-retraction-neutral";
+      span.textContent = "Update/Retraction";
+      span.title = "Listed in Retraction Watch (local list)";
+      root.appendChild(span);
+      if (isAuthorProfile) {
+        let inserted = false;
+        try {
+          const titleCell = getCachedElement(container, ".gsc_a_t");
+          if (info) {
+            if (info.tagName === "TD") {
+              info.appendChild(root);
+              inserted = true;
+            } else if (titleCell && titleCell.contains(info)) {
+              info.insertAdjacentElement("afterend", root);
+              inserted = true;
+            }
+          }
+          if (!inserted && titleCell) {
+            titleCell.appendChild(root);
+            inserted = true;
+          }
+        } catch (_) {}
+        if (!inserted) container.appendChild(root);
+      } else {
+        if (info) {
+          try {
+            info.insertAdjacentElement("afterend", root);
+          } catch (e) {
+            const parent = info.parentElement || container;
+            if (parent) {
+              parent.appendChild(root);
+            }
+          }
+        } else {
+          const snippet = container.querySelector(".gs_rs");
+          if (snippet) {
+            snippet.insertAdjacentElement("afterend", root);
+          } else {
+            container.appendChild(root);
+          }
+        }
+      }
+      return true;
+    }
+
     if (!badges.length && !showLookupButton) {
-      return;
+      return false;
     }
     
     // Create new badge container
@@ -3805,6 +3917,7 @@
     if (allBadges.length > 1) {
       allBadges.forEach((b, idx) => { if (idx > 0) b.remove(); });
     }
+    return false;
   }
 
   function applyAuthorSort() {
@@ -4590,6 +4703,11 @@
     state.hiddenPapers = new Set(hiddenPapers);
     state.hiddenVenues = new Set(hiddenVenues);
     state.hiddenAuthors = new Set(hiddenAuthors);
+    if (settings.showRetractionWatch) {
+      state.retractionBloom = await loadRetractionBloom();
+    } else {
+      state.retractionBloom = null;
+    }
     applyTheme(settings.theme);
     applyBadgePalette(settings.badgePalette);
     const themeBtn = document.getElementById("su-theme-toggle");
@@ -4671,9 +4789,13 @@
     if (isSaved && state.settings.highlightSaved) container.classList.add("su-saved");
     else container.classList.remove("su-saved");
 
-    renderQuality(container, paper, state, isAuthorProfile);
+    const isRetracted = renderQuality(container, paper, state, isAuthorProfile);
     const isDetailed = state.settings.viewMode !== "minimal";
-    if (isDetailed) {
+    if (isRetracted) {
+      container
+        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge")
+        .forEach((el) => el.remove());
+    } else if (isDetailed) {
       renderExternalSignalBadges(container, state, isAuthorProfile, { inViewport });
       // renderSkimmabilityStrip(container, paper, state, isAuthorProfile);
       renderArtifactBadges(container, state);
@@ -4713,7 +4835,7 @@
       setTimeout(applyCitationAndAge, 500);
     }
 
-    if (!isAuthorProfile && state.settings.showRetractionWatch) {
+    if (!isRetracted && !isAuthorProfile && state.settings.showRetractionWatch && !state.retractionBloom) {
       const doi = extractDOIFromResult(container);
       if (doi && inViewport && container.dataset.suRetractChecked !== "1") {
         container.dataset.suRetractChecked = "1";
