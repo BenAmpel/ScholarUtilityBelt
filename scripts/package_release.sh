@@ -13,26 +13,36 @@ ZIP_PATH="${OUT_DIR}/ScholarUtilityBelt-${VERSION}.zip"
 
 mkdir -p "${OUT_DIR}"
 
+rm -f "${ZIP_PATH}"
+
+pushd "${ROOT_DIR}" >/dev/null
+
 zip -r "${ZIP_PATH}" \
-  "${ROOT_DIR}/manifest.json" \
-  "${ROOT_DIR}/icons" \
-  "${ROOT_DIR}/src" \
+  "manifest.json" \
+  "icons" \
+  "src" \
   -x \
+  ".DS_Store" \
   "*/.DS_Store" \
-  "*/.git/*" \
-  "*/node_modules/*" \
-  "*/output/*" \
-  "*/scripts/*" \
-  "*/test_*.mhtml" \
-  "*/Scientometric Measure Scholar/*" \
-  "*/README.md" \
-  "*/CITATION.cff" \
-  "*/norwegian_register.csv" \
-  "*/src/data/aft_ultraslim.edges.bin.gz" \
-  "*/src/data/aft_ultraslim.names.json.gz" \
-  "*/src/data/econ_genealogy.edges.bin.gz" \
-  "*/src/data/econ_genealogy.names.json.gz" \
-  "*/src/data/se_genealogy.edges.bin.gz" \
-  "*/src/data/se_genealogy.names.json.gz"
+  ".git/*" \
+  ".claude/*" \
+  "node_modules/*" \
+  "output/*" \
+  "scripts/*" \
+  "test_*.mhtml" \
+  "Scientometric Measure Scholar/*" \
+  "README.md" \
+  "CITATION.cff" \
+  ".gitignore" \
+  "norwegian_register.csv" \
+  "src/data/norwegian_register.csv" \
+  "src/data/aft_ultraslim.edges.bin.gz" \
+  "src/data/aft_ultraslim.names.json.gz" \
+  "src/data/econ_genealogy.edges.bin.gz" \
+  "src/data/econ_genealogy.names.json.gz" \
+  "src/data/se_genealogy.edges.bin.gz" \
+  "src/data/se_genealogy.names.json.gz"
+
+popd >/dev/null
 
 echo "Wrote ${ZIP_PATH}"
