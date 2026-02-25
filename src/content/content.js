@@ -3426,6 +3426,13 @@
 
       if (el.__suOrigHTMLRaw === undefined) el.__suOrigHTMLRaw = el.innerHTML;
       const isSnippet = el.classList && el.classList.contains("gs_rs");
+      const hasDynamicSnippet = isSnippet && !!el.querySelector("[class*='gs_fma']");
+      if (hasDynamicSnippet) {
+        if (el.__suOrigHTMLRaw === undefined) el.__suOrigHTMLRaw = el.innerHTML;
+        if (el.innerHTML !== el.__suOrigHTMLRaw) el.innerHTML = el.__suOrigHTMLRaw;
+        el.dataset.suHlKey = hlKey;
+        continue;
+      }
       const baseHtml = isSnippet && applyCue
         ? applySnippetCueEmphasis(el.textContent || "")
         : el.__suOrigHTMLRaw;
