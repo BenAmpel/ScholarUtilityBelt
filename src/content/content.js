@@ -3480,26 +3480,23 @@
   }
 
   function renderQuality(container, paper, state, isAuthorProfile = false) {
+    const venueKey = paper?.venue || "";
     // Find the info element - try multiple strategies for robustness
     let info = null;
     if (isAuthorProfile) {
-      // For author profile pages, try to find the venue div first
-      if (paper._venueDiv) {
+      const titleCell = getCachedElement(container, ".gsc_a_t");
+      // For author profile pages, try to find the venue div first (must belong to this row).
+      if (paper._venueDiv && container.contains(paper._venueDiv)) {
         info = paper._venueDiv;
-      } else {
+      } else if (titleCell) {
         // Fallback: look for the venue div in the title cell
-        const titleCell = getCachedElement(container, ".gsc_a_t");
-        if (titleCell) {
-          const grayDivs = getCachedElements(titleCell, "div.gs_gray");
-          if (grayDivs.length >= 2) {
-            info = grayDivs[1]; // Second div contains venue info
-          } else if (grayDivs.length === 1) {
-            info = grayDivs[0];
-          }
-        }
-        // Last resort: use the cited by cell
-        if (!info) {
-          info = getCachedElement(container, ".gsc_a_c");
+        const grayDivs = getCachedElements(titleCell, "div.gs_gray");
+        if (grayDivs.length >= 2) {
+          info = grayDivs[1]; // Second div contains venue info
+        } else if (grayDivs.length === 1) {
+          info = grayDivs[0];
+        } else {
+          info = titleCell; // Last resort: append inside title cell
         }
       }
     } else {
@@ -3592,7 +3589,6 @@
     // recomputing the same venue's badges for every result on the page.
     let rawBadges = [];
     if (state.settings.showQualityBadges) {
-      const venueKey = paper.venue || "";
       if (state.venueQualityCache && state.venueQualityCache.has(venueKey)) {
         rawBadges = state.venueQualityCache.get(venueKey);
       } else {
@@ -3645,7 +3641,7 @@
       switch (b.kind) {
         case "quartile": return /^Q[1-4]$/i.test(t);
         case "abdc": return /^ABDC\s+(A\*?|[BCD])$/i.test(t);
-        case "vhb": return /^VHB\s+(A\\+?|[BCDE])$/i.test(t);
+        case "vhb": return /^VHB\s+(A\+?|[BCDE])$/i.test(t);
         case "jcr": return /^(JIF|JCI|AIS|5Y)\s+Q[1-4]$/i.test(t);
         case "if": return /^IF\s+\d+(?:\.\d+)?$/i.test(t);
         case "core": return /^CORE\s+(A\*?|[ABC])$/i.test(t);
@@ -3754,14 +3750,27 @@
     // For author profile pages, insert after the .gsc_a_c element
     // For search results, insert after .gs_a or fallback element
     if (isAuthorProfile) {
-      // On author profile pages, .gsc_a_c is a table cell (<td>)
-      // Insert the badges div after the cell (as a sibling, not inside the cell)
-      if (info) {
-        info.insertAdjacentElement("afterend", root);
-      } else {
-        // Fallback: append to container
-        container.appendChild(root);
-      }
+      // Author profile rows are table-based. Prefer inserting within the title cell
+      // to avoid invalid table structures.
+      let inserted = false;
+      try {
+        const titleCell = getCachedElement(container, ".gsc_a_t");
+        if (info) {
+          if (info.tagName === "TD") {
+            info.appendChild(root);
+            inserted = true;
+          } else if (titleCell && titleCell.contains(info)) {
+            // Insert right after the venue/author line when possible.
+            info.insertAdjacentElement("afterend", root);
+            inserted = true;
+          }
+        }
+        if (!inserted && titleCell) {
+          titleCell.appendChild(root);
+          inserted = true;
+        }
+      } catch (_) {}
+      if (!inserted) container.appendChild(root);
     } else {
       // For search results, insert after the info element
       if (info) {
@@ -7992,7 +8001,7 @@
     const authorVariations = window.suState?.authorVariations || (authorName ? generateAuthorNameVariations(authorName) : []);
     ensureGenealogyMatchAsync(authorName, authorVariations);
     const genealogyMatch = getGenealogyMatchState();
-    const genealogyKey = genealogyMatch?.datasetKey || "aft";
+    const genealogyKey = genealogyMatch?.datasetKey || "merged";
     const genealogyLabel = GENEALOGY_SOURCES[genealogyKey]?.label || "Academic lineage";
     const genealogyHtml = genealogyMatch?.status === "ready" && genealogyMatch?.matchIndex != null
       ? `<div class="su-right-card su-lineage-card">
@@ -11597,20 +11606,10 @@
   const GENEALOGY_MAX_PER_LEVEL = 10;
   const GENEALOGY_DESC_LIMIT = 10000;
   const GENEALOGY_SOURCES = {
-    aft: {
-      label: "Academic Family Tree",
-      namesUrl: "src/data/aft_ultraslim.names.json.gz",
-      edgesUrl: "src/data/aft_ultraslim.edges.bin.gz"
-    },
-    se: {
-      label: "Software Engineering",
-      namesUrl: "src/data/se_genealogy.names.json.gz",
-      edgesUrl: "src/data/se_genealogy.edges.bin.gz"
-    },
-    econ: {
-      label: "Economics",
-      namesUrl: "src/data/econ_genealogy.names.json.gz",
-      edgesUrl: "src/data/econ_genealogy.edges.bin.gz"
+    merged: {
+      label: "Unified genealogy (AFT + SE + Econ + OAI)",
+      namesUrl: "src/data/genealogy_merged.names.json.gz",
+      edgesUrl: "src/data/genealogy_merged.edges.bin.gz"
     }
   };
 
