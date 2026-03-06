@@ -32,6 +32,7 @@
     setExternalSignalCache,
     setSettings,
     setCitationSnapshot,
+    setTrajectoryVenueExpectedCache,
     setPageVisitCacheEntry,
     setReadingLoadPageCount,
     uniqTags,
@@ -1051,11 +1052,24 @@
     dblp_sparql: 7 * 24 * 60 * 60 * 1000,
     s2: 30 * 24 * 60 * 60 * 1000
   };
+  const OPENALEX_CACHE_VERSION = 2;
+  const OPENALEX_RATE_LIMIT_TTL_MS = 15 * 60 * 1000;
   let externalSignalCache = null;
   let externalSignalSaveTimer = null;
   const externalSignalInFlight = new Map();
   const externalSignalQueue = [];
   let externalSignalActive = 0;
+  const openalexWorkInFlight = new Map();
+  let openalexRateLimitUntil = 0;
+
+  function markOpenAlexRateLimited() {
+    openalexRateLimitUntil = Date.now() + OPENALEX_RATE_LIMIT_TTL_MS;
+  }
+
+  function isOpenAlexRateLimited() {
+    return Date.now() < openalexRateLimitUntil;
+  }
+  let trajectoryVenueExpectedSaveTimer = null;
   const EXTERNAL_SIGNAL_CONCURRENCY = 2;
   const EXTERNAL_SIGNAL_DELAY_MS = 500;
   const EXTERNAL_SIGNAL_PROVIDER_LIMITS = {
@@ -1100,6 +1114,9 @@
         const res = await fetch(url, { credentials: "omit", headers: headers || {}, signal: ctrl.signal });
         clearTimeout(t);
         if (res.ok) return await res.json();
+        if (res.status === 429 && String(url).includes("api.openalex.org")) {
+          markOpenAlexRateLimited();
+        }
       }
     } catch (_) {}
     try {
@@ -1111,6 +1128,9 @@
         headers: headers || {}
       });
       if (res?.ok) return res.body;
+      if (res?.error && String(url).includes("api.openalex.org") && String(res.error).includes("429")) {
+        markOpenAlexRateLimited();
+      }
     } catch (_) {}
     return null;
   }
@@ -1288,7 +1308,7 @@
     else if (doi) query = `DOI:${doi}`;
     if (!query) return null;
     const url = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(query)}&format=json`;
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     if (!data) return null;
     const result = data?.resultList?.result?.[0] || null;
     if (!result) return null;
@@ -1377,7 +1397,7 @@
     const authorUri = `https://dblp.org/pid/${pid}`;
     const query = `SELECT (COUNT(?pub) AS ?count) WHERE { ?pub <https://dblp.org/rdf/schema#authoredBy> <${authorUri}> . }`;
     const url = `https://sparql.dblp.org/sparql?query=${encodeURIComponent(query)}&format=application/sparql-results+json`;
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const countRaw = data?.results?.bindings?.[0]?.count?.value;
     const count = Number(countRaw) || 0;
     return { pid, count };
@@ -1448,6 +1468,7 @@
     return {
       id: work.id || "",
       openalexId: normalizeOpenAlexId(work.id || ""),
+      openalexCacheVersion: OPENALEX_CACHE_VERSION,
       title: work.display_name || work.title || "",
       year: work.publication_year || null,
       doi: normalizeDoi(work.doi || ""),
@@ -1456,7 +1477,9 @@
       referencedWorks: Array.isArray(work.referenced_works) ? work.referenced_works : [],
       relatedWorks: Array.isArray(work.related_works) ? work.related_works : [],
       citedByApi: work.cited_by_api_url || "",
-      hostVenue: work?.host_venue?.display_name || "",
+      hostVenue: work?.host_venue?.display_name || work?.primary_location?.source?.display_name || "",
+      hostVenueId: work?.host_venue?.id || work?.primary_location?.source?.id || work?.locations?.[0]?.source?.id || "",
+      countsByYear: Array.isArray(work?.counts_by_year) ? work.counts_by_year : [],
       authors,
       grants,
       concepts
@@ -1535,7 +1558,7 @@
       }
     }
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
     if (!results.length) return null;
     let best = results[0];
@@ -1556,9 +1579,9 @@
     if (!norm) return null;
     const cacheKey = makeExternalKey("openalex", norm);
     const cached = getExternalSignalEntry(cacheKey, "openalex");
-    if (cached) return cached.data || null;
+    if (cached?.data && cached.data.openalexCacheVersion >= OPENALEX_CACHE_VERSION) return cached.data || null;
     const url = formatOpenAlexUrl(`https://api.openalex.org/works/${encodeURIComponent(norm)}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const compact = compactOpenAlexWork(data);
     if (compact) setExternalSignalEntry(cacheKey, "openalex", compact);
     return compact || null;
@@ -1569,9 +1592,9 @@
     if (!norm) return null;
     const cacheKey = makeExternalKey("openalex", norm);
     const cached = getExternalSignalEntry(cacheKey, "openalex");
-    if (cached) return cached.data || null;
+    if (cached?.data && cached.data.openalexCacheVersion >= OPENALEX_CACHE_VERSION) return cached.data || null;
     const url = formatOpenAlexUrl(`https://api.openalex.org/works/https://doi.org/${encodeURIComponent(norm)}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const compact = compactOpenAlexWork(data);
     if (compact) setExternalSignalEntry(cacheKey, "openalex", compact);
     return compact || null;
@@ -1581,7 +1604,7 @@
     const norm = normalizeOpenAlexAuthorId(id);
     if (!norm) return null;
     const url = formatOpenAlexUrl(`https://api.openalex.org/authors/${encodeURIComponent(norm)}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     return data || null;
   }
 
@@ -1595,7 +1618,7 @@
     params.set("per_page", "1");
     params.set("select", "publication_year");
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const year = Number(data?.results?.[0]?.publication_year) || null;
     return year;
   }
@@ -1613,7 +1636,7 @@
       }
     }
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
     if (!results.length) return null;
     let best = results[0];
@@ -1631,15 +1654,40 @@
 
   async function fetchOpenAlexWorkForPaper(paper, authorName) {
     if (!paper) return null;
-    const doiCandidate = paper.doi || paper.url || "";
-    const doi = normalizeDoi(doiCandidate);
-    if (looksLikeDoi(doi)) {
-      const byDoi = await fetchOpenAlexWorkByDoi(doi);
-      if (byDoi) return byDoi;
+    const cacheKey = buildOpenAlexKeyForPaper(paper);
+    if (cacheKey) {
+      const cached = getExternalSignalEntry(cacheKey, "openalex");
+      if (cached?.data && cached.data.openalexCacheVersion >= OPENALEX_CACHE_VERSION) return cached.data || null;
+      const inflight = openalexWorkInFlight.get(cacheKey);
+      if (inflight) return await inflight;
     }
-    const title = paper.title || "";
-    const year = Number(paper.year) || null;
-    return await searchOpenAlexWorkByTitle(title, year, authorName);
+    const fetchPromise = (async () => {
+      const doiCandidate = paper.doi || paper.url || "";
+      const doi = normalizeDoi(doiCandidate);
+      if (looksLikeDoi(doi)) {
+        const byDoi = await fetchOpenAlexWorkByDoi(doi);
+        if (byDoi) return byDoi;
+      }
+      const title = paper.title || "";
+      const year = Number(paper.year) || null;
+      const found = await searchOpenAlexWorkByTitle(title, year, authorName);
+      if (!found) return null;
+      let work = found;
+      if (!work.countsByYear?.length || !work.hostVenueId) {
+        const byId = await fetchOpenAlexWorkById(work.openalexId || work.id);
+        if (byId) work = byId;
+      }
+      return work;
+    })();
+    if (cacheKey) openalexWorkInFlight.set(cacheKey, fetchPromise);
+    let work = null;
+    try {
+      work = await fetchPromise;
+    } finally {
+      if (cacheKey) openalexWorkInFlight.delete(cacheKey);
+    }
+    if (cacheKey) setExternalSignalEntry(cacheKey, "openalex", work);
+    return work;
   }
 
   function pickFirstAuthorName(paper) {
@@ -1684,7 +1732,7 @@
     params.set("search", q);
     params.set("per_page", "5");
     const url = formatOpenAlexUrl(`https://api.openalex.org/concepts?${params.toString()}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
     if (!results.length) return null;
     let best = results[0];
@@ -2817,6 +2865,108 @@
     return isNaN(num) ? null : num;
   }
 
+  function median(list) {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    const sorted = list.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  function formatPct(value, { decimals = 0, fallback = "—" } = {}) {
+    if (!Number.isFinite(value)) return fallback;
+    const sign = value > 0 ? "+" : value < 0 ? "" : "";
+    const rounded = decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString();
+    return `${sign}${rounded}%`;
+  }
+
+  function computeCitationAcceleration(history) {
+    if (!Array.isArray(history) || history.length < 3) return null;
+    const sorted = history.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+    const [a, b, c] = sorted.slice(-3);
+    const t1 = new Date(a.date).getTime();
+    const t2 = new Date(b.date).getTime();
+    const t3 = new Date(c.date).getTime();
+    const m1 = (t2 - t1) / (1000 * 60 * 60 * 24 * 30.4375);
+    const m2 = (t3 - t2) / (1000 * 60 * 60 * 24 * 30.4375);
+    if (m1 <= 0 || m2 <= 0) return null;
+    const rate1 = (Number(b.citations) - Number(a.citations)) / m1;
+    const rate2 = (Number(c.citations) - Number(b.citations)) / m2;
+    if (!Number.isFinite(rate1) || !Number.isFinite(rate2)) return null;
+    const acceleration = rate2 - rate1;
+    if (Math.abs(acceleration) < 0.05) return null;
+    return { acceleration, rate1, rate2, months1: m1, months2: m2 };
+  }
+
+  function updateCitationSnapshotInMemory(state, clusterId, citations, date) {
+    if (!state?.citationSnapshots || !clusterId) return;
+    const entry = state.citationSnapshots[clusterId] && typeof state.citationSnapshots[clusterId] === "object"
+      ? state.citationSnapshots[clusterId]
+      : {};
+    let history = Array.isArray(entry.history) ? entry.history.slice() : [];
+    if (entry.citations != null && entry.date && history.length === 0) {
+      history.push({ citations: Number(entry.citations), date: entry.date });
+    }
+    const next = { citations: Number(citations), date: date || new Date().toISOString() };
+    const last = history[history.length - 1];
+    if (!last || last.citations !== next.citations || last.date !== next.date) {
+      history.push(next);
+    }
+    history = history.slice(-3);
+    state.citationSnapshots[clusterId] = { citations: next.citations, date: next.date, history };
+  }
+
+  function computeHalfLifeYearFromYears(years) {
+    if (!Array.isArray(years) || years.length === 0) return null;
+    const sorted = years.map((y) => Number(y)).filter((y) => Number.isFinite(y)).sort((a, b) => a - b);
+    if (!sorted.length) return null;
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+
+  function computeHalfLifeFromCountsByYear(counts) {
+    if (!Array.isArray(counts) || counts.length === 0) return null;
+    const rows = counts
+      .map((c) => ({ year: Number(c?.year), count: Number(c?.cited_by_count) || 0 }))
+      .filter((c) => Number.isFinite(c.year) && c.count >= 0)
+      .sort((a, b) => a.year - b.year);
+    if (!rows.length) return null;
+    const total = rows.reduce((s, r) => s + r.count, 0);
+    if (total <= 0) return null;
+    let cumulative = 0;
+    for (const r of rows) {
+      cumulative += r.count;
+      if (cumulative >= total / 2) return r.year;
+    }
+    return rows[rows.length - 1].year;
+  }
+
+  function computeAccelerationFromCountsByYear(counts, windowSize = 3) {
+    if (!Array.isArray(counts) || counts.length < 2) return null;
+    const rows = counts
+      .map((c) => ({ year: Number(c?.year), count: Number(c?.cited_by_count) || 0 }))
+      .filter((c) => Number.isFinite(c.year))
+      .sort((a, b) => a.year - b.year);
+    if (rows.length < 2) return null;
+    const window = rows.slice(-Math.max(2, windowSize));
+    const n = window.length;
+    const xMean = (n - 1) / 2;
+    let yMean = 0;
+    for (const r of window) yMean += r.count;
+    yMean /= n;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = i - xMean;
+      const dy = window[i].count - yMean;
+      num += dx * dy;
+      den += dx * dx;
+    }
+    if (den === 0) return null;
+    const slope = num / den;
+    if (!Number.isFinite(slope)) return null;
+    return { acceleration: slope, years: n };
+  }
+
   /**
    * Velocity = citations per year since publication.
    * Returns formatted string (e.g. "25/yr") or null if not computable.
@@ -2870,6 +3020,151 @@
     if (ratio >= 1.1) return { arrow: "↑", label: "accelerating", level: "up" };
     if (ratio <= 0.9) return { arrow: "↓", label: "decelerating", level: "down" };
     return null;
+  }
+
+  function buildLocalCohortExpected(results, isAuthorProfile, minCohort = 5) {
+    const buckets = new Map();
+    for (const r of results) {
+      if (r.style.display === "none") continue;
+      let paper;
+      try {
+        paper = isAuthorProfile ? getCachedAuthorPaper(r) : getCachedPaperFast(r);
+      } catch {
+        continue;
+      }
+      const year = paper?.year != null ? parseYear(String(paper.year)) : null;
+      if (!year || year < 1500) continue;
+      const citationsRaw = isAuthorProfile ? getCachedAuthorCitationCount(r) : getCitationCountFromResult(r);
+      const citations = citationsRaw == null ? 0 : citationsRaw;
+      if (citations < 0) continue;
+      const venueRaw = (paper?.venue || extractVenueFromAuthorsVenue(paper?.authorsVenue) || "").trim();
+      if (!venueRaw) continue;
+      const venueNorm = normalizeVenueName(venueRaw);
+      if (!venueNorm) continue;
+      const key = `${venueNorm}|${year}`;
+      const entry = buckets.get(key) || { citations: [], citesPerYear: [] };
+      entry.citations.push(Number(citations) || 0);
+      const vel = computeVelocityValue(citations, year);
+      if (vel?.velocity != null) entry.citesPerYear.push(vel.velocity);
+      buckets.set(key, entry);
+    }
+    const expected = new Map();
+    for (const [key, entry] of buckets.entries()) {
+      const n = entry.citations.length;
+      if (!n) continue;
+      const medianCites = median(entry.citations);
+      const medianPerYear = entry.citesPerYear.length ? median(entry.citesPerYear) : null;
+      expected.set(key, {
+        medianCites,
+        medianCitesPerYear: medianPerYear,
+        n,
+        minCohort
+      });
+    }
+    return expected;
+  }
+
+  function getLocalExpectedForPaper(paper, state) {
+    if (!paper || !state?.localCohortExpected) return null;
+    const year = paper?.year != null ? parseYear(String(paper.year)) : null;
+    if (!year || year < 1500) return null;
+    const venueRaw = (paper.venue || extractVenueFromAuthorsVenue(paper.authorsVenue) || "").trim();
+    if (!venueRaw) return null;
+    const venueNorm = normalizeVenueName(venueRaw);
+    if (!venueNorm) return null;
+    const key = `${venueNorm}|${year}`;
+    const entry = state.localCohortExpected.get(key);
+    if (!entry) return null;
+    const minCohort = Number(state.settings?.emergingScoreMinCohort) || entry.minCohort || 5;
+    if (entry.n < minCohort) return { ...entry, insufficient: true };
+    return entry;
+  }
+
+  const TRAJECTORY_EXPECTED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+  const TRAJECTORY_EXPECTED_SAMPLE_LIMIT = 200;
+
+  function getTrajectoryExpectedEntry(state, key) {
+    if (!state?.trajectoryVenueExpected || !key) return null;
+    const entry = state.trajectoryVenueExpected[key];
+    if (!entry || typeof entry !== "object") return null;
+    if (entry.updatedAt && Date.now() - entry.updatedAt > TRAJECTORY_EXPECTED_TTL_MS) return null;
+    return entry;
+  }
+
+  function scheduleTrajectoryExpectedSave(state) {
+    if (trajectoryVenueExpectedSaveTimer) return;
+    trajectoryVenueExpectedSaveTimer = setTimeout(() => {
+      trajectoryVenueExpectedSaveTimer = null;
+      if (state?.trajectoryVenueExpected) {
+        setTrajectoryVenueExpectedCache(state.trajectoryVenueExpected).catch(() => {});
+      }
+    }, 1500);
+  }
+
+  function setTrajectoryExpectedEntry(state, key, entry) {
+    if (!state || !key) return;
+    if (!state.trajectoryVenueExpected || typeof state.trajectoryVenueExpected !== "object") {
+      state.trajectoryVenueExpected = {};
+    }
+    state.trajectoryVenueExpected[key] = entry;
+    scheduleTrajectoryExpectedSave(state);
+  }
+
+  async function fetchOpenAlexVenueYearStats(venueId, year, state) {
+    if (!venueId || !year) return null;
+    const key = `${venueId}|${year}`;
+    const cached = getTrajectoryExpectedEntry(state, key);
+    if (cached) return cached;
+    const params = new URLSearchParams();
+    params.set("filter", `host_venue.id:${venueId},from_publication_date:${year}-01-01,to_publication_date:${year}-12-31`);
+    params.set("per_page", String(TRAJECTORY_EXPECTED_SAMPLE_LIMIT));
+    params.set("select", "cited_by_count,publication_year");
+    const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
+    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const results = Array.isArray(data?.results) ? data.results : [];
+    if (!results.length) return null;
+    const citations = results.map((r) => Number(r?.cited_by_count) || 0);
+    const yearNow = new Date().getFullYear();
+    const citesPerYear = results.map((r) => {
+      const y = Number(r?.publication_year) || year;
+      const yearsAgo = Math.max(1, yearNow - y);
+      return (Number(r?.cited_by_count) || 0) / yearsAgo;
+    });
+    const entry = {
+      medianCites: median(citations),
+      medianCitesPerYear: median(citesPerYear),
+      n: results.length,
+      source: "openalex",
+      updatedAt: Date.now()
+    };
+    setTrajectoryExpectedEntry(state, key, entry);
+    return entry;
+  }
+
+  async function fetchOpenAlexCitingYears(openalexWork) {
+    const citedByApi = openalexWork?.citedByApi;
+    if (!citedByApi) return null;
+    const cacheKey = makeExternalKey("openalex_cites", citedByApi);
+    const cached = getExternalSignalEntry(cacheKey, "openalex_cites");
+    if (cached && cached.data) return cached.data;
+    let url = formatOpenAlexUrl(`${citedByApi}?per_page=200&select=publication_year`);
+    const years = [];
+    let pages = 0;
+    let cursor = "*";
+    while (url && pages < 5) {
+      const res = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
+      const results = Array.isArray(res?.results) ? res.results : [];
+      for (const r of results) {
+        if (r?.publication_year) years.push(Number(r.publication_year));
+      }
+      pages += 1;
+      cursor = res?.meta?.next_cursor;
+      if (!cursor || cursor === "null") break;
+      url = formatOpenAlexUrl(`${citedByApi}?per_page=200&select=publication_year&cursor=${encodeURIComponent(cursor)}`);
+    }
+    const payload = { years, sampled: years.length };
+    setExternalSignalEntry(cacheKey, "openalex_cites", payload);
+    return payload;
   }
 
   /**
@@ -3508,6 +3803,28 @@
     return b;
   }
 
+  function bindIdeaLineageButton(btn, container) {
+    if (!btn || btn.dataset.suLineageBound === "1") return;
+    btn.dataset.suLineageBound = "1";
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const p = getCachedAuthorPaper(container) || extractPaperFromResult(container);
+      if (!p) return;
+      const prevText = btn.textContent;
+      btn.textContent = "Loading…";
+      btn.disabled = true;
+      try {
+        await openIdeaLineageOverlay(container, p);
+      } catch (_) {
+        // Ignore; overlay handles errors.
+      } finally {
+        btn.textContent = prevText;
+        btn.disabled = false;
+      }
+    });
+  }
+
   function createBadgeTooltip(badge) {
     if (!badge.metadata) return null;
     
@@ -3595,7 +3912,15 @@
 
   function ensureSearchAbstractToggle(container) {
     if (!container) return;
-    if (container.querySelector(".su-abstract-wrap")) return;
+    const existingToggles = container.querySelectorAll(".su-abstract-toggle");
+    const existingPanels = container.querySelectorAll(".su-abstract-panel");
+    const existingWraps = container.querySelectorAll(".su-abstract-wrap");
+    if (existingToggles.length === 1 && existingPanels.length === 1 && existingWraps.length === 1) return;
+    if (existingToggles.length || existingPanels.length || existingWraps.length) {
+      existingToggles.forEach((el) => el.remove());
+      existingPanels.forEach((el) => el.remove());
+      existingWraps.forEach((el) => el.remove());
+    }
 
     const fma = container.querySelector(".gs_fma");
     const raw = fma ? (fma.textContent || "").trim() : "";
@@ -3608,7 +3933,7 @@
     if (!hasFmaText && hasSnippetText) snippetEl.classList.add("su-snippet-hidden");
 
     const wrap = document.createElement("div");
-    wrap.className = "su-abstract-wrap";
+    wrap.className = "su-abstract-wrap su-abstract-wrap-panel";
 
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -3670,7 +3995,12 @@
       }
     });
 
-    wrap.appendChild(toggle);
+    const grid = getOrCreateSearchActionGrid(container);
+    if (grid) {
+      grid.appendChild(toggle);
+    } else {
+      wrap.appendChild(toggle);
+    }
     wrap.appendChild(panel);
 
     const quality = container.querySelector(".su-quality");
@@ -3694,6 +4024,21 @@
       return;
     }
     container.appendChild(wrap);
+  }
+
+  function getOrCreateSearchActionGrid(container) {
+    if (!container) return null;
+    const fl = container.querySelector(".gs_fl");
+    if (!fl) return null;
+    let grid = fl.querySelector(".su-search-action-grid");
+    if (!grid) {
+      grid = document.createElement("div");
+      grid.className = "su-search-action-grid";
+      fl.appendChild(grid);
+    }
+    const bar = container.querySelector(".su-btnbar");
+    if (bar && bar.parentElement !== grid) grid.appendChild(bar);
+    return grid;
   }
 
   function resolveScholarRedirectUrl(url) {
@@ -3756,10 +4101,15 @@
     }
     url = resolveScholarRedirectUrl(url);
     if (!url) return;
-    if (container.querySelector(".su-abstract-toggle")) return;
+    const existingToggle = container.querySelector(".su-abstract-toggle");
+    const existingPanel = container.querySelector(".su-abstract-panel");
+    if (existingToggle && existingPanel) return;
+    if (existingToggle) existingToggle.remove();
+    if (existingPanel) existingPanel.remove();
+    container.querySelectorAll(".su-abstract-wrap").forEach((el) => el.remove());
 
     const wrap = document.createElement("div");
-    wrap.className = "su-abstract-wrap";
+    wrap.className = "su-abstract-wrap su-abstract-wrap-panel";
 
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -3770,26 +4120,45 @@
     const panel = document.createElement("div");
     panel.className = "su-abstract-panel";
     panel.textContent = "";
+    if (container.dataset.suAbstractText) {
+      panel.textContent = container.dataset.suAbstractText;
+    }
 
     toggle.addEventListener("click", async () => {
       const isOpen = container.classList.toggle("su-abstract-open");
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
       toggle.textContent = isOpen ? "Abstract ▴" : "Abstract ▾";
       if (!isOpen) return;
-      if (panel.textContent) return;
+      const cachedText = container.dataset.suAbstractText;
+      if (cachedText) {
+        const livePanel = container.querySelector(".su-abstract-panel");
+        if (livePanel) livePanel.textContent = cachedText;
+        toggle.textContent = "Abstract ▴";
+        return;
+      }
       toggle.textContent = "Abstract …";
+      const updatePanel = (text) => {
+        container.dataset.suAbstractText = text;
+        const livePanel = container.querySelector(".su-abstract-panel");
+        if (livePanel) livePanel.textContent = text;
+      };
       try {
         const res = await chrome.runtime.sendMessage({ action: "fetchSnippet", url });
         const summary = res?.ok && res.html ? parseAbstractFromHtml(res.html) : null;
-        panel.textContent = summary || "Abstract unavailable.";
+        updatePanel(summary || "Abstract unavailable.");
       } catch {
-        panel.textContent = "Abstract unavailable.";
+        updatePanel("Abstract unavailable.");
       } finally {
         toggle.textContent = "Abstract ▴";
       }
     });
 
-    wrap.appendChild(toggle);
+    const grid = getOrCreateAuthorBadgeGrid(container);
+    if (grid) {
+      grid.appendChild(toggle);
+    } else {
+      wrap.appendChild(toggle);
+    }
     wrap.appendChild(panel);
 
     const quality = container.querySelector(".su-quality");
@@ -4239,17 +4608,18 @@
       ? getAccelerationArrow(velocityData.velocity, velocityData.yearsAgo, window.suState?.velocityBucketAvg)
       : null;
 
+    const authorGrid = isAuthorProfile ? getOrCreateAuthorBadgeGrid(container) : null;
     const anchor = isAuthorProfile
-      ? getCachedElement(container, ".gsc_a_c")
+      ? (authorGrid || getCachedElement(container, ".gsc_a_c"))
       : getCachedElement(container, ".gs_fl");
     if (!anchor) return;
 
-    const existing = getCachedElement(container, ".su-velocity");
-    if (existing) {
-      const prev = existing.previousSibling;
+    const existing = getCachedElements(container, ".su-velocity");
+    existing.forEach((el) => {
+      const prev = el.previousSibling;
       if (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent === " ") prev.remove();
-      existing.remove();
-    }
+      el.remove();
+    });
     const vel = document.createElement("span");
     vel.className = "su-velocity";
     vel.textContent = velocityStr;
@@ -4263,13 +4633,22 @@
     if (accel) {
       vel.title += ` Citation acceleration: ${accel.label} (cites/yr vs similar-age papers).`;
     }
+    if (isAuthorProfile && authorGrid) {
+      authorGrid.appendChild(vel);
+      return;
+    }
+    const actionGrid = !isAuthorProfile ? getOrCreateSearchActionGrid(container) : null;
+    if (actionGrid) {
+      actionGrid.appendChild(vel);
+      return;
+    }
     const bar = getCachedElement(container, ".su-btnbar");
     if (bar) {
       bar.appendChild(vel);
-    } else {
-      anchor.appendChild(document.createTextNode(" "));
-      anchor.appendChild(vel);
+      return;
     }
+    anchor.appendChild(document.createTextNode(" "));
+    anchor.appendChild(vel);
   }
 
   function renderCitationSpikeBadge(container, paper, state, citations, isAuthorProfile) {
@@ -4279,7 +4658,7 @@
     const snap = state.citationSnapshots?.[paper.clusterId];
     if (!snap || typeof snap.citations !== "number" || snap.citations < 1) {
       setCitationSnapshot(paper.clusterId, citations).catch(() => {});
-      if (state.citationSnapshots) state.citationSnapshots[paper.clusterId] = { citations, date: new Date().toISOString() };
+      updateCitationSnapshotInMemory(state, paper.clusterId, citations);
       return;
     }
     const prevDate = new Date(snap.date);
@@ -4287,13 +4666,13 @@
     const monthsAgo = (now.getFullYear() - prevDate.getFullYear()) * 12 + (now.getMonth() - prevDate.getMonth());
     if (monthsAgo < Math.max(1, months - 1)) {
       setCitationSnapshot(paper.clusterId, citations).catch(() => {});
-      if (state.citationSnapshots) state.citationSnapshots[paper.clusterId] = { citations, date: new Date().toISOString() };
+      updateCitationSnapshotInMemory(state, paper.clusterId, citations);
       return;
     }
     const minCurrent = snap.citations * (1 + thresholdPct / 100);
     if (citations <= minCurrent) {
       setCitationSnapshot(paper.clusterId, citations).catch(() => {});
-      if (state.citationSnapshots) state.citationSnapshots[paper.clusterId] = { citations, date: new Date().toISOString() };
+      updateCitationSnapshotInMemory(state, paper.clusterId, citations);
       return;
     }
     const pct = Math.round(((citations - snap.citations) / snap.citations) * 100);
@@ -4309,7 +4688,296 @@
       anchor.appendChild(badge);
     }
     setCitationSnapshot(paper.clusterId, citations).catch(() => {});
-    if (state.citationSnapshots) state.citationSnapshots[paper.clusterId] = { citations, date: new Date().toISOString() };
+    updateCitationSnapshotInMemory(state, paper.clusterId, citations);
+  }
+
+  function getOrCreateQualityContainer(container, isAuthorProfile) {
+    let root = container.querySelector(".su-quality");
+    if (root) return root;
+    root = document.createElement("div");
+    root.className = "su-quality";
+    root.setAttribute("data-su-quality", "true");
+    if (isAuthorProfile) {
+      const titleCell = container.querySelector(".gsc_a_t");
+      if (titleCell) {
+        titleCell.appendChild(root);
+      } else {
+        container.appendChild(root);
+      }
+      return root;
+    }
+    const info = container.querySelector(".gs_a") || container.querySelector(".gs_ri .gs_a");
+    if (info) {
+      try {
+        info.insertAdjacentElement("afterend", root);
+        return root;
+      } catch {}
+    }
+    const snippet = container.querySelector(".gs_rs");
+    if (snippet) {
+      snippet.insertAdjacentElement("afterend", root);
+      return root;
+    }
+    container.appendChild(root);
+    return root;
+  }
+
+  function getOrCreateAuthorBadgeGrid(container) {
+    if (!container) return null;
+    let grid = container.querySelector(".su-author-badge-grid");
+    if (grid) {
+      sizeAuthorBadgeGrid(grid, container);
+      moveAuthorAbstractToggleToGrid(container, grid);
+      return grid;
+    }
+    const yearCell = container.querySelector(".gsc_a_y");
+    if (!yearCell) return null;
+    grid = document.createElement("div");
+    grid.className = "su-author-badge-grid";
+    yearCell.appendChild(grid);
+    sizeAuthorBadgeGrid(grid, container);
+    moveAuthorAbstractToggleToGrid(container, grid);
+    return grid;
+  }
+
+  function sizeAuthorBadgeGrid(grid, row) {
+    if (!grid || !row) return;
+    const citedCell = row.querySelector(".gsc_a_c");
+    const yearCell = row.querySelector(".gsc_a_y");
+    if (!citedCell || !yearCell) return;
+    const citedWidth = Math.round(citedCell.getBoundingClientRect().width);
+    const yearWidth = Math.round(yearCell.getBoundingClientRect().width);
+    const total = citedWidth + yearWidth;
+    if (!Number.isFinite(total) || total <= 0) return;
+    grid.style.width = `${total}px`;
+    grid.style.maxWidth = `${total}px`;
+    grid.style.marginLeft = `-${citedWidth}px`;
+  }
+
+  function moveAuthorAbstractToggleToGrid(container, grid) {
+    if (!container || !grid) return;
+    const toggle = container.querySelector(".su-abstract-toggle");
+    if (!toggle) return;
+    if (grid.contains(toggle)) return;
+    grid.appendChild(toggle);
+  }
+
+  function buildEmergingTooltipHtml(data) {
+    const citations = Number.isFinite(data.citations) ? data.citations : null;
+    const expectedCites = Number.isFinite(data.expectedCites) ? Math.round(data.expectedCites) : null;
+    const expectedPerYear = Number.isFinite(data.expectedCitesPerYear)
+      ? data.expectedCitesPerYear
+      : (Number.isFinite(data.expectedCites) && Number.isFinite(data.yearsAgo) && data.yearsAgo > 0
+        ? data.expectedCites / data.yearsAgo
+        : null);
+    const relative = Number.isFinite(data.relativePct) ? formatPct(data.relativePct) : "—";
+    const momentum = Number.isFinite(data.momentumPct) ? formatPct(data.momentumPct) : "—";
+    const accel = data.accelText || "Not enough history";
+    const halfLife = data.halfLifeYear != null ? String(data.halfLifeYear) : "—";
+    const source = data.sourceLabel || "—";
+    const approx = data.lowConfidence ? "~" : "";
+    const expectedLine = expectedCites != null ? `<strong>${approx}${expectedCites}</strong>` : "—";
+    const expectedPerYearLine = expectedPerYear != null ? `<strong>${approx}${expectedPerYear.toFixed(1)}</strong>` : "—";
+    const parts = [
+      "<strong>Emerging Paper Score</strong>",
+      `Citations: <strong>${citations != null ? citations : "—"}</strong>`,
+      `Expected (venue/year): ${expectedLine}`,
+      `Expected cites/yr: ${expectedPerYearLine}`,
+      `Relative performance: <strong>${relative}</strong>`,
+      `Early momentum: <strong>${momentum}</strong>`,
+      `Citation acceleration: <strong>${accel}</strong>`,
+      `Citation half-life: <strong>${halfLife}</strong>`,
+      `<span class="su-emerging-source">${source}</span>`
+    ];
+    if (data.openalexRateLimited) {
+      parts.push('<span class="su-emerging-warn">OpenAlex rate limited; try again later.</span>');
+    }
+    return parts.join("<br>");
+  }
+
+  function renderEmergingScore(container, paper, state, isAuthorProfile) {
+    if (!state?.settings?.showEmergingScore) return;
+    container.querySelectorAll(".su-emerging-badge").forEach((el) => el.remove());
+    if (!paper) return;
+    const citationsRaw = isAuthorProfile ? getCachedAuthorCitationCount(container) : getCitationCountFromResult(container);
+    const citations = citationsRaw == null ? 0 : citationsRaw;
+    if (citations < 0) return;
+    const year = paper?.year != null ? parseYear(String(paper.year)) : null;
+    if (!year || year < 1500) return;
+    const vel = computeVelocityValue(citations, year);
+    if (!vel) return;
+
+    const dataSource = state.settings.emergingScoreDataSource || "hybrid";
+    const allowLocal = dataSource !== "openalex";
+    const allowOpenAlexExpected = dataSource !== "local";
+    const allowOpenAlexHalfLife = true;
+    const allowOpenAlex = allowOpenAlexExpected || allowOpenAlexHalfLife;
+    const localEntry = allowLocal ? getLocalExpectedForPaper(paper, state) : null;
+    const localInsufficient = !!localEntry?.insufficient;
+    const expectedCites = localEntry?.medianCites ?? null;
+    let expectedPerYear = localEntry?.medianCitesPerYear ?? null;
+    if (expectedPerYear == null && Number.isFinite(expectedCites) && expectedCites > 0) {
+      expectedPerYear = expectedCites / vel.yearsAgo;
+    }
+    const relativePct = expectedCites != null && expectedCites > 0 ? ((citations - expectedCites) / expectedCites) * 100 : null;
+    const momentumPct = expectedPerYear != null && expectedPerYear > 0 ? ((vel.velocity / expectedPerYear) - 1) * 100 : null;
+    const displayPct = Number.isFinite(relativePct) ? relativePct : (Number.isFinite(momentumPct) ? momentumPct : null);
+    const badgeText = displayPct != null
+      ? `Emerging ${localInsufficient ? "~" : ""}${formatPct(displayPct)}`
+      : "Emerging —";
+
+    const root = isAuthorProfile
+      ? getOrCreateAuthorBadgeGrid(container)
+      : getOrCreateSearchActionGrid(container) || getOrCreateQualityContainer(container, isAuthorProfile);
+    if (!root) return;
+    const badge = document.createElement("span");
+    badge.className = "su-badge su-emerging-badge";
+    badge.style.position = "relative";
+    badge.style.cursor = "help";
+    const label = document.createElement("span");
+    label.className = "su-emerging-label";
+    label.textContent = badgeText;
+    badge.appendChild(label);
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "su-badge-tooltip";
+    badge.appendChild(tooltip);
+
+    const accel = computeCitationAcceleration(state.citationSnapshots?.[paper.clusterId]?.history);
+    const accelText = accel
+      ? `${accel.acceleration >= 0 ? "+" : ""}${accel.acceleration.toFixed(2)} cites/yr²`
+      : "Not enough history";
+    const sourceLabel = localEntry
+      ? `Local cohort (n=${localEntry.n}${localInsufficient ? ", low confidence" : ""})`
+      : allowOpenAlexExpected
+        ? "OpenAlex (pending)"
+        : "OpenAlex disabled";
+
+    tooltip.innerHTML = buildEmergingTooltipHtml({
+      citations,
+      expectedCites,
+      expectedCitesPerYear: expectedPerYear,
+      relativePct,
+      momentumPct,
+      accelText,
+      halfLifeYear: null,
+      sourceLabel,
+      yearsAgo: vel.yearsAgo,
+      lowConfidence: localInsufficient,
+      openalexRateLimited: isOpenAlexRateLimited()
+    });
+
+    const positionTooltip = () => {
+      tooltip.style.display = "block";
+      tooltip.style.position = "fixed";
+      tooltip.style.transform = "none";
+      tooltip.style.left = "0px";
+      tooltip.style.top = "0px";
+      tooltip.style.bottom = "auto";
+      tooltip.style.marginTop = "0";
+      tooltip.style.marginBottom = "0";
+      const rect = badge.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const pad = 8;
+      let top = rect.top - tooltipRect.height - 8;
+      let placeBelow = false;
+      if (top < pad) {
+        top = rect.bottom + 8;
+        placeBelow = true;
+      }
+      let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+      if (left < pad) left = pad;
+      if (left + tooltipRect.width > window.innerWidth - pad) {
+        left = window.innerWidth - pad - tooltipRect.width;
+      }
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      if (placeBelow) tooltip.classList.add("su-tooltip-below");
+      else tooltip.classList.remove("su-tooltip-below");
+    };
+
+    const updateTooltipFromOpenAlex = async () => {
+      if (badge.dataset.suEmergingLoaded === "1" || !allowOpenAlex) return;
+      badge.dataset.suEmergingLoaded = "1";
+      const authorName = pickFirstAuthorName(paper);
+      const oaWork = await fetchOpenAlexWorkForPaper(paper, authorName);
+      let openalexExpected = null;
+      if (allowOpenAlexExpected && oaWork?.hostVenueId && year) {
+        openalexExpected = await fetchOpenAlexVenueYearStats(oaWork.hostVenueId, year, state);
+      }
+      const useOpenAlexExpected = allowOpenAlexExpected && (!localEntry || localInsufficient) && openalexExpected;
+      let nextExpectedCites = expectedCites;
+      let nextExpectedPerYear = expectedPerYear;
+      let nextSource = sourceLabel;
+      if (useOpenAlexExpected) {
+        nextExpectedCites = openalexExpected.medianCites;
+        nextExpectedPerYear = openalexExpected.medianCitesPerYear;
+        nextSource = `OpenAlex (n=${openalexExpected.n})`;
+      } else if (allowOpenAlexExpected && openalexExpected && dataSource === "openalex") {
+        nextExpectedCites = openalexExpected.medianCites;
+        nextExpectedPerYear = openalexExpected.medianCitesPerYear;
+        nextSource = `OpenAlex (n=${openalexExpected.n})`;
+      }
+      if (nextExpectedPerYear == null && Number.isFinite(nextExpectedCites) && nextExpectedCites > 0) {
+        nextExpectedPerYear = nextExpectedCites / vel.yearsAgo;
+      }
+      const nextRelativePct = nextExpectedCites != null && nextExpectedCites > 0 ? ((citations - nextExpectedCites) / nextExpectedCites) * 100 : null;
+      const nextMomentumPct = nextExpectedPerYear != null && nextExpectedPerYear > 0 ? ((vel.velocity / nextExpectedPerYear) - 1) * 100 : null;
+      const nextDisplayPct = Number.isFinite(nextRelativePct) ? nextRelativePct : (Number.isFinite(nextMomentumPct) ? nextMomentumPct : null);
+      if (nextDisplayPct != null && (!Number.isFinite(displayPct) || dataSource === "openalex" || useOpenAlexExpected)) {
+        const prefix = (!openalexExpected && localInsufficient) ? "Emerging ~" : "Emerging ";
+        label.textContent = `${prefix}${formatPct(nextDisplayPct)}`;
+      } else if (displayPct != null && localInsufficient) {
+        label.textContent = `Emerging ~${formatPct(displayPct)}`;
+      }
+      let halfLifeYear = null;
+      if (allowOpenAlexHalfLife && oaWork?.countsByYear?.length) {
+        halfLifeYear = computeHalfLifeFromCountsByYear(oaWork.countsByYear);
+      } else if (allowOpenAlexHalfLife && oaWork?.citedByApi) {
+        const citing = await fetchOpenAlexCitingYears(oaWork);
+        if (citing?.years) halfLifeYear = computeHalfLifeYearFromYears(citing.years);
+      }
+      let nextAccelText = accelText;
+      if (nextAccelText === "Not enough history" && oaWork?.countsByYear?.length) {
+        const accel = computeAccelerationFromCountsByYear(oaWork.countsByYear, 3);
+        if (accel && Number.isFinite(accel.acceleration)) {
+          nextAccelText = `${accel.acceleration >= 0 ? "+" : ""}${accel.acceleration.toFixed(2)} cites/yr² (OA ${accel.years}y)`;
+        }
+      }
+      tooltip.innerHTML = buildEmergingTooltipHtml({
+        citations,
+        expectedCites: nextExpectedCites,
+        expectedCitesPerYear: nextExpectedPerYear,
+        relativePct: nextRelativePct,
+        momentumPct: nextMomentumPct,
+        accelText: nextAccelText,
+        halfLifeYear,
+        sourceLabel: nextSource,
+        yearsAgo: vel.yearsAgo,
+        lowConfidence: !openalexExpected && localInsufficient,
+        openalexRateLimited: isOpenAlexRateLimited() && !openalexExpected && !halfLifeYear
+      });
+    };
+
+    badge.addEventListener("mouseenter", () => {
+      positionTooltip();
+      updateTooltipFromOpenAlex().catch(() => {});
+    });
+    badge.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+
+    root.appendChild(badge);
+
+    if (paper?.clusterId && state.citationSnapshots) {
+      const snap = state.citationSnapshots[paper.clusterId];
+      const lastDate = snap?.date ? new Date(snap.date) : null;
+      const daysSince = lastDate ? (Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24) : null;
+      if (!lastDate || daysSince > 30) {
+        setCitationSnapshot(paper.clusterId, citations).catch(() => {});
+        updateCitationSnapshotInMemory(state, paper.clusterId, citations);
+      }
+    }
   }
 
   /**
@@ -4878,6 +5546,7 @@
       qualityQuartilesMeta: null,
       qualityJcrIndex: {},
       qualityJcrMeta: null,
+      trajectoryVenueExpected: {},
       hiddenPapers: [],
       hiddenVenues: [],
       hiddenAuthors: []
@@ -4896,6 +5565,10 @@
     const hiddenPapers = Array.isArray(storageData.hiddenPapers) ? storageData.hiddenPapers : [];
     const hiddenVenues = Array.isArray(storageData.hiddenVenues) ? storageData.hiddenVenues : [];
     const hiddenAuthors = Array.isArray(storageData.hiddenAuthors) ? storageData.hiddenAuthors : [];
+    const trajectoryVenueExpected =
+      storageData.trajectoryVenueExpected && typeof storageData.trajectoryVenueExpected === "object"
+        ? storageData.trajectoryVenueExpected
+        : {};
 
     state.saved = saved;
     state.settings = settings;
@@ -4903,6 +5576,7 @@
     state.quartilesMeta = quartiles.meta;
     state.jcrIndex = jcr.index;
     state.jcrMeta = jcr.meta;
+    state.trajectoryVenueExpected = trajectoryVenueExpected;
 
     // Hash uses only in-memory data so cache can be checked before any file I/O.
     // VHB/Impact index sizes are omitted; settings changes (rank filters) act as
@@ -5064,6 +5738,9 @@
     if (isSaved && state.settings.highlightSaved) container.classList.add("su-saved");
     else container.classList.remove("su-saved");
 
+    if (!isAuthorProfile) {
+      getOrCreateSearchActionGrid(container);
+    }
     const isRetracted = renderQuality(container, paper, state, isAuthorProfile);
     if (!isAuthorProfile) {
       ensureSearchAbstractToggle(container);
@@ -5073,16 +5750,19 @@
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
-        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge")
+        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge")
         .forEach((el) => el.remove());
-    } else if (isDetailed) {
-      renderExternalSignalBadges(container, state, isAuthorProfile, { inViewport });
-      // renderSkimmabilityStrip(container, paper, state, isAuthorProfile);
-      renderArtifactBadges(container, state);
-      renderCodeLinkBadge(container, paper);
-      renderVelocity(container, paper, isAuthorProfile);
     } else {
-      container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external").forEach((el) => el.remove());
+      renderEmergingScore(container, paper, state, isAuthorProfile);
+      if (isDetailed) {
+        renderExternalSignalBadges(container, state, isAuthorProfile, { inViewport });
+        // renderSkimmabilityStrip(container, paper, state, isAuthorProfile);
+        renderArtifactBadges(container, state);
+        renderCodeLinkBadge(container, paper);
+        renderVelocity(container, paper, isAuthorProfile);
+      } else {
+        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external").forEach((el) => el.remove());
+      }
     }
     renderAuthorshipHeatmap(container, state, isAuthorProfile);
 
@@ -5191,6 +5871,9 @@
       }
       bar.append(removeBtn);
       fl.appendChild(bar);
+      if (!isAuthorProfile) {
+        getOrCreateSearchActionGrid(container);
+      }
 
       bar.addEventListener("click", async (e) => {
         const btn = e.target?.closest?.("button[data-act]");
@@ -5278,6 +5961,21 @@
             btn.textContent = "Failed";
           }
           setTimeout(() => { btn.textContent = prevText; }, 1500);
+        } else if (act === "idealineage") {
+          const p = isAuthorProfile
+            ? getCachedAuthorPaper(container)
+            : extractPaperFromResult(container);
+          const prevText = btn.textContent;
+          btn.textContent = "Loading…";
+          btn.disabled = true;
+          try {
+            await openIdeaLineageOverlay(container, p);
+          } catch (_) {
+            // Ignore; overlay handles errors.
+          } finally {
+            btn.textContent = prevText;
+            btn.disabled = false;
+          }
         } else if (act === "hide") {
           const p = isAuthorProfile
             ? getCachedAuthorPaper(container)
@@ -5315,6 +6013,21 @@
           });
         }
       });
+    }
+
+    const authorGrid = isAuthorProfile ? getOrCreateAuthorBadgeGrid(container) : null;
+    let lineageBtn = container.querySelector(".su-lineage-badge, .su-btn[data-act='idealineage']");
+    if (!lineageBtn) {
+      lineageBtn = createButton("Lineage", { act: "idealineage" });
+      lineageBtn.title = "Show idea lineage for this paper (citations + semantic similarity).";
+    }
+    if (isAuthorProfile && authorGrid) {
+      lineageBtn.classList.add("su-lineage-badge");
+      if (lineageBtn.parentElement !== authorGrid) authorGrid.appendChild(lineageBtn);
+      bindIdeaLineageButton(lineageBtn, container);
+    } else if (bar && lineageBtn.parentElement !== bar) {
+      lineageBtn.classList.remove("su-lineage-badge");
+      bar.appendChild(lineageBtn);
     }
 
     const removeBtn = bar.querySelector('button[data-act="remove"]');
@@ -12510,6 +13223,1011 @@
     if (overlay) overlay.classList.remove("su-visible");
   }
 
+  const IDEA_LINEAGE_CACHE_MS = 6 * 60 * 60 * 1000;
+  const IDEA_LINEAGE_MAX_NODES = 200;
+  const IDEA_LINEAGE_MAX_EDGES = 400;
+  const IDEA_LINEAGE_REF_LIMIT = 30;
+  const IDEA_LINEAGE_CITE_LIMIT = 30;
+  const IDEA_LINEAGE_CITE_DEPTH_LIMIT = 8;
+  const IDEA_LINEAGE_BRANCH_THRESHOLD = 0.8;
+  const S2_RATE_LIMIT_TTL_MS = 2 * 60 * 1000;
+  const S2_RESOLVE_CACHE_MS = 24 * 60 * 60 * 1000;
+  const S2_RESOLVE_NEGATIVE_CACHE_MS = 60 * 60 * 1000;
+
+  let s2RateLimitUntil = 0;
+  let s2RateLimitReason = "";
+
+  const IDEA_LINEAGE_STOPWORDS = new Set([
+    "the", "and", "for", "with", "from", "that", "this", "these", "those", "into", "onto", "over", "under",
+    "of", "in", "on", "to", "a", "an", "by", "is", "are", "was", "were", "be", "as", "at", "it", "its",
+    "we", "our", "their", "they", "you", "your", "can", "may", "might", "will", "would", "should", "could",
+    "using", "use", "used", "via", "based", "approach", "method", "methods", "study", "studies", "results"
+  ]);
+
+  function getIdeaLineageCache() {
+    if (!window.suIdeaLineageCache) window.suIdeaLineageCache = new Map();
+    return window.suIdeaLineageCache;
+  }
+
+  function getS2ResolveCache() {
+    if (!window.suS2ResolveCache) window.suS2ResolveCache = new Map();
+    return window.suS2ResolveCache;
+  }
+
+  function isS2RateLimited() {
+    return Date.now() < s2RateLimitUntil;
+  }
+
+  function markS2RateLimited(reason) {
+    s2RateLimitReason = String(reason || "").trim();
+    s2RateLimitUntil = Date.now() + S2_RATE_LIMIT_TTL_MS;
+  }
+
+  function getS2RateLimitMessage() {
+    if (!isS2RateLimited()) return "";
+    const remaining = Math.max(0, s2RateLimitUntil - Date.now());
+    const seconds = Math.max(1, Math.round(remaining / 1000));
+    return `Semantic Scholar rate limited (retry in ~${seconds}s).`;
+  }
+
+  async function fetchSemanticScholarJson(url, { timeoutMs = 15000 } = {}) {
+    if (!url) return null;
+    if (isS2RateLimited()) return { __s2_error: "rate_limit" };
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      const res = await fetch(url, { credentials: "omit", signal: ctrl.signal });
+      clearTimeout(t);
+      if (res.status === 429) {
+        const body = await res.text().catch(() => "");
+        markS2RateLimited(body || "429");
+        return { __s2_error: "rate_limit" };
+      }
+      if (res.ok) return await res.json();
+      const text = await res.text().catch(() => "");
+      if (/too many requests/i.test(text)) {
+        markS2RateLimited(text);
+        return { __s2_error: "rate_limit" };
+      }
+    } catch (_) {}
+
+    try {
+      const raw = await fetchExternalText(url, { timeoutMs, preferBackground: true });
+      if (!raw) return null;
+      if (/too many requests/i.test(raw)) {
+        markS2RateLimited(raw);
+        return { __s2_error: "rate_limit" };
+      }
+      return JSON.parse(raw);
+    } catch (_) {}
+    return null;
+  }
+
+  function normalizeS2AuthorList(authors) {
+    if (!Array.isArray(authors)) return [];
+    return authors.map((a) => String(a?.name || a || "").trim()).filter(Boolean);
+  }
+
+  function normalizeS2Paper(raw) {
+    if (!raw || !raw.paperId) return null;
+    return {
+      paperId: String(raw.paperId),
+      title: String(raw.title || "").trim(),
+      year: Number(raw.year) || null,
+      authors: normalizeS2AuthorList(raw.authors),
+      abstract: String(raw.abstract || "").trim()
+    };
+  }
+
+  function pickBestS2SearchResult(results, paper) {
+    const targetTitle = normalizeText(paper?.title || "");
+    const targetYear = Number(paper?.year) || null;
+    const authorPart = String(paper?.authorsVenue || "").split(/\s*[-–—]\s*/)[0] || "";
+    const authorTokens = authorPart
+      .split(/\s*,\s*|\s+and\s+/i)
+      .map((a) => a.trim().split(/\s+/).slice(-1)[0])
+      .filter(Boolean)
+      .map((a) => a.toLowerCase());
+    let best = null;
+    let bestScore = -1;
+    for (const r of results) {
+      const title = normalizeText(r?.title || "");
+      const titleScore = targetTitle && title ? jaroWinkler(targetTitle, title) : 0;
+      const yearScore = targetYear && r?.year
+        ? (Number(r.year) === targetYear ? 1 : (Math.abs(Number(r.year) - targetYear) <= 1 ? 0.6 : 0))
+        : 0.2;
+      const authors = normalizeS2AuthorList(r?.authors);
+      const authorScore = authorTokens.length && authors.length
+        ? (authors.some((a) => authorTokens.includes(a.split(/\s+/).slice(-1)[0]?.toLowerCase())) ? 1 : 0)
+        : 0;
+      const score = titleScore * 0.7 + yearScore * 0.2 + authorScore * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = r;
+      }
+      if (titleScore >= 0.88 && !best) {
+        best = r;
+        bestScore = Math.max(bestScore, 0.55);
+      }
+    }
+    return bestScore >= 0.52 ? best : null;
+  }
+
+  function simplifyTitleForS2(title) {
+    const raw = String(title || "").replace(/^\[[^\]]+\]\s*/g, "").trim();
+    if (!raw) return "";
+    const parts = raw.split(/\s*[:–—-]\s+/);
+    return parts[0] || raw;
+  }
+
+  function buildS2SearchQueries(paper) {
+    const title = String(paper?.title || "").trim();
+    const shortTitle = simplifyTitleForS2(title);
+    const year = Number(paper?.year) || null;
+    const authorPart = String(paper?.authorsVenue || "").split(/\s*[-–—]\s*/)[0] || "";
+    const authorLast = authorPart
+      .split(/\s*,\s*|\s+and\s+/i)
+      .map((a) => a.trim().split(/\s+/).slice(-1)[0])
+      .filter(Boolean)[0] || "";
+    const queries = [];
+    const push = (q) => {
+      const v = String(q || "").trim();
+      if (!v) return;
+      if (!queries.includes(v)) queries.push(v);
+    };
+    if (title) {
+      push(`"${title}"`);
+      push(title);
+    }
+    if (shortTitle && shortTitle !== title) {
+      push(`"${shortTitle}"`);
+      push(shortTitle);
+    }
+    if (shortTitle && authorLast) {
+      push(`"${shortTitle}" ${authorLast}`);
+    }
+    if (shortTitle && year) {
+      push(`"${shortTitle}" ${year}`);
+    }
+    return queries;
+  }
+
+  async function fetchS2PaperById(paperId) {
+    if (!paperId) return null;
+    const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}?fields=paperId,title,year,authors,abstract`;
+    const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+    if (data?.__s2_error === "rate_limit") return null;
+    return normalizeS2Paper(data);
+  }
+
+  async function resolveS2Paper(paper, doi) {
+    const cacheKey = paper?.key || computeKey({
+      clusterId: paper?.clusterId,
+      url: paper?.url,
+      title: paper?.title,
+      authors: paper?.authorsVenue,
+      year: paper?.year
+    });
+    const now = Date.now();
+    if (cacheKey) {
+      const cached = getS2ResolveCache().get(cacheKey);
+      if (cached && (now - cached.ts) < cached.ttl) return cached.result;
+    }
+
+    const normalizedDoi = normalizeDoi(doi);
+    if (normalizedDoi) {
+      const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(normalizedDoi)}?fields=paperId,title,year,authors,abstract`;
+      const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+      if (data?.__s2_error === "rate_limit") {
+        const result = { paper: null, rateLimited: true };
+        if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
+        return result;
+      }
+      const s2 = normalizeS2Paper(data);
+      if (s2) {
+        const result = { paper: s2, rateLimited: false };
+        if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_CACHE_MS, result });
+        return result;
+      }
+    }
+    const queries = buildS2SearchQueries(paper);
+    for (const q of queries) {
+      const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(q)}&limit=15&fields=paperId,title,year,authors,abstract`;
+      const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+      if (data?.__s2_error === "rate_limit") {
+        const result = { paper: null, rateLimited: true };
+        if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
+        return result;
+      }
+      const results = Array.isArray(data?.data) ? data.data : [];
+      const best = pickBestS2SearchResult(results, paper);
+      const normalized = normalizeS2Paper(best);
+      if (normalized) {
+        const result = { paper: normalized, rateLimited: false };
+        if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_CACHE_MS, result });
+        return result;
+      }
+    }
+
+    // Fallback: ask OpenAlex for a DOI, then retry Semantic Scholar via DOI.
+    try {
+      const authorName = pickFirstAuthorName(paper);
+      const oa = await fetchOpenAlexWorkForPaper(paper, authorName);
+      const oaDoi = normalizeDoi(oa?.doi || oa?.ids?.doi || "");
+      if (oaDoi) {
+        const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(oaDoi)}?fields=paperId,title,year,authors,abstract`;
+        const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+        if (data?.__s2_error === "rate_limit") {
+          const result = { paper: null, rateLimited: true };
+          if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
+          return result;
+        }
+        const s2 = normalizeS2Paper(data);
+        if (s2) {
+          const result = { paper: s2, rateLimited: false };
+          if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_CACHE_MS, result });
+          return result;
+        }
+      }
+    } catch (_) {}
+
+    // Final fallback: Crossref title search -> DOI -> Semantic Scholar.
+    try {
+      const crossrefDoi = await findCrossrefDoiForPaper(paper);
+      const norm = normalizeDoi(crossrefDoi);
+      if (norm) {
+        const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(norm)}?fields=paperId,title,year,authors,abstract`;
+        const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+        if (data?.__s2_error === "rate_limit") {
+          const result = { paper: null, rateLimited: true };
+          if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
+          return result;
+        }
+        const s2 = normalizeS2Paper(data);
+        if (s2) {
+          const result = { paper: s2, rateLimited: false };
+          if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_CACHE_MS, result });
+          return result;
+        }
+      }
+    } catch (_) {}
+    const result = { paper: null, rateLimited: false };
+    if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
+    return result;
+  }
+
+  async function findCrossrefDoiForPaper(paper) {
+    const title = String(paper?.title || "").trim();
+    if (!title) return null;
+    const params = new URLSearchParams();
+    params.set("query.title", title);
+    params.set("rows", "6");
+    const url = `https://api.crossref.org/works?${params.toString()}&mailto=scholar-extension@local`;
+    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+    const items = Array.isArray(data?.message?.items) ? data.message.items : [];
+    if (!items.length) return null;
+    const targetTitle = normalizeText(title);
+    const targetYear = Number(paper?.year) || null;
+    let best = null;
+    let bestScore = -1;
+    for (const item of items) {
+      const candTitle = Array.isArray(item?.title) ? item.title[0] : item?.title;
+      const candNorm = normalizeText(candTitle || "");
+      const titleScore = targetTitle && candNorm ? jaroWinkler(targetTitle, candNorm) : 0;
+      const yearVal = Number(item?.issued?.["date-parts"]?.[0]?.[0]) || null;
+      const yearScore = targetYear && yearVal
+        ? (yearVal === targetYear ? 1 : (Math.abs(yearVal - targetYear) <= 1 ? 0.6 : 0))
+        : 0.2;
+      const score = titleScore * 0.8 + yearScore * 0.2;
+      if (score > bestScore) {
+        bestScore = score;
+        best = item;
+      }
+    }
+    if (bestScore < 0.5) return null;
+    return best?.DOI || best?.doi || null;
+  }
+
+  async function fetchS2References(paperId, limit) {
+    if (!paperId) return [];
+    const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}/references?limit=${Math.max(1, limit || IDEA_LINEAGE_REF_LIMIT)}&fields=citedPaper.paperId,citedPaper.title,citedPaper.year,citedPaper.authors,citedPaper.abstract`;
+    const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+    if (data?.__s2_error === "rate_limit") return [];
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    return rows.map((r) => normalizeS2Paper(r?.citedPaper)).filter(Boolean);
+  }
+
+  async function fetchS2Citations(paperId, limit) {
+    if (!paperId) return [];
+    const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}/citations?limit=${Math.max(1, limit || IDEA_LINEAGE_CITE_LIMIT)}&fields=citingPaper.paperId,citingPaper.title,citingPaper.year,citingPaper.authors,citingPaper.abstract`;
+    const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
+    if (data?.__s2_error === "rate_limit") return [];
+    const rows = Array.isArray(data?.data) ? data.data : [];
+    return rows.map((r) => normalizeS2Paper(r?.citingPaper)).filter(Boolean);
+  }
+
+  function openalexLineageId(work) {
+    if (!work) return null;
+    return work.openalexId || normalizeOpenAlexId(work.id || "") || (work.doi ? `doi:${work.doi}` : null);
+  }
+
+  function openalexPaperToLineageNode(work, abstract) {
+    const id = openalexLineageId(work);
+    if (!id) return null;
+    return {
+      paperId: id,
+      title: work.title || "Untitled",
+      year: work.year || null,
+      authors: Array.isArray(work.authors) ? work.authors.map((a) => a.name).filter(Boolean) : [],
+      abstract: abstract || ""
+    };
+  }
+
+  async function buildIdeaLineageFromOpenAlex(paper) {
+    const authorName = pickFirstAuthorName(paper);
+    const work = await fetchOpenAlexWorkForPaper(paper, authorName);
+    if (!work) {
+      return {
+        error: isOpenAlexRateLimited()
+          ? "OpenAlex rate limited. Try again in a minute."
+          : "Unable to resolve this paper in OpenAlex."
+      };
+    }
+    const nodes = new Map();
+    const edges = [];
+    const edgeKeys = new Set();
+    const targetAbstract = await fetchOpenAlexAbstractForTitle(work.title, work.year, authorName);
+    const targetNode = openalexPaperToLineageNode(work, targetAbstract);
+    if (!targetNode) return { error: "OpenAlex record missing identifier." };
+    addIdeaLineageNode(nodes, targetNode);
+
+    const refs = Array.isArray(work.referencedWorks) ? work.referencedWorks.slice(0, IDEA_LINEAGE_REF_LIMIT) : [];
+    const refWorks = await mapWithConcurrency(refs, 2, async (id) => await fetchOpenAlexWorkById(id));
+    refWorks.filter(Boolean).forEach((ref) => {
+      if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+      const refNode = openalexPaperToLineageNode(ref);
+      if (!refNode) return;
+      addIdeaLineageNode(nodes, refNode);
+      addIdeaLineageEdge(edges, edgeKeys, refNode.paperId, targetNode.paperId, "ref");
+    });
+
+    const citing = await fetchOpenAlexCitingWorks(work, IDEA_LINEAGE_CITE_LIMIT);
+    citing.forEach((cw) => {
+      if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+      const citeNode = openalexPaperToLineageNode(cw);
+      if (!citeNode) return;
+      addIdeaLineageNode(nodes, citeNode);
+      addIdeaLineageEdge(edges, edgeKeys, targetNode.paperId, citeNode.paperId, "cite");
+    });
+
+    if (citing.length && nodes.size < IDEA_LINEAGE_MAX_NODES) {
+      const depthSeeds = citing.slice(0, IDEA_LINEAGE_CITE_DEPTH_LIMIT);
+      const depthResults = await mapWithConcurrency(depthSeeds, 2, async (seed) => {
+        const more = await fetchOpenAlexCitingWorks(seed, Math.max(4, Math.floor(IDEA_LINEAGE_CITE_LIMIT / 3)));
+        return { seed, more };
+      });
+      depthResults.forEach(({ seed, more }) => {
+        if (!seed || !Array.isArray(more)) return;
+        more.forEach((child) => {
+          if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+          const childNode = openalexPaperToLineageNode(child);
+          if (!childNode) return;
+          addIdeaLineageNode(nodes, childNode);
+          addIdeaLineageEdge(edges, edgeKeys, openalexLineageId(seed), childNode.paperId, "cite2");
+        });
+      });
+    }
+
+    const vectors = buildTfIdfVectors(nodes);
+    edges.forEach((e) => {
+      const sim = cosineSimilarity(vectors.get(e.source), vectors.get(e.target));
+      e.similarity = sim;
+      e.weight = 0.6 + 0.4 * sim;
+    });
+
+    const lineageIds = extractIdeaLineagePath(targetNode.paperId, edges);
+    const branches = extractIdeaLineageBranches(lineageIds, edges);
+    const originId = lineageIds.length ? lineageIds[0] : targetNode.paperId;
+
+    return {
+      targetId: targetNode.paperId,
+      originId,
+      lineageIds,
+      branches,
+      nodes,
+      edges,
+      stats: {
+        nodeCount: nodes.size,
+        edgeCount: edges.length
+      },
+      source: "openalex"
+    };
+  }
+
+  function tokenizeIdeaLineageText(text) {
+    const cleaned = String(text || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+    if (!cleaned) return [];
+    const parts = cleaned.split(/\s+/);
+    return parts.filter((p) => p.length > 2 && !IDEA_LINEAGE_STOPWORDS.has(p));
+  }
+
+  function buildTfIdfVectors(nodes) {
+    const docs = [];
+    const ids = [];
+    const df = new Map();
+    nodes.forEach((node, id) => {
+      const text = `${node.title || ""} ${node.abstract || ""}`;
+      const tokens = tokenizeIdeaLineageText(text);
+      const counts = new Map();
+      tokens.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1));
+      const unique = new Set(tokens);
+      unique.forEach((t) => df.set(t, (df.get(t) || 0) + 1));
+      docs.push(counts);
+      ids.push(id);
+    });
+    const N = docs.length || 1;
+    const vectors = new Map();
+    docs.forEach((counts, idx) => {
+      let norm = 0;
+      const weights = new Map();
+      counts.forEach((tf, token) => {
+        const idf = Math.log(1 + N / (1 + (df.get(token) || 0)));
+        const w = tf * idf;
+        weights.set(token, w);
+        norm += w * w;
+      });
+      vectors.set(ids[idx], { weights, norm: Math.sqrt(norm) });
+    });
+    return vectors;
+  }
+
+  function cosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || !vecA.weights || !vecB.weights) return 0;
+    if (!vecA.norm || !vecB.norm) return 0;
+    const aWeights = vecA.weights;
+    const bWeights = vecB.weights;
+    let dot = 0;
+    const [small, large] = aWeights.size <= bWeights.size ? [aWeights, bWeights] : [bWeights, aWeights];
+    small.forEach((w, token) => {
+      const w2 = large.get(token);
+      if (w2) dot += w * w2;
+    });
+    return dot / (vecA.norm * vecB.norm);
+  }
+
+  function addIdeaLineageNode(nodes, paper) {
+    if (!paper || !paper.paperId) return;
+    const id = String(paper.paperId);
+    const existing = nodes.get(id) || {};
+    nodes.set(id, {
+      id,
+      title: paper.title || existing.title || "Untitled",
+      year: paper.year || existing.year || null,
+      authors: Array.isArray(paper.authors) ? paper.authors : (existing.authors || []),
+      abstract: paper.abstract || existing.abstract || ""
+    });
+  }
+
+  function addIdeaLineageEdge(edges, edgeKeys, source, target, type) {
+    if (!source || !target || source === target) return;
+    if (edges.length >= IDEA_LINEAGE_MAX_EDGES) return;
+    const key = `${source}->${target}`;
+    if (edgeKeys.has(key)) return;
+    edgeKeys.add(key);
+    edges.push({ source, target, type, similarity: 0, weight: 0 });
+  }
+
+  function buildScholarTitleSearchUrl(title) {
+    const q = String(title || "").trim();
+    if (!q) return null;
+    let origin = "https://scholar.google.com";
+    try {
+      const url = new URL(window.location.href);
+      if (isScholarHostname(url.hostname)) origin = url.origin;
+    } catch {}
+    return `${origin}/scholar?q=${encodeURIComponent(q)}`;
+  }
+
+  function renderIdeaLineagePaperButton(node, extraClass = "") {
+    const title = escapeHtml(node?.title || "Untitled");
+    const id = node?.id ? escapeHtml(String(node.id)) : "";
+    const cls = `su-idea-lineage-paper${extraClass ? ` ${extraClass}` : ""}`;
+    if (!id) return `<span class="${cls}">${title}</span>`;
+    return `<button type="button" class="${cls}" data-lineage-paper-id="${id}">${title}</button>`;
+  }
+
+  function openIdeaLineagePaperOverlay(node) {
+    if (!node) return;
+    const overlay = document.getElementById("su-idea-lineage-overlay");
+    if (!overlay) return;
+    const detail = overlay.querySelector("#su-idea-lineage-detail");
+    if (!detail) return;
+    const authors = Array.isArray(node.authors) ? node.authors.filter(Boolean) : [];
+    const authorText = authors.length > 3 ? `${authors.slice(0, 3).join(", ")} +${authors.length - 3}` : authors.join(", ");
+    const abstract = String(node.abstract || "").trim();
+    const scholarUrl = buildScholarTitleSearchUrl(node.title);
+    const s2Url = node.id ? `https://www.semanticscholar.org/paper/${encodeURIComponent(node.id)}` : null;
+    detail.innerHTML = `
+      <div class="su-idea-lineage-detail-header">
+        <div class="su-idea-lineage-detail-title">${escapeHtml(node.title || "Untitled")}</div>
+        <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-detail-close="1">Close</button>
+      </div>
+      <div class="su-idea-lineage-detail-meta">${escapeHtml(String(node.year || "—"))}${authorText ? ` · ${escapeHtml(authorText)}` : ""}</div>
+      <div class="su-idea-lineage-detail-abstract">${escapeHtml(abstract || "Abstract unavailable.")}</div>
+      <div class="su-idea-lineage-detail-actions">
+        ${[
+          scholarUrl ? `<a class="su-graph-btn" href="${scholarUrl}" target="_blank" rel="noopener">Search Scholar</a>` : "",
+          s2Url ? `<a class="su-graph-btn su-graph-btn-secondary" href="${s2Url}" target="_blank" rel="noopener">Semantic Scholar</a>` : ""
+        ].filter(Boolean).join("")}
+      </div>
+    `;
+    detail.classList.add("su-visible");
+    detail.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  function ensureIdeaLineagePopover() {
+    let pop = document.getElementById("su-idea-lineage-popover");
+    if (pop) return pop;
+    pop = document.createElement("div");
+    pop.id = "su-idea-lineage-popover";
+    pop.className = "su-idea-lineage-popover";
+    document.body.appendChild(pop);
+    return pop;
+  }
+
+  function positionIdeaLineagePopover(pop, anchorRect) {
+    const pad = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = anchorRect.right + 10;
+    let top = anchorRect.top - 6;
+    pop.style.left = "0px";
+    pop.style.top = "0px";
+    pop.style.maxWidth = "360px";
+    pop.style.display = "block";
+    const popRect = pop.getBoundingClientRect();
+    if (left + popRect.width > vw - pad) left = Math.max(pad, anchorRect.left - popRect.width - 10);
+    if (top + popRect.height > vh - pad) top = Math.max(pad, vh - pad - popRect.height);
+    if (top < pad) top = pad;
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  }
+
+  function showIdeaLineagePopover(anchorEl, node) {
+    if (!anchorEl || !node) return;
+    const pop = ensureIdeaLineagePopover();
+    const authors = Array.isArray(node.authors) ? node.authors.filter(Boolean) : [];
+    const authorText = authors.length > 2 ? `${authors.slice(0, 2).join(", ")} +${authors.length - 2}` : authors.join(", ");
+    const abstract = String(node.abstract || "").trim();
+    const snippet = abstract.length > 260 ? `${abstract.slice(0, 257)}…` : abstract;
+    pop.innerHTML = `
+      <div class="su-idea-lineage-popover-title">${escapeHtml(node.title || "Untitled")}</div>
+      <div class="su-idea-lineage-popover-meta">${escapeHtml(String(node.year || "—"))}${authorText ? ` · ${escapeHtml(authorText)}` : ""}</div>
+      <div class="su-idea-lineage-popover-abstract">${escapeHtml(snippet || "Abstract unavailable.")}</div>
+    `;
+    pop.classList.add("su-visible");
+    positionIdeaLineagePopover(pop, anchorEl.getBoundingClientRect());
+  }
+
+  function hideIdeaLineagePopover() {
+    const pop = document.getElementById("su-idea-lineage-popover");
+    if (!pop) return;
+    pop.classList.remove("su-visible");
+    pop.style.display = "none";
+  }
+
+  function extractIdeaLineagePath(targetId, edges) {
+    const incoming = new Map();
+    edges.forEach((e) => {
+      if (!incoming.has(e.target)) incoming.set(e.target, []);
+      incoming.get(e.target).push(e);
+    });
+    const path = [];
+    const seen = new Set();
+    let current = targetId;
+    let guard = 0;
+    while (current && guard < 60) {
+      if (seen.has(current)) break;
+      seen.add(current);
+      path.push(current);
+      const inc = incoming.get(current) || [];
+      if (!inc.length) break;
+      inc.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+      const best = inc[0];
+      if (!best || !best.source) break;
+      current = best.source;
+      guard += 1;
+    }
+    return path.reverse();
+  }
+
+  function extractIdeaLineageBranches(pathIds, edges) {
+    const pathSet = new Set(pathIds);
+    const outgoing = new Map();
+    edges.forEach((e) => {
+      if (!outgoing.has(e.source)) outgoing.set(e.source, []);
+      outgoing.get(e.source).push(e);
+    });
+    const branches = [];
+    for (const id of pathIds) {
+      const out = (outgoing.get(id) || [])
+        .filter((e) => !pathSet.has(e.target) && e.weight >= IDEA_LINEAGE_BRANCH_THRESHOLD)
+        .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+        .slice(0, 4);
+      if (!out.length) continue;
+      out.forEach((e) => branches.push({ from: id, to: e.target, weight: e.weight }));
+    }
+    return branches;
+  }
+
+  async function buildIdeaLineageForPaper(paper, doi) {
+    try {
+      const resolved = await resolveS2Paper(paper, doi);
+      const target = resolved?.paper || null;
+      if (!target) {
+        const fallback = await buildIdeaLineageFromOpenAlex(paper);
+        if (fallback?.error) {
+          if (resolved?.rateLimited) {
+            return { error: getS2RateLimitMessage() || "Semantic Scholar rate limited. OpenAlex fallback unavailable." };
+          }
+          return fallback;
+        }
+        return {
+          ...fallback,
+          note: resolved?.rateLimited
+            ? "Semantic Scholar rate limited; using OpenAlex fallback."
+            : "Semantic Scholar match failed; using OpenAlex fallback."
+        };
+      }
+      const nodes = new Map();
+      const edges = [];
+      const edgeKeys = new Set();
+      addIdeaLineageNode(nodes, target);
+
+      const references = await fetchS2References(target.paperId, IDEA_LINEAGE_REF_LIMIT);
+      references.forEach((ref) => {
+        if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+        addIdeaLineageNode(nodes, ref);
+        addIdeaLineageEdge(edges, edgeKeys, ref.paperId, target.paperId, "ref");
+      });
+
+      const citations = await fetchS2Citations(target.paperId, IDEA_LINEAGE_CITE_LIMIT);
+      citations.forEach((cite) => {
+        if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+        addIdeaLineageNode(nodes, cite);
+        addIdeaLineageEdge(edges, edgeKeys, target.paperId, cite.paperId, "cite");
+      });
+
+      if (citations.length && nodes.size < IDEA_LINEAGE_MAX_NODES) {
+        const depthSeeds = citations.slice(0, IDEA_LINEAGE_CITE_DEPTH_LIMIT);
+        const depthResults = await mapWithConcurrency(depthSeeds, 2, async (seed) => {
+          const more = await fetchS2Citations(seed.paperId, Math.max(4, Math.floor(IDEA_LINEAGE_CITE_LIMIT / 3)));
+          return { seed, more };
+        });
+        depthResults.forEach(({ seed, more }) => {
+          if (!seed || !Array.isArray(more)) return;
+          more.forEach((child) => {
+            if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
+            addIdeaLineageNode(nodes, child);
+            addIdeaLineageEdge(edges, edgeKeys, seed.paperId, child.paperId, "cite2");
+          });
+        });
+      }
+
+      const vectors = buildTfIdfVectors(nodes);
+      edges.forEach((e) => {
+        const sim = cosineSimilarity(vectors.get(e.source), vectors.get(e.target));
+        e.similarity = sim;
+        e.weight = 0.6 + 0.4 * sim;
+      });
+
+      const lineageIds = extractIdeaLineagePath(target.paperId, edges);
+      const branches = extractIdeaLineageBranches(lineageIds, edges);
+      const originId = lineageIds.length ? lineageIds[0] : target.paperId;
+
+      return {
+        targetId: target.paperId,
+        originId,
+        lineageIds,
+        branches,
+        nodes,
+        edges,
+        stats: {
+          nodeCount: nodes.size,
+          edgeCount: edges.length
+        },
+        source: "semanticscholar"
+      };
+    } catch (err) {
+      if (isS2RateLimited()) {
+        const fallback = await buildIdeaLineageFromOpenAlex(paper);
+        if (fallback?.error) return { error: getS2RateLimitMessage() || "Semantic Scholar rate limited." };
+        return { ...fallback, note: "Semantic Scholar rate limited; using OpenAlex fallback." };
+      }
+      return { error: "Unable to build idea lineage right now." };
+    }
+  }
+
+  function ensureIdeaLineageOverlay() {
+    let overlay = document.getElementById("su-idea-lineage-overlay");
+    if (overlay) return overlay;
+    overlay = document.createElement("div");
+    overlay.id = "su-idea-lineage-overlay";
+    overlay.className = "su-idea-lineage-overlay";
+    overlay.innerHTML = `
+      <div class="su-idea-lineage-backdrop" data-idea-lineage-close="1"></div>
+      <div class="su-idea-lineage-panel">
+        <div class="su-idea-lineage-header">
+          <div>
+            <div class="su-idea-lineage-title">Idea Lineage</div>
+            <div class="su-idea-lineage-subtitle">Hybrid citation + semantic similarity path.</div>
+          </div>
+          <div class="su-idea-lineage-actions">
+            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-refresh="1">Refresh</button>
+            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-close="1">Close</button>
+          </div>
+        </div>
+        <div class="su-idea-lineage-meta">
+          <div id="su-idea-lineage-status" class="su-idea-lineage-status"></div>
+        </div>
+        <div id="su-idea-lineage-summary" class="su-idea-lineage-summary"></div>
+        <div id="su-idea-lineage-tree" class="su-idea-lineage-tree"></div>
+        <div id="su-idea-lineage-detail" class="su-idea-lineage-detail"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", async (e) => {
+      const paperBtn = e.target.closest("[data-lineage-paper-id]");
+      if (paperBtn) {
+        e.preventDefault();
+        const id = paperBtn.getAttribute("data-lineage-paper-id");
+        const nodes = window.suIdeaLineageState?.data?.nodes;
+        const node = nodes?.get ? nodes.get(id) : null;
+        if (node) openIdeaLineagePaperOverlay(node);
+        return;
+      }
+      const closeBtn = e.target.closest("[data-idea-lineage-close]");
+      if (closeBtn) {
+        e.preventDefault();
+        closeIdeaLineageOverlay();
+        return;
+      }
+      const refreshBtn = e.target.closest("[data-idea-lineage-refresh]");
+      if (refreshBtn) {
+        e.preventDefault();
+        if (window.suIdeaLineageState?.paper) {
+          await openIdeaLineageOverlay(
+            window.suIdeaLineageState.paperContainer,
+            window.suIdeaLineageState.paper,
+            true,
+            window.suIdeaLineageState.doi
+          );
+        }
+      }
+      const detailClose = e.target.closest("[data-idea-lineage-detail-close]");
+      if (detailClose) {
+        e.preventDefault();
+        const detail = overlay.querySelector("#su-idea-lineage-detail");
+        if (detail) {
+          detail.classList.remove("su-visible");
+          detail.innerHTML = "";
+        }
+      }
+    });
+    if (!overlay.dataset.suIdeaLineageHoverBound) {
+      overlay.dataset.suIdeaLineageHoverBound = "1";
+      let hideTimer = null;
+      overlay.addEventListener("mouseover", (e) => {
+        const paperBtn = e.target.closest("[data-lineage-paper-id]");
+        if (!paperBtn) return;
+        const id = paperBtn.getAttribute("data-lineage-paper-id");
+        const nodes = window.suIdeaLineageState?.data?.nodes;
+        const node = nodes?.get ? nodes.get(id) : null;
+        if (!node) return;
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+        showIdeaLineagePopover(paperBtn, node);
+      });
+      overlay.addEventListener("mouseout", (e) => {
+        const paperBtn = e.target.closest("[data-lineage-paper-id]");
+        if (!paperBtn) return;
+        if (paperBtn.contains(e.relatedTarget)) return;
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => hideIdeaLineagePopover(), 150);
+      });
+      const pop = ensureIdeaLineagePopover();
+      pop.addEventListener("mouseenter", () => {
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+      });
+      pop.addEventListener("mouseleave", () => {
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => hideIdeaLineagePopover(), 150);
+      });
+    }
+    return overlay;
+  }
+
+  function renderIdeaLineageOverlay(state) {
+    const overlay = ensureIdeaLineageOverlay();
+    const statusEl = overlay.querySelector("#su-idea-lineage-status");
+    const summaryEl = overlay.querySelector("#su-idea-lineage-summary");
+    const treeEl = overlay.querySelector("#su-idea-lineage-tree");
+    if (!statusEl || !summaryEl || !treeEl) return;
+
+    if (state?.loading) {
+      statusEl.textContent = "Building idea lineage…";
+      summaryEl.innerHTML = "";
+      treeEl.innerHTML = "";
+      return;
+    }
+    if (state?.error) {
+      statusEl.textContent = "";
+      summaryEl.innerHTML = `<div class="su-idea-lineage-empty">${escapeHtml(state.error)}</div>`;
+      treeEl.innerHTML = "";
+      return;
+    }
+    const data = state?.data;
+    if (!data) {
+      statusEl.textContent = "";
+      summaryEl.innerHTML = `<div class="su-idea-lineage-empty">No lineage data available.</div>`;
+      treeEl.innerHTML = "";
+      return;
+    }
+
+    const nodes = data.nodes || new Map();
+    const lineage = Array.isArray(data.lineageIds) ? data.lineageIds.map((id) => nodes.get(id)).filter(Boolean) : [];
+    const origin = nodes.get(data.originId);
+    const sourceLabel = data.source === "openalex" ? "OpenAlex" : "Semantic Scholar";
+    const statusParts = [];
+    statusParts.push(`${data.stats?.nodeCount || nodes.size} papers · ${data.stats?.edgeCount || 0} edges`);
+    statusParts.push(`Source: ${sourceLabel}`);
+    statusEl.textContent = statusParts.join(" · ");
+
+    const noteHtml = data.note ? `<div class="su-idea-lineage-note">${escapeHtml(data.note)}</div>` : "";
+    summaryEl.innerHTML = `
+      ${noteHtml}
+      <div class="su-idea-lineage-summary-card">
+        <div class="su-idea-lineage-summary-label">Origin</div>
+        <div class="su-idea-lineage-summary-title">${renderIdeaLineagePaperButton(origin, "su-idea-lineage-summary-link")}</div>
+        <div class="su-idea-lineage-summary-meta">${origin?.year || "—"}${origin?.authors?.length ? ` · ${escapeHtml(origin.authors[0])}` : ""}</div>
+      </div>
+      <div class="su-idea-lineage-summary-card">
+        <div class="su-idea-lineage-summary-label">Main path</div>
+        <div class="su-idea-lineage-summary-title">${lineage.length} papers</div>
+        <div class="su-idea-lineage-summary-meta">${lineage.length ? escapeHtml(lineage[lineage.length - 1]?.title || "") : ""}</div>
+      </div>
+    `;
+
+    const mainHtml = lineage.map((node, idx) => `
+      <div class="su-idea-lineage-step ${idx === lineage.length - 1 ? "is-current" : ""}">
+        <div class="su-idea-lineage-dot"></div>
+        <div class="su-idea-lineage-content">
+          <div class="su-idea-lineage-step-title">${renderIdeaLineagePaperButton(node)}</div>
+          <div class="su-idea-lineage-step-meta">${node.year || "—"}${node.authors?.length ? ` · ${escapeHtml(node.authors[0])}` : ""}</div>
+        </div>
+      </div>
+    `).join("");
+
+    const branchGroups = new Map();
+    (data.branches || []).forEach((b) => {
+      if (!branchGroups.has(b.from)) branchGroups.set(b.from, []);
+      branchGroups.get(b.from).push(b);
+    });
+    const branchHtml = Array.from(branchGroups.entries()).map(([from, items]) => {
+      const fromNode = nodes.get(from);
+      const rows = items.map((b) => {
+        const n = nodes.get(b.to);
+        if (!n) return "";
+        return `<div class="su-idea-lineage-branch-item">
+          <span class="su-idea-lineage-branch-title">${renderIdeaLineagePaperButton(n, "su-idea-lineage-branch-link")}</span>
+          <span class="su-idea-lineage-branch-meta">${n.year || "—"}</span>
+          <span class="su-idea-lineage-branch-weight">${(b.weight || 0).toFixed(2)}</span>
+        </div>`;
+      }).join("");
+      if (!rows) return "";
+      return `
+        <div class="su-idea-lineage-branch">
+          <div class="su-idea-lineage-branch-from">Branching from: ${escapeHtml(fromNode?.title || "Unknown")}</div>
+          ${rows}
+        </div>
+      `;
+    }).join("");
+
+    let fallbackHtml = "";
+    if (!branchHtml) {
+      const lineageSet = new Set(data.lineageIds || []);
+      const edges = Array.isArray(data.edges) ? data.edges : [];
+      let candidates = edges.filter((e) => lineageSet.has(e.source) && !lineageSet.has(e.target));
+      if (candidates.length < 3) candidates = edges.slice();
+      const top = candidates
+        .slice()
+        .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+        .slice(0, 3);
+      if (top.length) {
+        const rows = top.map((e) => {
+          const fromNode = nodes.get(e.source);
+          const toNode = nodes.get(e.target);
+          return `<div class="su-idea-lineage-branch-item">
+            <span class="su-idea-lineage-branch-title">${renderIdeaLineagePaperButton(toNode, "su-idea-lineage-branch-link")}</span>
+            <span class="su-idea-lineage-branch-meta">${toNode?.year || "—"}</span>
+            <span class="su-idea-lineage-branch-weight">${(e.weight || 0).toFixed(2)}</span>
+          </div>`;
+        }).join("");
+        fallbackHtml = `
+          <div class="su-idea-lineage-branch">
+            <div class="su-idea-lineage-branch-from">Top weighted edges (no branches above threshold)</div>
+            ${rows}
+          </div>
+        `;
+      }
+    }
+
+    treeEl.innerHTML = `
+      <div class="su-idea-lineage-section">
+        <div class="su-idea-lineage-section-title">Main lineage</div>
+        <div class="su-idea-lineage-main">${mainHtml || `<div class="su-idea-lineage-empty">No lineage path found.</div>`}</div>
+      </div>
+      <div class="su-idea-lineage-section">
+        <div class="su-idea-lineage-section-title">Branches</div>
+        <div class="su-idea-lineage-branches">
+          ${branchHtml || fallbackHtml || `<div class="su-idea-lineage-empty">No high-weight branches detected.</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  async function openIdeaLineageOverlay(container, paper, forceRefresh = false, doiOverride = null) {
+    const overlay = ensureIdeaLineageOverlay();
+    overlay.classList.add("su-visible");
+    if (!paper || !paper.title) {
+      window.suIdeaLineageState = { data: null, loading: false, error: "Missing paper metadata.", paper, paperContainer: container, doi: null };
+      renderIdeaLineageOverlay(window.suIdeaLineageState);
+      return;
+    }
+
+    const key = paper?.key || computeKey({
+      clusterId: paper?.clusterId,
+      url: paper?.url,
+      title: paper?.title,
+      authors: paper?.authorsVenue,
+      year: paper?.year
+    });
+    const cache = getIdeaLineageCache();
+    const cached = key ? cache.get(key) : null;
+    const now = Date.now();
+    if (!forceRefresh && cached && cached.timestamp && (now - cached.timestamp < IDEA_LINEAGE_CACHE_MS)) {
+      window.suIdeaLineageState = { data: cached.data, loading: false, error: null, paper, paperContainer: container };
+      renderIdeaLineageOverlay(window.suIdeaLineageState);
+      return;
+    }
+
+    const doi = normalizeDoi(doiOverride || paper?.doi || (container ? extractDOIFromResult(container) : null));
+    window.suIdeaLineageState = { data: null, loading: true, error: null, paper, paperContainer: container, doi };
+    renderIdeaLineageOverlay(window.suIdeaLineageState);
+    const result = await buildIdeaLineageForPaper(paper, doi);
+    if (result?.error) {
+      window.suIdeaLineageState = { data: null, loading: false, error: result.error, paper, paperContainer: container, doi };
+      renderIdeaLineageOverlay(window.suIdeaLineageState);
+      return;
+    }
+    if (key) cache.set(key, { data: result, timestamp: now });
+    window.suIdeaLineageState = { data: result, loading: false, error: null, paper, paperContainer: container, doi };
+    renderIdeaLineageOverlay(window.suIdeaLineageState);
+  }
+
+  function closeIdeaLineageOverlay() {
+    const overlay = document.getElementById("su-idea-lineage-overlay");
+    if (overlay) overlay.classList.remove("su-visible");
+  }
+
   function exportPoPMarkdown(payload) {
     const { authorName, metrics } = payload;
     if (!metrics) return;
@@ -14603,7 +16321,7 @@
         state.currentResultKeys = [];
       }
 
-      if (state.settings.showCitationSpike) {
+      if (state.settings.showCitationSpike || state.settings.showEmergingScore) {
         try {
           state.citationSnapshots = await getCitationSnapshots();
         } catch {
@@ -14640,6 +16358,15 @@
         };
       } else {
         state.velocityBucketAvg = { early: 0, mid: 0, late: 0 };
+      }
+      if (state.settings.showEmergingScore) {
+        try {
+          state.localCohortExpected = buildLocalCohortExpected(results, isAuthorProfile, state.settings.emergingScoreMinCohort);
+        } catch {
+          state.localCohortExpected = new Map();
+        }
+      } else {
+        state.localCohortExpected = new Map();
       }
       window.suState = state;
       

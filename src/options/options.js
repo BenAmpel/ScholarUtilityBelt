@@ -155,6 +155,9 @@ async function load() {
   el("showFundingTag").checked = !!s.showFundingTag;
   el("showHoverSummary").checked = !!s.showHoverSummary;
   el("showReadingGuide").checked = !!s.showReadingGuide;
+  el("showEmergingScore").checked = s.showEmergingScore !== false;
+  el("emergingScoreDataSource").value = s.emergingScoreDataSource || "hybrid";
+  el("emergingScoreMinCohort").value = String(s.emergingScoreMinCohort ?? 5);
   el("showRetractionWatch").checked = !!s.showRetractionWatch;
   el("showArtifactBadge").checked = !!s.showArtifactBadge;
   el("showCSS").checked = !!s.showCSS;
@@ -563,6 +566,9 @@ async function handleSave() {
     showFundingTag: el("showFundingTag").checked,
     showHoverSummary: el("showHoverSummary").checked,
     showReadingGuide: el("showReadingGuide").checked,
+    showEmergingScore: el("showEmergingScore").checked,
+    emergingScoreDataSource: el("emergingScoreDataSource").value || "hybrid",
+    emergingScoreMinCohort: Math.max(3, Math.min(50, parseInt(el("emergingScoreMinCohort").value, 10) || 5)),
     showRetractionWatch: el("showRetractionWatch").checked,
     showArtifactBadge: el("showArtifactBadge").checked,
     showCSS: el("showCSS").checked,

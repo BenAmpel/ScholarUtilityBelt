@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "key": "ndltd_union",
+      "label": "NDLTD Union Archive",
+      "base": "http://union.ndltd.org/OAI-PMH/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc"]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "sources": [
+    {
+      "key": "ohiolink_etd",
+      "label": "OhioLINK ETD Center",
+      "base": "https://etd.ohiolink.edu/acprod/odb_etd/ws/oai/oai",
+      "metadataPrefixes": ["oai_etdms", "oai_dc"]
+    },
+    {
+      "key": "escholarship",
+      "label": "eScholarship OAI",
+      "base": "https://escholarship.org/oai",
+      "metadataPrefixes": ["oai_dc"]
+    },
+    {
+      "key": "ora_oxford",
+      "label": "Oxford ORA OAI",
+      "base": "https://ora.ox.ac.uk/oai2",
+      "metadataPrefixes": ["oai_etdms", "mods", "oai_dc"]
+    },
+    {
+      "key": "ndl_search",
+      "label": "NDL Search OAI-PMH",
+      "base": "https://ndlsearch.ndl.go.jp/api/oaipmh",
+      "metadataPrefixes": ["dcndl"]
+    },
+    {
+      "key": "ndltd_union_catalog",
+      "label": "NDLTD Union Catalog (discontinued)",
+      "base": "",
+      "metadataPrefixes": [],
+      "enabled": false
+    },
+    {
+      "key": "oatd",
+      "label": "OATD (no OAI-PMH endpoint found)",
+      "base": "",
+      "metadataPrefixes": [],
+      "enabled": false
+    },
+    {
+      "key": "ethos",
+      "label": "EThOS (no OAI-PMH endpoint found)",
+      "base": "",
+      "metadataPrefixes": [],
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "key": "escholarship",
+      "label": "eScholarship OAI",
+      "base": "https://escholarship.org/oai",
+      "metadataPrefixes": ["oai_dc"]
+    }
+  ]
+}

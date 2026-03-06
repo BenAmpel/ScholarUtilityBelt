@@ -75,6 +75,14 @@ input[type="text"] {
   outline: none;
 }
 
+input[type="number"],
+select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  outline: none;
+}
+
 .actions {
   margin-top: 12px;
   display: flex;

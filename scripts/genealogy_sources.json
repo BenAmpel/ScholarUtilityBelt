@@ -1,0 +1,50 @@
+{
+  "sources": [
+    {
+      "key": "datacite",
+      "label": "DataCite OAI-PMH",
+      "base": "https://oai.datacite.org/oai",
+      "metadataPrefixes": ["oai_datacite", "oai_dc"],
+      "setRegex": "thesis|dissertation|etd"
+    },
+    {
+      "key": "figshare",
+      "label": "Figshare OAI-PMH",
+      "base": "https://api.figshare.com/v2/oai",
+      "metadataPrefixes": ["oai_datacite", "oai_dc"],
+      "setRegex": "thesis|dissertation|etd"
+    },
+    {
+      "key": "ohiolink",
+      "label": "OhioLINK ETD Center OAI-PMH",
+      "base": "https://etd.ohiolink.edu/acprod/odb_etd/ws/oai/oai",
+      "metadataPrefixes": ["oai_etdms", "oai_dc"]
+    },
+    {
+      "key": "digitalcommons_unl",
+      "label": "Digital Commons (UNL)",
+      "base": "https://digitalcommons.unl.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_unf",
+      "label": "Digital Commons (UNF)",
+      "base": "https://digitalcommons.unf.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_uri",
+      "label": "Digital Commons (URI)",
+      "base": "https://digitalcommons.uri.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"],
+      "enabled": false
+    },
+    {
+      "key": "tdl",
+      "label": "Texas Digital Library (DSpace)",
+      "base": "http://repositories.tdl.org/dspace-oai/request",
+      "metadataPrefixes": ["oai_etdms", "mods", "oai_dc"],
+      "setRegex": "thesis|dissertation|etd"
+    }
+  ]
+}

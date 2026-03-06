@@ -76,6 +76,9 @@ export const DEFAULT_SETTINGS = {
   showCitationSpike: true,
   citationSpikeThresholdPct: 50,
   citationSpikeMonths: 6,
+  showEmergingScore: true,
+  emergingScoreDataSource: "hybrid", // "local" | "openalex" | "hybrid"
+  emergingScoreMinCohort: 5,
 
   // Author profile stats row visibility (top bar)
   authorStatsVisible: {
@@ -108,6 +111,8 @@ const DEFAULT_LIBRARY_STATE = {
   activeSavedSearchId: "",
   showDuplicates: false
 };
+
+const TRAJECTORY_VENUE_EXPECTED_KEY = "trajectoryVenueExpected";
 
 /**
  * Batch get multiple storage keys in a single call.
@@ -522,8 +527,42 @@ export async function getCitationSnapshots() {
 export async function setCitationSnapshot(clusterId, citations, date) {
   try {
     const snap = await getCitationSnapshots();
-    snap[clusterId] = { citations: Number(citations), date: date || new Date().toISOString() };
+    const entry = snap[clusterId] && typeof snap[clusterId] === "object" ? snap[clusterId] : {};
+    const history = Array.isArray(entry.history) ? entry.history.slice() : [];
+    if (entry.citations != null && entry.date && history.length === 0) {
+      history.push({ citations: Number(entry.citations), date: entry.date });
+    }
+    const next = { citations: Number(citations), date: date || new Date().toISOString() };
+    const last = history[history.length - 1];
+    if (!last || last.citations !== next.citations || last.date !== next.date) {
+      history.push(next);
+    }
+    const trimmed = history.slice(-3);
+    snap[clusterId] = { citations: next.citations, date: next.date, history: trimmed };
     await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: snap });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+/** Get cached expected citation benchmarks by venue/year. */
+export async function getTrajectoryVenueExpectedCache() {
+  try {
+    const { [TRAJECTORY_VENUE_EXPECTED_KEY]: cache } = await chrome.storage.local.get({
+      [TRAJECTORY_VENUE_EXPECTED_KEY]: {}
+    });
+    return cache && typeof cache === "object" ? cache : {};
+  } catch (e) {
+    if (isContextInvalidated(e)) return {};
+    throw e;
+  }
+}
+
+export async function setTrajectoryVenueExpectedCache(cache) {
+  try {
+    const payload = cache && typeof cache === "object" ? cache : {};
+    await chrome.storage.local.set({ [TRAJECTORY_VENUE_EXPECTED_KEY]: payload });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;

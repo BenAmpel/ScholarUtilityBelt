@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "key": "ndl_search",
+      "label": "NDL Search OAI-PMH",
+      "base": "https://ndlsearch.ndl.go.jp/api/oaipmh",
+      "metadataPrefixes": ["dcndl"]
+    }
+  ]
+}

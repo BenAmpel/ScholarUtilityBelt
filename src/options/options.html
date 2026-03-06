@@ -395,6 +395,23 @@
         </label>
 
         <label class="row">
+          <input type="checkbox" id="showEmergingScore" />
+          <span>Show <strong>Emerging Paper Score</strong> badge (trajectory-based signals: momentum, venue-adjusted performance, acceleration, half-life)</span>
+        </label>
+        <div class="field">
+          <div class="label">Emerging score data source</div>
+          <select id="emergingScoreDataSource">
+            <option value="hybrid">Hybrid (local cohort + OpenAlex fallback)</option>
+            <option value="local">Local cohort only</option>
+            <option value="openalex">OpenAlex only</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="label">Minimum cohort size (local baseline)</div>
+          <input type="number" id="emergingScoreMinCohort" min="3" max="50" step="1" style="width: 90px" />
+        </div>
+
+        <label class="row">
           <input type="checkbox" id="showRetractionWatch" />
           <span>Show <strong>Retraction Watch</strong> badge when a result has a DOI that is marked as retracted in Crossref (includes Retraction Watch data). Only results with a DOI in the snippet or links are checked.</span>
         </label>
