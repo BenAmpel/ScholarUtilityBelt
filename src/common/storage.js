@@ -8,11 +8,28 @@ function isContextInvalidated(e) {
   return (
     msg.includes("context invalidated") ||
     msg.includes("extension context invalidated") ||
+    msg.includes("access to storage is not allowed") ||
     msg.includes("cannot read properties of undefined (reading 'local')") ||
     msg.includes("cannot read properties of undefined (reading 'storage')") ||
     msg.includes("chrome is undefined") ||
     msg.includes("chrome.storage is undefined")
   );
+}
+
+function sameJsonValue(a, b) {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
+function sameStringArray(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 export const DEFAULT_SETTINGS = {
@@ -113,6 +130,9 @@ const DEFAULT_LIBRARY_STATE = {
 };
 
 const TRAJECTORY_VENUE_EXPECTED_KEY = "trajectoryVenueExpected";
+const LOCAL_COHORT_CACHE_KEY = "localCohortCacheV1";
+const LOCAL_COHORT_CACHE_MAX_KEYS = 4000;
+const LOCAL_COHORT_CACHE_MAX_SAMPLES = 24;
 
 /**
  * Batch get multiple storage keys in a single call.
@@ -141,7 +161,9 @@ export async function getSettings() {
 export async function setSettings(next) {
   try {
     const current = await getSettings();
-    await chrome.storage.local.set({ settings: { ...current, ...next } });
+    const merged = { ...current, ...next };
+    if (sameJsonValue(current, merged)) return;
+    await chrome.storage.local.set({ settings: merged });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -171,7 +193,9 @@ export async function getLibraryState() {
 export async function setLibraryState(next) {
   try {
     const current = await getLibraryState();
-    await chrome.storage.local.set({ libraryState: { ...current, ...(next || {}) } });
+    const merged = { ...current, ...(next || {}) };
+    if (sameJsonValue(current, merged)) return;
+    await chrome.storage.local.set({ libraryState: merged });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -341,6 +365,7 @@ export async function setReadingLoadPageCount(paperKey, pages) {
   if (!paperKey || typeof pages !== "number" || pages < 1) return;
   try {
     const counts = await getReadingLoadPageCounts();
+    if (counts[paperKey] === pages) return;
     counts[paperKey] = pages;
     await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: counts });
   } catch (e) {
@@ -505,7 +530,15 @@ export async function getPageVisitCache() {
 export async function setPageVisitCacheEntry(pageKey, seenKeys, timestamp) {
   try {
     const cache = await getPageVisitCache();
-    cache[pageKey] = { seenKeys: Array.isArray(seenKeys) ? seenKeys : [], timestamp: timestamp || new Date().toISOString() };
+    const nextEntry = {
+      seenKeys: Array.isArray(seenKeys) ? seenKeys : [],
+      timestamp: timestamp || new Date().toISOString()
+    };
+    const existing = cache[pageKey];
+    if (existing && existing.timestamp === nextEntry.timestamp && sameStringArray(existing.seenKeys, nextEntry.seenKeys)) {
+      return;
+    }
+    cache[pageKey] = nextEntry;
     await chrome.storage.local.set({ [PAGE_VISIT_CACHE_KEY]: cache });
   } catch (e) {
     if (isContextInvalidated(e)) return;
@@ -538,7 +571,9 @@ export async function setCitationSnapshot(clusterId, citations, date) {
       history.push(next);
     }
     const trimmed = history.slice(-3);
-    snap[clusterId] = { citations: next.citations, date: next.date, history: trimmed };
+    const nextEntry = { citations: next.citations, date: next.date, history: trimmed };
+    if (sameJsonValue(entry, nextEntry)) return;
+    snap[clusterId] = nextEntry;
     await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: snap });
   } catch (e) {
     if (isContextInvalidated(e)) return;
@@ -563,6 +598,75 @@ export async function setTrajectoryVenueExpectedCache(cache) {
   try {
     const payload = cache && typeof cache === "object" ? cache : {};
     await chrome.storage.local.set({ [TRAJECTORY_VENUE_EXPECTED_KEY]: payload });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+function normalizeLocalCohortSample(sample) {
+  if (!sample || typeof sample !== "object") return null;
+  const id = String(sample.id || "").trim();
+  const citations = Number(sample.citations);
+  const citesPerYear = Number(sample.citesPerYear);
+  if (!id || !Number.isFinite(citations) || citations < 0) return null;
+  return {
+    id,
+    citations,
+    citesPerYear: Number.isFinite(citesPerYear) && citesPerYear >= 0 ? citesPerYear : null,
+    observedAt: Number(sample.observedAt) || 0
+  };
+}
+
+function pruneLocalCohortCache(cache) {
+  if (!cache || typeof cache !== "object") return {};
+  const entries = Object.entries(cache).map(([key, entry]) => {
+    const rawSamples = Array.isArray(entry?.samples) ? entry.samples : [];
+    const sampleMap = new Map();
+    for (const rawSample of rawSamples) {
+      const sample = normalizeLocalCohortSample(rawSample);
+      if (!sample) continue;
+      const existing = sampleMap.get(sample.id);
+      if (!existing || sample.observedAt >= existing.observedAt) {
+        sampleMap.set(sample.id, sample);
+      }
+    }
+    const samples = Array.from(sampleMap.values())
+      .sort((a, b) => (b.observedAt || 0) - (a.observedAt || 0))
+      .slice(0, LOCAL_COHORT_CACHE_MAX_SAMPLES);
+    const updatedAt = Number(entry?.updatedAt) || samples.reduce((acc, sample) => Math.max(acc, sample.observedAt || 0), 0);
+    return {
+      key,
+      updatedAt,
+      entry: {
+        samples,
+        updatedAt
+      }
+    };
+  }).filter((entry) => entry.entry.samples.length > 0);
+  if (entries.length <= LOCAL_COHORT_CACHE_MAX_KEYS) {
+    return Object.fromEntries(entries.map((entry) => [entry.key, entry.entry]));
+  }
+  entries.sort((a, b) => b.updatedAt - a.updatedAt);
+  return Object.fromEntries(entries.slice(0, LOCAL_COHORT_CACHE_MAX_KEYS).map((entry) => [entry.key, entry.entry]));
+}
+
+export async function getLocalCohortCache() {
+  try {
+    const { [LOCAL_COHORT_CACHE_KEY]: cache } = await chrome.storage.local.get({
+      [LOCAL_COHORT_CACHE_KEY]: {}
+    });
+    return cache && typeof cache === "object" ? cache : {};
+  } catch (e) {
+    if (isContextInvalidated(e)) return {};
+    throw e;
+  }
+}
+
+export async function setLocalCohortCache(cache) {
+  try {
+    const pruned = pruneLocalCohortCache(cache || {});
+    await chrome.storage.local.set({ [LOCAL_COHORT_CACHE_KEY]: pruned });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;

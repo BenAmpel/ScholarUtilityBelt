@@ -3,6 +3,10 @@
 
 const domCache = new WeakMap();
 
+function hasConnectedElements(elements) {
+  return Array.isArray(elements) && elements.length > 0 && elements.every((element) => element?.isConnected);
+}
+
 /**
  * Get a cached element or query and cache it.
  * @param {Element} container - Container element to query within
@@ -58,8 +62,7 @@ export function getCachedElements(container, selector) {
   // Return cached elements if available and still in DOM
   if (cache.has(cacheKey)) {
     const elements = cache.get(cacheKey);
-    // Check if at least one element is still connected (quick check)
-    if (elements.length > 0 && elements[0]?.isConnected) {
+    if (hasConnectedElements(elements)) {
       return elements;
     }
     // Elements were removed, clear from cache

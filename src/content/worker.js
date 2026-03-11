@@ -53,12 +53,13 @@ self.onmessage = function(e) {
       hCoreShare = Math.round((hCoreCite / totalCite) * 1000) / 1000;
     }
     
-    // Median citations per paper
+    // Median citations per paper.
+    // sortedCitations is already sorted descending; the median element(s) are at the same
+    // indices as in an ascending-sorted array, so no re-sort is needed.
     let medianCitations = null;
     if (n >= 1) {
-      const sorted = sortedCitations.slice().sort((a, b) => a - b);
       const mid = Math.floor(n / 2);
-      medianCitations = n % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+      medianCitations = n % 2 === 1 ? sortedCitations[mid] : Math.round((sortedCitations[mid - 1] + sortedCitations[mid]) / 2);
     }
     
     // Mean citations per paper

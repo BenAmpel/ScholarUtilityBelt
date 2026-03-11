@@ -1,56 +1,145 @@
 (async () => {
   // Content scripts are loaded as classic scripts in many Chrome setups.
   // Use dynamic import() with chrome.runtime.getURL so we can share modules.
-  const storage = await import(chrome.runtime.getURL("src/common/storage.js"));
-  const quality = await import(chrome.runtime.getURL("src/common/quality.js"));
-  const domCache = await import(chrome.runtime.getURL("src/content/dom-cache.js"));
-  const { getCachedElement, getCachedElements } = domCache;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let modulesLoaded = false;
 
-  const {
-    addHiddenAuthor,
-    addHiddenPaper,
-    addHiddenVenue,
-    addToReadingQueue,
-    batchGetStorage,
-    clearReadingQueue,
-    csvToTags,
-    getAuthorHIndexSnapshots,
-    getCitationSnapshots,
-    getExternalSignalCache,
-    getHiddenAuthors,
-    getHiddenPapers,
-    getHiddenVenues,
-    getPageVisitCache,
-    getQualityJcrIndex,
-    getQualityQuartilesIndex,
-    getReadingLoadPageCounts,
-    getReadingQueue,
-    getSavedPapers,
-    getSettings,
-    removePaper,
-    setAuthorHIndexSnapshot,
-    setExternalSignalCache,
-    setSettings,
-    setCitationSnapshot,
-    setTrajectoryVenueExpectedCache,
-    setPageVisitCacheEntry,
-    setReadingLoadPageCount,
-    uniqTags,
-    upsertPaper
-  } = storage;
+  let addHiddenAuthor;
+  let addHiddenPaper;
+  let addHiddenVenue;
+  let addToReadingQueue;
+  let batchGetStorage;
+  let clearReadingQueue;
+  let csvToTags;
+  let getAuthorHIndexSnapshots;
+  let getCitationSnapshots;
+  let getExternalSignalCache;
+  let getHiddenAuthors;
+  let getHiddenPapers;
+  let getHiddenVenues;
+  let getLocalCohortCache;
+  let getPageVisitCache;
+  let getQualityJcrIndex;
+  let getQualityQuartilesIndex;
+  let getReadingLoadPageCounts;
+  let getReadingQueue;
+  let getSavedPapers;
+  let getSettings;
+  let removePaper;
+  let setAuthorHIndexSnapshot;
+  let setExternalSignalCache;
+  let setLocalCohortCache;
+  let setSettings;
+  let setCitationSnapshot;
+  let setTrajectoryVenueExpectedCache;
+  let setPageVisitCacheEntry;
+  let setReadingLoadPageCount;
+  let uniqTags;
+  let upsertPaper;
+  let DEFAULT_SETTINGS;
 
-  const {
-    compileQualityIndex,
-    extractVenueFromAuthorsVenue,
-    isPreprintVenue,
-    normalizeVenueName,
-    normalizeVhbRank,
-    qualityBadgesForVenue,
-    venueWeightForVenue
-  } = quality;
-  
-  // Import DEFAULT_SETTINGS for refreshState
-  const { DEFAULT_SETTINGS } = storage;
+  let compileQualityIndex;
+  let extractVenueFromAuthorsVenue;
+  let isPreprintVenue;
+  let normalizeVenueName;
+  let normalizeVhbRank;
+  let qualityBadgesForVenue;
+  let venueWeightForVenue;
+
+  let getCachedElement;
+  let getCachedElements;
+
+  async function importModuleWithRetry(path, attempts = 2) {
+    let lastError = null;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await import(chrome.runtime.getURL(path));
+      } catch (e) {
+        lastError = e;
+        if (i < attempts - 1) await sleep(120 * (i + 1));
+      }
+    }
+    throw lastError;
+  }
+
+  async function ensureModulesLoaded() {
+    if (modulesLoaded) return;
+    const storage = await importModuleWithRetry("src/common/storage.js");
+    const quality = await importModuleWithRetry("src/common/quality.js");
+    const domCache = await importModuleWithRetry("src/content/dom-cache.js");
+    ({
+      addHiddenAuthor,
+      addHiddenPaper,
+      addHiddenVenue,
+      addToReadingQueue,
+      batchGetStorage,
+      clearReadingQueue,
+      csvToTags,
+      getAuthorHIndexSnapshots,
+      getCitationSnapshots,
+      getExternalSignalCache,
+      getHiddenAuthors,
+      getHiddenPapers,
+      getHiddenVenues,
+      getLocalCohortCache,
+      getPageVisitCache,
+      getQualityJcrIndex,
+      getQualityQuartilesIndex,
+      getReadingLoadPageCounts,
+      getReadingQueue,
+      getSavedPapers,
+      getSettings,
+      removePaper,
+      setAuthorHIndexSnapshot,
+      setExternalSignalCache,
+      setLocalCohortCache,
+      setSettings,
+      setCitationSnapshot,
+      setTrajectoryVenueExpectedCache,
+      setPageVisitCacheEntry,
+      setReadingLoadPageCount,
+      uniqTags,
+      upsertPaper,
+      DEFAULT_SETTINGS
+    } = storage);
+    ({
+      compileQualityIndex,
+      extractVenueFromAuthorsVenue,
+      isPreprintVenue,
+      normalizeVenueName,
+      normalizeVhbRank,
+      qualityBadgesForVenue,
+      venueWeightForVenue
+    } = quality);
+    ({ getCachedElement, getCachedElements } = domCache);
+    modulesLoaded = true;
+  }
+
+  function safeSessionGet(key) {
+    try {
+      return sessionStorage.getItem(key);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function safeSessionSet(key, value) {
+    try {
+      sessionStorage.setItem(key, value);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function safeSessionRemove(key) {
+    try {
+      sessionStorage.removeItem(key);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   function parseCsvLine(line, delim = ";") {
     const s = String(line || "");
@@ -75,8 +164,6 @@
   }
 
   const SELF_CITE_CACHE_MS = 30 * 24 * 60 * 60 * 1000; // Used by ensureSelfCitationEstimate
-
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function normalizeText(str) {
     return String(str || "")
@@ -1070,6 +1157,7 @@
     return Date.now() < openalexRateLimitUntil;
   }
   let trajectoryVenueExpectedSaveTimer = null;
+  let localCohortCacheSaveTimer = null;
   const EXTERNAL_SIGNAL_CONCURRENCY = 2;
   const EXTERNAL_SIGNAL_DELAY_MS = 500;
   const EXTERNAL_SIGNAL_PROVIDER_LIMITS = {
@@ -2083,9 +2171,19 @@
     if (arxivId) api += `&paper_arxiv_id=${encodeURIComponent(arxivId)}`;
     if (title) api += `&paper_title=${encodeURIComponent(title)}`;
     if (url) api += `&paper_url=${encodeURIComponent(url)}`;
-    const r = await fetch(api);
-    if (!r.ok) return null;
-    const data = await r.json();
+    let data = null;
+    try {
+      const res = await chrome.runtime.sendMessage({
+        action: "fetchExternal",
+        url: api,
+        timeoutMs: 8000,
+        responseType: "json"
+      });
+      if (!res?.ok || !res.body) return null;
+      data = res.body;
+    } catch (_) {
+      return null;
+    }
     const link = data?.code_url || data?.unshortened_url || data?.cx_url || null;
     return link || null;
   }
@@ -3022,6 +3120,75 @@
     return null;
   }
 
+  const SPARSE_LOCAL_COHORT_MIN = 5;
+  const SPARSE_LOCAL_COHORT_MAX_SAMPLE_REQUESTS = 3;
+  const LOCAL_COHORT_CACHE_SAMPLE_LIMIT = 24;
+
+  function normalizeCohortSample(sample) {
+    if (!sample || typeof sample !== "object") return null;
+    const id = String(sample.id || "").trim();
+    const citations = Number(sample.citations);
+    const citesPerYear = Number(sample.citesPerYear);
+    if (!id || !Number.isFinite(citations) || citations < 0) return null;
+    return {
+      id,
+      citations,
+      citesPerYear: Number.isFinite(citesPerYear) && citesPerYear >= 0 ? citesPerYear : null,
+      observedAt: Number(sample.observedAt) || Date.now()
+    };
+  }
+
+  function buildCohortEntry(samples, minCohort, extra = {}) {
+    const sampleMap = new Map();
+    for (const rawSample of Array.isArray(samples) ? samples : []) {
+      const sample = normalizeCohortSample(rawSample);
+      if (!sample) continue;
+      const existing = sampleMap.get(sample.id);
+      if (!existing || sample.observedAt >= existing.observedAt) {
+        sampleMap.set(sample.id, sample);
+      }
+    }
+    const normalizedSamples = Array.from(sampleMap.values())
+      .sort((a, b) => (b.observedAt || 0) - (a.observedAt || 0))
+      .slice(0, LOCAL_COHORT_CACHE_SAMPLE_LIMIT);
+    const citations = normalizedSamples.map((sample) => sample.citations);
+    const citesPerYear = normalizedSamples.map((sample) => sample.citesPerYear).filter((value) => Number.isFinite(value));
+    return {
+      medianCites: citations.length ? median(citations) : null,
+      medianCitesPerYear: citesPerYear.length ? median(citesPerYear) : null,
+      n: normalizedSamples.length,
+      minCohort,
+      samples: normalizedSamples,
+      updatedAt: normalizedSamples.reduce((acc, sample) => Math.max(acc, sample.observedAt || 0), 0),
+      ...extra
+    };
+  }
+
+  function mergeCohortEntries(primary, secondary, minCohort, extra = {}) {
+    if (!primary && !secondary) return null;
+    const samples = [
+      ...(Array.isArray(primary?.samples) ? primary.samples : []),
+      ...(Array.isArray(secondary?.samples) ? secondary.samples : [])
+    ];
+    if (!samples.length) return null;
+    return buildCohortEntry(samples, minCohort, {
+      sampled: !!(primary?.sampled || secondary?.sampled),
+      persisted: !!(primary?.persisted || secondary?.persisted),
+      ...extra
+    });
+  }
+
+  function getLocalCohortKeyForPaper(paper) {
+    if (!paper) return "";
+    const year = paper?.year != null ? parseYear(String(paper.year)) : null;
+    if (!year || year < 1500) return "";
+    const venueRaw = (paper.venue || extractVenueFromAuthorsVenue(paper.authorsVenue) || "").trim();
+    if (!venueRaw) return "";
+    const venueNorm = normalizeVenueName(venueRaw);
+    if (!venueNorm) return "";
+    return `${venueNorm}|${year}`;
+  }
+
   function buildLocalCohortExpected(results, isAuthorProfile, minCohort = 5) {
     const buckets = new Map();
     for (const r of results) {
@@ -3042,42 +3209,313 @@
       const venueNorm = normalizeVenueName(venueRaw);
       if (!venueNorm) continue;
       const key = `${venueNorm}|${year}`;
-      const entry = buckets.get(key) || { citations: [], citesPerYear: [] };
-      entry.citations.push(Number(citations) || 0);
+      const entry = buckets.get(key) || [];
       const vel = computeVelocityValue(citations, year);
-      if (vel?.velocity != null) entry.citesPerYear.push(vel.velocity);
+      const sampleId = paper.clusterId || paper.key || `${paper.title || ""}|${paper.year || ""}|${paper.url || ""}`;
+      entry.push({
+        id: sampleId,
+        citations: Number(citations) || 0,
+        citesPerYear: vel?.velocity != null ? vel.velocity : null,
+        observedAt: Date.now()
+      });
       buckets.set(key, entry);
     }
     const expected = new Map();
-    for (const [key, entry] of buckets.entries()) {
-      const n = entry.citations.length;
+    for (const [key, samples] of buckets.entries()) {
+      const n = samples.length;
       if (!n) continue;
-      const medianCites = median(entry.citations);
-      const medianPerYear = entry.citesPerYear.length ? median(entry.citesPerYear) : null;
-      expected.set(key, {
-        medianCites,
-        medianCitesPerYear: medianPerYear,
-        n,
-        minCohort
-      });
+      expected.set(key, buildCohortEntry(samples, minCohort, { sourceKind: "local" }));
     }
     return expected;
   }
 
   function getLocalExpectedForPaper(paper, state) {
     if (!paper || !state?.localCohortExpected) return null;
-    const year = paper?.year != null ? parseYear(String(paper.year)) : null;
-    if (!year || year < 1500) return null;
-    const venueRaw = (paper.venue || extractVenueFromAuthorsVenue(paper.authorsVenue) || "").trim();
-    if (!venueRaw) return null;
-    const venueNorm = normalizeVenueName(venueRaw);
-    if (!venueNorm) return null;
-    const key = `${venueNorm}|${year}`;
-    const entry = state.localCohortExpected.get(key);
+    const key = getLocalCohortKeyForPaper(paper);
+    if (!key) return null;
+    const baseEntry = state.localCohortExpected.get(key) || null;
+    const persistentEntry = state.localCohortPersistent?.[key] ? { ...state.localCohortPersistent[key], persisted: true } : null;
+    const sampledEntry = state.localCohortSampleCache?.get?.(key) || null;
+    const minCohort = Number(state.settings?.emergingScoreMinCohort) || baseEntry?.minCohort || persistentEntry?.minCohort || sampledEntry?.minCohort || 5;
+    const localMerged = mergeCohortEntries(baseEntry, persistentEntry, minCohort, { sourceKind: "local" });
+    const entry = mergeCohortEntries(localMerged, sampledEntry, minCohort, {
+      sourceKind: sampledEntry ? "sampled" : "local"
+    });
     if (!entry) return null;
-    const minCohort = Number(state.settings?.emergingScoreMinCohort) || entry.minCohort || 5;
     if (entry.n < minCohort) return { ...entry, insufficient: true };
     return entry;
+  }
+
+  function getSparseLocalCohortSampleUrl(isAuthorProfile) {
+    try {
+      const url = new URL(window.location.href);
+      if (isAuthorProfile) {
+        if (!/^\/citations\b/.test(url.pathname)) return null;
+        const pageSize = Math.max(1, parseInt(url.searchParams.get("pagesize") || "20", 10) || 20);
+        const cstart = Math.max(0, parseInt(url.searchParams.get("cstart") || "0", 10) || 0);
+        const nextStart = cstart > 0 ? Math.max(0, cstart - pageSize) : cstart + pageSize;
+        if (nextStart === cstart) return null;
+        url.searchParams.set("cstart", String(nextStart));
+        url.searchParams.set("pagesize", String(pageSize));
+        return url.toString();
+      }
+      if (!url.pathname.includes("/scholar")) return null;
+      const start = Math.max(0, parseInt(url.searchParams.get("start") || "0", 10) || 0);
+      const nextStart = start > 0 ? Math.max(0, start - 10) : start + 10;
+      if (nextStart === start) return null;
+      url.searchParams.set("start", String(nextStart));
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchScholarHtml(url) {
+    if (!url) return null;
+    try {
+      const res = await chrome.runtime.sendMessage({ action: "fetchSnippet", url });
+      return res?.ok && typeof res.html === "string" ? res.html : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function collectSparseLocalCohortSample(doc, targetKey, isAuthorProfile) {
+    if (!doc || !targetKey) return null;
+    const rows = Array.from(doc.querySelectorAll(isAuthorProfile ? ".gsc_a_tr" : ".gs_r"));
+    if (!rows.length) return null;
+    const samples = [];
+    for (const row of rows) {
+      let paper = null;
+      try {
+        paper = isAuthorProfile ? extractPaperFromAuthorProfile(row) : extractPaperFromResultFast(row);
+      } catch {
+        continue;
+      }
+      if (!paper || getLocalCohortKeyForPaper(paper) !== targetKey) continue;
+      const dedupeKey = paper.clusterId || paper.key || `${paper.title || ""}|${paper.year || ""}|${paper.url || ""}`;
+      const citationCount = isAuthorProfile ? extractCitationCount(row) : getCitationCountFromResult(row);
+      const citationsValue = citationCount == null ? 0 : Number(citationCount);
+      if (!Number.isFinite(citationsValue) || citationsValue < 0) continue;
+      const vel = computeVelocityValue(citationsValue, paper.year);
+      samples.push({
+        id: dedupeKey,
+        citations: citationsValue,
+        citesPerYear: vel?.velocity != null ? vel.velocity : null,
+        observedAt: Date.now()
+      });
+    }
+    return samples.length ? buildCohortEntry(samples, SPARSE_LOCAL_COHORT_MIN, { sampled: true, sourceKind: "sampled" }) : null;
+  }
+
+  async function fetchSparseLocalCohortSamplePage(sampleUrl, state) {
+    if (!sampleUrl || !state) return null;
+    if (!state.localCohortSamplePageCache) state.localCohortSamplePageCache = new Map();
+    if (state.localCohortSamplePageCache.has(sampleUrl)) {
+      return state.localCohortSamplePageCache.get(sampleUrl);
+    }
+    if ((Number(state.localCohortSampleRequestCount) || 0) >= SPARSE_LOCAL_COHORT_MAX_SAMPLE_REQUESTS) {
+      return null;
+    }
+    state.localCohortSampleRequestCount = (Number(state.localCohortSampleRequestCount) || 0) + 1;
+    const request = fetchScholarHtml(sampleUrl).catch(() => null);
+    state.localCohortSamplePageCache.set(sampleUrl, request);
+    return request;
+  }
+
+  async function maybeExpandLocalCohortForPaper(paper, state, isAuthorProfile) {
+    if (!paper || !state) return getLocalExpectedForPaper(paper, state);
+    const key = getLocalCohortKeyForPaper(paper);
+    if (!key) return null;
+    const current = getLocalExpectedForPaper(paper, state);
+    if ((current?.n || 0) >= SPARSE_LOCAL_COHORT_MIN) return current;
+    if (!state.localCohortSampleAttempts) state.localCohortSampleAttempts = new Set();
+    if (!state.localCohortSampleInFlight) state.localCohortSampleInFlight = new Map();
+    if (!state.localCohortSampleCache) state.localCohortSampleCache = new Map();
+    if (state.localCohortSampleAttempts.has(key)) {
+      const inflight = state.localCohortSampleInFlight.get(key);
+      if (inflight) await inflight.catch(() => null);
+      return getLocalExpectedForPaper(paper, state);
+    }
+    const sampleUrl = getSparseLocalCohortSampleUrl(isAuthorProfile);
+    if (!sampleUrl) return current;
+    state.localCohortSampleAttempts.add(key);
+    const promise = (async () => {
+      const html = await fetchSparseLocalCohortSamplePage(sampleUrl, state);
+      if (!html) return null;
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const sampled = collectSparseLocalCohortSample(doc, key, isAuthorProfile);
+      if (sampled) state.localCohortSampleCache.set(key, sampled);
+      return sampled;
+    })().finally(() => {
+      state.localCohortSampleInFlight.delete(key);
+    });
+    state.localCohortSampleInFlight.set(key, promise);
+    await promise.catch(() => null);
+    return getLocalExpectedForPaper(paper, state);
+  }
+
+  function mergeLocalCohortPersistentEntry(existing, next, minCohort) {
+    const sampleMap = new Map();
+    for (const sample of Array.isArray(existing?.samples) ? existing.samples : []) {
+      const normalized = normalizeCohortSample(sample);
+      if (normalized) sampleMap.set(normalized.id, normalized);
+    }
+    for (const sample of Array.isArray(next?.samples) ? next.samples : []) {
+      const normalized = normalizeCohortSample(sample);
+      if (!normalized) continue;
+      const current = sampleMap.get(normalized.id);
+      if (!current) {
+        sampleMap.set(normalized.id, normalized);
+        continue;
+      }
+      if (current.citations !== normalized.citations || current.citesPerYear !== normalized.citesPerYear) {
+        sampleMap.set(normalized.id, normalized);
+      }
+    }
+    const merged = buildCohortEntry(Array.from(sampleMap.values()), minCohort, { sourceKind: "local", persisted: true });
+    if (!merged || !merged.samples.length) return existing || null;
+    return {
+      samples: merged.samples,
+      updatedAt: merged.updatedAt || Date.now()
+    };
+  }
+
+  function sameCohortSamples(a, b) {
+    const left = Array.isArray(a) ? a : [];
+    const right = Array.isArray(b) ? b : [];
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i++) {
+      const ls = left[i];
+      const rs = right[i];
+      if (!ls || !rs) return false;
+      if (
+        ls.id !== rs.id ||
+        ls.citations !== rs.citations ||
+        ls.citesPerYear !== rs.citesPerYear ||
+        ls.observedAt !== rs.observedAt
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function scheduleLocalCohortCacheSave(state) {
+    if (localCohortCacheSaveTimer) return;
+    localCohortCacheSaveTimer = setTimeout(() => {
+      localCohortCacheSaveTimer = null;
+      if (state?.localCohortPersistent) {
+        setLocalCohortCache(state.localCohortPersistent).catch(() => {});
+      }
+    }, 1500);
+  }
+
+  function persistLocalCohortObservations(state) {
+    if (!state?.settings?.showEmergingScore || !state.localCohortExpected || !(state.localCohortExpected instanceof Map)) return;
+    if (!state.localCohortPersistent || typeof state.localCohortPersistent !== "object") {
+      state.localCohortPersistent = {};
+    }
+    const currentKeys = Array.isArray(state.currentResultKeys) ? state.currentResultKeys : [];
+    const signature = [
+      state.currentPageKey || location.pathname || "",
+      currentKeys.length,
+      currentKeys.slice(0, 5).join(","),
+      currentKeys.slice(-5).join(",")
+    ].join("|");
+    if (signature && state.localCohortPersistSignature === signature) return;
+    const minCohort = Number(state.settings?.emergingScoreMinCohort) || SPARSE_LOCAL_COHORT_MIN;
+    let changed = false;
+    for (const [key, entry] of state.localCohortExpected.entries()) {
+      const current = state.localCohortPersistent[key] || null;
+      const merged = mergeLocalCohortPersistentEntry(current, entry, minCohort);
+      if (!sameCohortSamples(merged?.samples, current?.samples)) {
+        state.localCohortPersistent[key] = merged;
+        changed = true;
+      }
+    }
+    state.localCohortPersistSignature = signature;
+    if (changed) scheduleLocalCohortCacheSave(state);
+  }
+
+  const EMERGING_PREFETCH_MAX_ROWS = 3;
+  const EMERGING_PREFETCH_MAX_OPENALEX = 2;
+  const EMERGING_PREFETCH_IDLE_MIN_MS = 12;
+  const EMERGING_PREFETCH_TIMEOUT_MS = 2500;
+
+  function canSpendLatencyBudget(state, deadline) {
+    if (document.hidden) return false;
+    if (navigator.connection?.saveData) return false;
+    if (state?.criticalRenderUntil && performance.now() < state.criticalRenderUntil && !deadline?.didTimeout) return false;
+    if (deadline && typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < EMERGING_PREFETCH_IDLE_MIN_MS && !deadline.didTimeout) {
+      return false;
+    }
+    return true;
+  }
+
+  async function warmEmergingDataForPaper(paper, state, isAuthorProfile, allowOpenAlexPrefetch) {
+    if (!paper || !state?.settings?.showEmergingScore) return;
+    const dataSource = state.settings.emergingScoreDataSource || "hybrid";
+    const allowLocal = dataSource !== "openalex";
+    const allowOpenAlexExpected = dataSource !== "local";
+    let localEntry = allowLocal ? getLocalExpectedForPaper(paper, state) : null;
+    if (allowLocal && (localEntry?.n || 0) < SPARSE_LOCAL_COHORT_MIN) {
+      localEntry = await maybeExpandLocalCohortForPaper(paper, state, isAuthorProfile);
+    }
+    if (!allowOpenAlexExpected || !allowOpenAlexPrefetch || isOpenAlexRateLimited()) return;
+    const shouldWarmOpenAlex = dataSource === "openalex" || !localEntry || localEntry.insufficient;
+    if (!shouldWarmOpenAlex) return;
+    const year = paper?.year != null ? parseYear(String(paper.year)) : null;
+    if (!year || year < 1500) return;
+    const authorName = pickFirstAuthorName(paper);
+    const oaWork = await fetchOpenAlexWorkForPaper(paper, authorName);
+    if (oaWork?.hostVenueId) {
+      await fetchOpenAlexVenueYearStats(oaWork.hostVenueId, year, state);
+    }
+  }
+
+  function scheduleEmergingPrefetch(rows, state, isAuthorProfile) {
+    if (!state?.settings?.showEmergingScore || !Array.isArray(rows) || rows.length === 0) return;
+    if (state.emergingPrefetchScheduled) return;
+    const visibleRows = rows.filter((row) => row && row.isConnected && row.dataset.suInView === "1").slice(0, 10);
+    if (!visibleRows.length) return;
+    state.emergingPrefetchScheduled = true;
+    const runner = async (deadline) => {
+      state.emergingPrefetchScheduled = false;
+      if (!canSpendLatencyBudget(state, deadline)) {
+        if (!deadline?.didTimeout) scheduleEmergingPrefetch(visibleRows, state, isAuthorProfile);
+        return;
+      }
+      if (!state.emergingPrefetchSeen) state.emergingPrefetchSeen = new Set();
+      let warmed = 0;
+      let openalexBudget = EMERGING_PREFETCH_MAX_OPENALEX;
+      for (const row of visibleRows) {
+        if (warmed >= EMERGING_PREFETCH_MAX_ROWS) break;
+        if (!canSpendLatencyBudget(state, deadline)) break;
+        let paper = null;
+        try {
+          paper = isAuthorProfile ? getCachedAuthorPaper(row) : getCachedPaperFast(row);
+        } catch {
+          continue;
+        }
+        const key = getLocalCohortKeyForPaper(paper) || paper?.key || "";
+        if (!key || state.emergingPrefetchSeen.has(key)) continue;
+        const localEntry = getLocalExpectedForPaper(paper, state);
+        const dataSource = state.settings.emergingScoreDataSource || "hybrid";
+        const likelyBenefit = dataSource === "openalex" || !localEntry || localEntry.insufficient || (localEntry.n < SPARSE_LOCAL_COHORT_MIN);
+        if (!likelyBenefit) continue;
+        state.emergingPrefetchSeen.add(key);
+        const allowOpenAlexPrefetch = openalexBudget > 0;
+        await warmEmergingDataForPaper(paper, state, isAuthorProfile, allowOpenAlexPrefetch);
+        if (allowOpenAlexPrefetch) openalexBudget -= 1;
+        warmed += 1;
+      }
+    };
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback((deadline) => { runner(deadline).catch(() => {}); }, { timeout: EMERGING_PREFETCH_TIMEOUT_MS });
+    } else {
+      setTimeout(() => { runner({ didTimeout: true, timeRemaining: () => EMERGING_PREFETCH_IDLE_MIN_MS }).catch(() => {}); }, 1200);
+    }
   }
 
   const TRAJECTORY_EXPECTED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -3116,7 +3554,7 @@
     const cached = getTrajectoryExpectedEntry(state, key);
     if (cached) return cached;
     const params = new URLSearchParams();
-    params.set("filter", `host_venue.id:${venueId},from_publication_date:${year}-01-01,to_publication_date:${year}-12-31`);
+    params.set("filter", `primary_location.source.id:${venueId},from_publication_date:${year}-01-01,to_publication_date:${year}-12-31`);
     params.set("per_page", String(TRAJECTORY_EXPECTED_SAMPLE_LIMIT));
     params.set("select", "cited_by_count,publication_year");
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
@@ -3997,7 +4435,7 @@
 
     const grid = getOrCreateSearchActionGrid(container);
     if (grid) {
-      grid.appendChild(toggle);
+      placeInSearchActionGrid(grid, toggle, "abstract");
     } else {
       wrap.appendChild(toggle);
     }
@@ -4038,7 +4476,36 @@
     }
     const bar = container.querySelector(".su-btnbar");
     if (bar && bar.parentElement !== grid) grid.appendChild(bar);
+    if (bar) {
+      for (const btn of bar.querySelectorAll(".su-btn[data-act]")) {
+        placeInSearchActionGrid(grid, btn, btn.dataset.act || "");
+      }
+    }
     return grid;
+  }
+
+  const SEARCH_ACTION_GRID_SLOTS = {
+    hide: "1 / 1",
+    addqueue: "1 / 2",
+    openpdf: "1 / 3",
+    copybib: "2 / 1",
+    copymd: "2 / 2",
+    idealineage: "2 / 3",
+    abstract: "3 / 1",
+    emerging: "3 / 2",
+    velocity: "3 / 3",
+    remove: "4 / 1"
+  };
+
+  function placeInSearchActionGrid(grid, el, slotName) {
+    if (!grid || !el || !slotName) return;
+    const area = SEARCH_ACTION_GRID_SLOTS[slotName];
+    if (!area) return;
+    if (!el.classList.contains("su-search-grid-item")) el.classList.add("su-search-grid-item");
+    el.style.gridArea = area;
+    if (el.parentElement !== grid && !grid.contains(el)) {
+      grid.appendChild(el);
+    }
   }
 
   function resolveScholarRedirectUrl(url) {
@@ -4155,7 +4622,7 @@
 
     const grid = getOrCreateAuthorBadgeGrid(container);
     if (grid) {
-      grid.appendChild(toggle);
+      placeInAuthorBadgeGrid(grid, toggle, "abstract");
     } else {
       wrap.appendChild(toggle);
     }
@@ -4633,13 +5100,14 @@
     if (accel) {
       vel.title += ` Citation acceleration: ${accel.label} (cites/yr vs similar-age papers).`;
     }
+    vel.title += ` Inputs: ${citations != null ? citations : "—"} citations over ${velocityData?.yearsAgo || "—"} years from Scholar on this page.`;
     if (isAuthorProfile && authorGrid) {
-      authorGrid.appendChild(vel);
+      placeInAuthorBadgeGrid(authorGrid, vel, "velocity");
       return;
     }
     const actionGrid = !isAuthorProfile ? getOrCreateSearchActionGrid(container) : null;
     if (actionGrid) {
-      actionGrid.appendChild(vel);
+      placeInSearchActionGrid(actionGrid, vel, "velocity");
       return;
     }
     const bar = getCachedElement(container, ".su-btnbar");
@@ -4681,7 +5149,7 @@
     const badge = document.createElement("span");
     badge.className = "su-citation-spike-badge su-btn";
     badge.textContent = `↑${pct}% in ${monthsAgo}mo`;
-    badge.title = `Citations increased by ${pct}% since ${monthsAgo} months ago (${snap.citations} → ${citations}).`;
+    badge.title = `Citations increased by ${pct}% since ${monthsAgo} months ago (${snap.citations} → ${citations}). Inputs: Scholar citations on this page plus the stored baseline snapshot from ${snap.date || "the prior visit"}. Formula: percent change = (current - baseline) / baseline.`;
     const anchor = isAuthorProfile ? container.querySelector(".gsc_a_c") : container.querySelector(".gs_fl");
     if (anchor) {
       anchor.appendChild(document.createTextNode(" "));
@@ -4740,6 +5208,23 @@
     return grid;
   }
 
+  const AUTHOR_BADGE_GRID_SLOTS = {
+    abstract: { column: "1", row: "1" },
+    lineage: { column: "2", row: "1" },
+    emerging: { column: "1", row: "2" },
+    velocity: { column: "2", row: "2" }
+  };
+
+  function placeInAuthorBadgeGrid(grid, el, slotName) {
+    if (!grid || !el) return;
+    const slot = AUTHOR_BADGE_GRID_SLOTS[slotName];
+    if (!slot) return;
+    el.dataset.suAuthorGridSlot = slotName;
+    el.style.gridColumn = slot.column;
+    el.style.gridRow = slot.row;
+    if (el.parentElement !== grid) grid.appendChild(el);
+  }
+
   function sizeAuthorBadgeGrid(grid, row) {
     if (!grid || !row) return;
     const citedCell = row.querySelector(".gsc_a_c");
@@ -4758,8 +5243,34 @@
     if (!container || !grid) return;
     const toggle = container.querySelector(".su-abstract-toggle");
     if (!toggle) return;
-    if (grid.contains(toggle)) return;
-    grid.appendChild(toggle);
+    placeInAuthorBadgeGrid(grid, toggle, "abstract");
+  }
+
+  function formatEmergingConfidenceLabel(kind) {
+    if (kind === "sampled") return "Sampled";
+    if (kind === "openalex") return "OpenAlex";
+    if (kind === "mixed") return "Mixed";
+    return "Local";
+  }
+
+  function getEmergingConfidenceKind(localEntry, useOpenAlexExpected, openalexExpected) {
+    if ((useOpenAlexExpected || openalexExpected) && localEntry) return "mixed";
+    if (useOpenAlexExpected || openalexExpected) return "openalex";
+    if (localEntry?.sampled) return "sampled";
+    return "local";
+  }
+
+  function buildEmergingBadgeTitle(data) {
+    const confidence = formatEmergingConfidenceLabel(data.confidenceKind);
+    const citations = Number.isFinite(data.citations) ? data.citations : "—";
+    const expected = Number.isFinite(data.expectedCites) ? Math.round(data.expectedCites) : "—";
+    const expectedPerYear = Number.isFinite(data.expectedCitesPerYear) ? data.expectedCitesPerYear.toFixed(1) : "—";
+    return [
+      `Confidence: ${confidence}.`,
+      `Inputs: ${citations} Scholar citations over ${data.yearsAgo || "—"} years; expected ${expected} total and ${expectedPerYear}/yr.`,
+      "Score shows relative performance vs venue/year peers; if expected totals are sparse, it falls back to early momentum (citations/year vs expected citations/year).",
+      `Source: ${data.sourceLabel || "—"}.`
+    ].join(" ");
   }
 
   function buildEmergingTooltipHtml(data) {
@@ -4776,6 +5287,8 @@
     const halfLife = data.halfLifeYear != null ? String(data.halfLifeYear) : "—";
     const source = data.sourceLabel || "—";
     const approx = data.lowConfidence ? "~" : "";
+    const confidenceKind = String(data.confidenceKind || "local");
+    const confidence = formatEmergingConfidenceLabel(confidenceKind);
     const expectedLine = expectedCites != null ? `<strong>${approx}${expectedCites}</strong>` : "—";
     const expectedPerYearLine = expectedPerYear != null ? `<strong>${approx}${expectedPerYear.toFixed(1)}</strong>` : "—";
     const parts = [
@@ -4787,12 +5300,29 @@
       `Early momentum: <strong>${momentum}</strong>`,
       `Citation acceleration: <strong>${accel}</strong>`,
       `Citation half-life: <strong>${halfLife}</strong>`,
+      `<span class="su-emerging-confidence su-emerging-confidence-${confidenceKind}">Confidence: ${confidence}</span>`,
       `<span class="su-emerging-source">${source}</span>`
     ];
+    parts.push(`<span class="su-emerging-explain">Formula: relative = (citations - expected) / expected; fallback momentum = (citations/yr / expected citations/yr) - 1.</span>`);
+    parts.push(`<span class="su-emerging-explain">Assumptions: Scholar provides the citation count on this page; local cohorts come from pages you visited, sampled cohorts add one nearby Scholar page, and OpenAlex supplies venue/year and half-life when local evidence is thin.</span>`);
     if (data.openalexRateLimited) {
       parts.push('<span class="su-emerging-warn">OpenAlex rate limited; try again later.</span>');
     }
     return parts.join("<br>");
+  }
+
+  function getEmergingMetrics(citations, velocity, yearsAgo, expectedCites, expectedPerYear) {
+    const relativePct = expectedCites != null && expectedCites > 0 ? ((citations - expectedCites) / expectedCites) * 100 : null;
+    const momentumPct = expectedPerYear != null && expectedPerYear > 0 ? ((velocity / expectedPerYear) - 1) * 100 : null;
+    const displayPct = Number.isFinite(relativePct) ? relativePct : (Number.isFinite(momentumPct) ? momentumPct : null);
+    return { relativePct, momentumPct, displayPct, yearsAgo };
+  }
+
+  function formatLocalCohortSourceLabel(entry) {
+    if (!entry) return "";
+    const sampledNote = entry.sampled ? ", sampled" : "";
+    const cachedNote = entry.persisted ? ", cached" : "";
+    return `Local cohort (n=${entry.n}${entry.insufficient ? ", low confidence" : ""}${sampledNote}${cachedNote})`;
   }
 
   function renderEmergingScore(container, paper, state, isAuthorProfile) {
@@ -4819,9 +5349,13 @@
     if (expectedPerYear == null && Number.isFinite(expectedCites) && expectedCites > 0) {
       expectedPerYear = expectedCites / vel.yearsAgo;
     }
-    const relativePct = expectedCites != null && expectedCites > 0 ? ((citations - expectedCites) / expectedCites) * 100 : null;
-    const momentumPct = expectedPerYear != null && expectedPerYear > 0 ? ((vel.velocity / expectedPerYear) - 1) * 100 : null;
-    const displayPct = Number.isFinite(relativePct) ? relativePct : (Number.isFinite(momentumPct) ? momentumPct : null);
+    const { relativePct, momentumPct, displayPct } = getEmergingMetrics(
+      citations,
+      vel.velocity,
+      vel.yearsAgo,
+      expectedCites,
+      expectedPerYear
+    );
     const badgeText = displayPct != null
       ? `Emerging ${localInsufficient ? "~" : ""}${formatPct(displayPct)}`
       : "Emerging —";
@@ -4848,10 +5382,11 @@
       ? `${accel.acceleration >= 0 ? "+" : ""}${accel.acceleration.toFixed(2)} cites/yr²`
       : "Not enough history";
     const sourceLabel = localEntry
-      ? `Local cohort (n=${localEntry.n}${localInsufficient ? ", low confidence" : ""})`
+      ? formatLocalCohortSourceLabel(localEntry)
       : allowOpenAlexExpected
         ? "OpenAlex (pending)"
         : "OpenAlex disabled";
+    const initialConfidenceKind = getEmergingConfidenceKind(localEntry, false, null);
 
     tooltip.innerHTML = buildEmergingTooltipHtml({
       citations,
@@ -4863,9 +5398,19 @@
       halfLifeYear: null,
       sourceLabel,
       yearsAgo: vel.yearsAgo,
+      confidenceKind: initialConfidenceKind,
       lowConfidence: localInsufficient,
       openalexRateLimited: isOpenAlexRateLimited()
     });
+    badge.title = buildEmergingBadgeTitle({
+      confidenceKind: initialConfidenceKind,
+      citations,
+      expectedCites,
+      expectedCitesPerYear: expectedPerYear,
+      yearsAgo: vel.yearsAgo,
+      sourceLabel
+    });
+    badge.dataset.suConfidence = initialConfidenceKind;
 
     const positionTooltip = () => {
       tooltip.style.display = "block";
@@ -4897,18 +5442,23 @@
     };
 
     const updateTooltipFromOpenAlex = async () => {
-      if (badge.dataset.suEmergingLoaded === "1" || !allowOpenAlex) return;
+      if (badge.dataset.suEmergingLoaded === "1") return;
       badge.dataset.suEmergingLoaded = "1";
+      let sampledLocalEntry = allowLocal ? getLocalExpectedForPaper(paper, state) : null;
+      if (allowLocal && (sampledLocalEntry?.n || 0) < SPARSE_LOCAL_COHORT_MIN) {
+        sampledLocalEntry = await maybeExpandLocalCohortForPaper(paper, state, isAuthorProfile);
+      }
+      const sampledLocalInsufficient = !!sampledLocalEntry?.insufficient;
       const authorName = pickFirstAuthorName(paper);
-      const oaWork = await fetchOpenAlexWorkForPaper(paper, authorName);
+      const oaWork = allowOpenAlex ? await fetchOpenAlexWorkForPaper(paper, authorName) : null;
       let openalexExpected = null;
-      if (allowOpenAlexExpected && oaWork?.hostVenueId && year) {
+      if (allowOpenAlexExpected && oaWork?.hostVenueId && year && (!sampledLocalEntry || sampledLocalInsufficient || dataSource === "openalex")) {
         openalexExpected = await fetchOpenAlexVenueYearStats(oaWork.hostVenueId, year, state);
       }
-      const useOpenAlexExpected = allowOpenAlexExpected && (!localEntry || localInsufficient) && openalexExpected;
-      let nextExpectedCites = expectedCites;
-      let nextExpectedPerYear = expectedPerYear;
-      let nextSource = sourceLabel;
+      let nextExpectedCites = sampledLocalEntry?.medianCites ?? expectedCites;
+      let nextExpectedPerYear = sampledLocalEntry?.medianCitesPerYear ?? expectedPerYear;
+      let nextSource = sampledLocalEntry ? formatLocalCohortSourceLabel(sampledLocalEntry) : sourceLabel;
+      const useOpenAlexExpected = allowOpenAlexExpected && (!sampledLocalEntry || sampledLocalInsufficient) && openalexExpected;
       if (useOpenAlexExpected) {
         nextExpectedCites = openalexExpected.medianCites;
         nextExpectedPerYear = openalexExpected.medianCitesPerYear;
@@ -4921,13 +5471,18 @@
       if (nextExpectedPerYear == null && Number.isFinite(nextExpectedCites) && nextExpectedCites > 0) {
         nextExpectedPerYear = nextExpectedCites / vel.yearsAgo;
       }
-      const nextRelativePct = nextExpectedCites != null && nextExpectedCites > 0 ? ((citations - nextExpectedCites) / nextExpectedCites) * 100 : null;
-      const nextMomentumPct = nextExpectedPerYear != null && nextExpectedPerYear > 0 ? ((vel.velocity / nextExpectedPerYear) - 1) * 100 : null;
-      const nextDisplayPct = Number.isFinite(nextRelativePct) ? nextRelativePct : (Number.isFinite(nextMomentumPct) ? nextMomentumPct : null);
-      if (nextDisplayPct != null && (!Number.isFinite(displayPct) || dataSource === "openalex" || useOpenAlexExpected)) {
-        const prefix = (!openalexExpected && localInsufficient) ? "Emerging ~" : "Emerging ";
+      const nextConfidenceKind = getEmergingConfidenceKind(sampledLocalEntry, useOpenAlexExpected || (dataSource === "openalex" && !!openalexExpected), openalexExpected);
+      const { relativePct: nextRelativePct, momentumPct: nextMomentumPct, displayPct: nextDisplayPct } = getEmergingMetrics(
+        citations,
+        vel.velocity,
+        vel.yearsAgo,
+        nextExpectedCites,
+        nextExpectedPerYear
+      );
+      if (nextDisplayPct != null && (!Number.isFinite(displayPct) || dataSource === "openalex" || useOpenAlexExpected || sampledLocalEntry?.sampled)) {
+        const prefix = (!openalexExpected && sampledLocalInsufficient) ? "Emerging ~" : "Emerging ";
         label.textContent = `${prefix}${formatPct(nextDisplayPct)}`;
-      } else if (displayPct != null && localInsufficient) {
+      } else if (displayPct != null && sampledLocalInsufficient) {
         label.textContent = `Emerging ~${formatPct(displayPct)}`;
       }
       let halfLifeYear = null;
@@ -4954,9 +5509,19 @@
         halfLifeYear,
         sourceLabel: nextSource,
         yearsAgo: vel.yearsAgo,
-        lowConfidence: !openalexExpected && localInsufficient,
+        confidenceKind: nextConfidenceKind,
+        lowConfidence: !openalexExpected && sampledLocalInsufficient,
         openalexRateLimited: isOpenAlexRateLimited() && !openalexExpected && !halfLifeYear
       });
+      badge.title = buildEmergingBadgeTitle({
+        confidenceKind: nextConfidenceKind,
+        citations,
+        expectedCites: nextExpectedCites,
+        expectedCitesPerYear: nextExpectedPerYear,
+        yearsAgo: vel.yearsAgo,
+        sourceLabel: nextSource
+      });
+      badge.dataset.suConfidence = nextConfidenceKind;
     };
 
     badge.addEventListener("mouseenter", () => {
@@ -4967,7 +5532,13 @@
       tooltip.style.display = "none";
     });
 
-    root.appendChild(badge);
+    if (isAuthorProfile && root.classList.contains("su-author-badge-grid")) {
+      placeInAuthorBadgeGrid(root, badge, "emerging");
+    } else if (!isAuthorProfile && root.classList.contains("su-search-action-grid")) {
+      placeInSearchActionGrid(root, badge, "emerging");
+    } else {
+      root.appendChild(badge);
+    }
 
     if (paper?.clusterId && state.citationSnapshots) {
       const snap = state.citationSnapshots[paper.clusterId];
@@ -5539,18 +6110,21 @@
 
   async function refreshState(state) {
     // Batch all storage reads into a single call
-    const storageData = await batchGetStorage({
-      savedPapers: {},
-      settings: DEFAULT_SETTINGS,
-      qualityQuartilesIndex: {},
-      qualityQuartilesMeta: null,
-      qualityJcrIndex: {},
-      qualityJcrMeta: null,
-      trajectoryVenueExpected: {},
-      hiddenPapers: [],
-      hiddenVenues: [],
-      hiddenAuthors: []
-    });
+    const [storageData, persistentLocalCohort] = await Promise.all([
+      batchGetStorage({
+        savedPapers: {},
+        settings: DEFAULT_SETTINGS,
+        qualityQuartilesIndex: {},
+        qualityQuartilesMeta: null,
+        qualityJcrIndex: {},
+        qualityJcrMeta: null,
+        trajectoryVenueExpected: {},
+        hiddenPapers: [],
+        hiddenVenues: [],
+        hiddenAuthors: []
+      }),
+      getLocalCohortCache()
+    ]);
     
     const saved = storageData.savedPapers || {};
     const settings = { ...DEFAULT_SETTINGS, ...(storageData.settings || {}) };
@@ -5577,6 +6151,9 @@
     state.jcrIndex = jcr.index;
     state.jcrMeta = jcr.meta;
     state.trajectoryVenueExpected = trajectoryVenueExpected;
+    state.localCohortPersistent = persistentLocalCohort && typeof persistentLocalCohort === "object"
+      ? persistentLocalCohort
+      : {};
 
     // Hash uses only in-memory data so cache can be checked before any file I/O.
     // VHB/Impact index sizes are omitted; settings changes (rank filters) act as
@@ -6023,8 +6600,12 @@
     }
     if (isAuthorProfile && authorGrid) {
       lineageBtn.classList.add("su-lineage-badge");
-      if (lineageBtn.parentElement !== authorGrid) authorGrid.appendChild(lineageBtn);
+      placeInAuthorBadgeGrid(authorGrid, lineageBtn, "lineage");
       bindIdeaLineageButton(lineageBtn, container);
+    } else if (!isAuthorProfile) {
+      const searchGrid = getOrCreateSearchActionGrid(container);
+      lineageBtn.classList.remove("su-lineage-badge");
+      placeInSearchActionGrid(searchGrid, lineageBtn, "idealineage");
     } else if (bar && lineageBtn.parentElement !== bar) {
       lineageBtn.classList.remove("su-lineage-badge");
       bar.appendChild(lineageBtn);
@@ -11465,15 +12046,17 @@
         "## Included papers",
         ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`)
       ];
-      const reportText = lines.join("\\n");
+      const reportText = lines.join("\n");
       content.innerHTML = `
-        <textarea class="su-review-report" readonly>${reportText}</textarea>
+        <textarea class="su-review-report" readonly></textarea>
         <div class="su-review-actions">
           <button type="button" class="su-graph-btn" data-review-copy-report="1">Copy report</button>
           <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-report="1">Download report</button>
           <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-bib="1">Export BibTeX</button>
         </div>
       `;
+      const reviewReportEl = content.querySelector(".su-review-report");
+      if (reviewReportEl) reviewReportEl.value = reportText;
       return;
     }
   }
@@ -12030,20 +12613,29 @@
         }
         if (!parsed || parsed.protocol !== "https:" || !isScholarHostname(parsed.hostname)) {
           const resultEl = overlay.querySelector("#su-compare-result");
-          if (resultEl) resultEl.innerHTML = '<p class="su-compare-error">Please enter a Google Scholar author profile URL (https://scholar.google.[tld]/...).</p>';
+          setCompareResultMessage(resultEl, "Please enter a Google Scholar author profile URL (https://scholar.google.[tld]/...).", "su-compare-error");
           return;
         }
         const resultEl = overlay.querySelector("#su-compare-result");
-        if (resultEl) resultEl.innerHTML = "<p>Loading Author B...</p>";
+        setCompareResultMessage(resultEl, "Loading Author B...");
         try {
           const PAGE_SIZE = 20;
-          const MAX_PAGES = 100;
+          const MAX_PAGES = 25;
+          const FETCH_TIMEOUT_MS = 12000;
 
-          const fetchPage = (cstart) => {
+          const fetchPage = async (cstart) => {
             const u = new URL(url);
             u.searchParams.set("cstart", String(cstart));
             u.searchParams.set("pagesize", String(PAGE_SIZE));
-            return fetch(u.toString(), { credentials: "include" }).then((r) => r.text());
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+            try {
+              const res = await fetch(u.toString(), { credentials: "include", signal: ctrl.signal });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              return await res.text();
+            } finally {
+              clearTimeout(timer);
+            }
           };
 
           const html0 = await fetchPage(0);
@@ -12054,7 +12646,7 @@
           const rowId = (tr) => tr.getAttribute("data-row") || tr.querySelector(".gsc_a_at")?.getAttribute("href") || tr.textContent?.slice(0, 80) || "";
           for (let page = 1; page < MAX_PAGES; page++) {
             const cstart = page * PAGE_SIZE;
-            if (resultEl) resultEl.innerHTML = `<p>Loading Author B... (${allRows.length} papers so far)</p>`;
+            setCompareResultMessage(resultEl, `Loading Author B... (${allRows.length} papers so far)`);
             const html = await fetchPage(cstart);
             const doc = new DOMParser().parseFromString(html, "text/html");
             const rows = Array.from(doc.querySelectorAll(".gsc_a_tr"));
@@ -12077,7 +12669,7 @@
           const table = buildAuthorCompareTable(nameA, statsA, nameB, statsB);
           if (resultEl) resultEl.innerHTML = table;
         } catch (err) {
-          if (resultEl) resultEl.innerHTML = `<p class="su-compare-error">Could not load profile: ${String(err?.message || err)}</p>`;
+          setCompareResultMessage(resultEl, `Could not load profile: ${String(err?.message || err)}`, "su-compare-error");
         }
       });
     }
@@ -12113,6 +12705,30 @@
         </tbody>
       </table>
     `;
+  }
+
+  function setCompareResultMessage(resultEl, message, className = "") {
+    if (!resultEl) return;
+    resultEl.textContent = "";
+    const p = document.createElement("p");
+    if (className) p.className = className;
+    p.textContent = String(message || "");
+    resultEl.appendChild(p);
+  }
+
+  function sameFlatObject(a, b) {
+    const left = a && typeof a === "object" ? a : {};
+    const right = b && typeof b === "object" ? b : {};
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    if (leftKeys.length !== rightKeys.length) return false;
+    for (const key of leftKeys) {
+      const lv = left[key];
+      const rv = right[key];
+      if (!rv) return false;
+      if (lv.author !== rv.author || lv.year !== rv.year || lv.title !== rv.title) return false;
+    }
+    return true;
   }
 
   function closePoPOverlay() {
@@ -14765,7 +15381,14 @@
     if (!container) return { added: 0, visible: 0, hasMore: false };
     let added = 0;
     try {
-      const res = await fetch(nextUrl, { credentials: "include" });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      let res;
+      try {
+        res = await fetch(nextUrl, { credentials: "include", signal: ctrl.signal });
+      } finally {
+        clearTimeout(timer);
+      }
       if (!res.ok) return { added: 0, visible: 0, hasMore: true };
       const html = await res.text();
       const parser = new DOMParser();
@@ -14831,95 +15454,7 @@
   }
 
   function ensureSearchSyntaxHighlighting() {
-    const input = document.querySelector("#gs_hdr_ts_in, input[name='q']");
-    if (!input) return;
-    if (input.__suSyntaxHighlightAttached) return;
-    input.__suSyntaxHighlightAttached = true;
-
-    const overlay = document.createElement("div");
-    overlay.className = "su-search-highlight-overlay";
-    overlay.setAttribute("aria-hidden", "true");
-    document.body.appendChild(overlay);
-
-    let stylesSynced = false;
-    let lastValue = null;
-    let rafId = null;
-    let isFocused = false;
-
-    const syncStyles = () => {
-      const cs = window.getComputedStyle(input);
-      overlay.style.font = cs.font;
-      overlay.style.fontSize = cs.fontSize;
-      overlay.style.fontFamily = cs.fontFamily;
-      overlay.style.fontWeight = cs.fontWeight;
-      overlay.style.letterSpacing = cs.letterSpacing;
-      overlay.style.lineHeight = cs.lineHeight;
-      overlay.style.paddingTop = cs.paddingTop;
-      overlay.style.paddingRight = cs.paddingRight;
-      overlay.style.paddingBottom = cs.paddingBottom;
-      overlay.style.paddingLeft = cs.paddingLeft;
-      overlay.style.textAlign = cs.textAlign;
-      overlay.style.borderRadius = cs.borderRadius;
-    };
-
-    const syncPosition = () => {
-      const rect = input.getBoundingClientRect();
-      overlay.style.left = `${rect.left}px`;
-      overlay.style.top = `${rect.top}px`;
-      overlay.style.width = `${rect.width}px`;
-      overlay.style.height = `${rect.height}px`;
-    };
-
-    const update = () => {
-      const value = input.value || "";
-      if (!isFocused || !value) {
-        overlay.style.display = "none";
-        input.classList.remove("su-search-highlight-input");
-        lastValue = value;
-        return;
-      }
-      if (value === lastValue && overlay.style.display === "block") {
-        return;
-      }
-      overlay.innerHTML = highlightSearchQuerySyntax(value);
-      overlay.style.display = "block";
-      input.classList.add("su-search-highlight-input");
-      if (!stylesSynced) {
-        syncStyles();
-        stylesSynced = true;
-      }
-      syncPosition();
-      lastValue = value;
-    };
-
-    const scheduleUpdate = () => {
-      if (rafId != null) return;
-      const raf = window.requestAnimationFrame || ((fn) => setTimeout(fn, 16));
-      rafId = raf(() => {
-        rafId = null;
-        update();
-      });
-    };
-
-    input.addEventListener("input", scheduleUpdate);
-    input.addEventListener("focus", () => {
-      isFocused = true;
-      stylesSynced = false;
-      scheduleUpdate();
-    });
-    input.addEventListener("blur", () => {
-      isFocused = false;
-      overlay.style.display = "none";
-      input.classList.remove("su-search-highlight-input");
-      lastValue = null;
-    });
-    window.addEventListener("resize", () => {
-      stylesSynced = false;
-      syncStyles();
-      syncPosition();
-    });
-    window.addEventListener("scroll", syncPosition, true);
-    update();
+    return;
   }
 
   async function loadSemanticExpansionData() {
@@ -14982,10 +15517,8 @@
     dismissBtn.title = "Dismiss";
     dismissBtn.setAttribute("aria-label", "Dismiss");
     dismissBtn.addEventListener("click", () => {
-      try {
-        sessionStorage.setItem("su-semantic-dismissed", currentQuery || "");
-        root.remove();
-      } catch (_) {}
+      safeSessionSet("su-semantic-dismissed", currentQuery || "");
+      root.remove();
     });
     header.appendChild(dismissBtn);
     root.appendChild(header);
@@ -15013,9 +15546,7 @@
     const existing = document.getElementById("su-semantic-expansion");
     existing?.remove();
     if (!expansion || (!expansion.synonyms?.length && !expansion.broader?.length && !expansion.narrower?.length)) return;
-    try {
-      if (sessionStorage.getItem("su-semantic-dismissed") === (query || "")) return;
-    } catch (_) {}
+    if (safeSessionGet("su-semantic-dismissed") === (query || "")) return;
     const panel = buildSemanticExpansionPanel(expansion, query);
     const container = document.querySelector("#gs_res_ccl_mid, #gs_res_ccl, #gs_bdy");
     if (container) {
@@ -15437,7 +15968,7 @@
     openPdfBtn.textContent = "Open PDFs";
     openPdfBtn.title = "Open the top N available PDFs in background tabs (asks for confirmation).";
     openPdfBtn.addEventListener("click", async () => {
-      const defaultCount = Number(sessionStorage.getItem("su-batch-open-count") || "5") || 5;
+      const defaultCount = Number(safeSessionGet("su-batch-open-count") || "5") || 5;
       const raw = window.prompt(`Open how many PDFs? (max ${MAX_BATCH_PDFS})`, String(defaultCount));
       if (raw == null) return;
       const parsed = parseInt(raw, 10);
@@ -15446,7 +15977,7 @@
         return;
       }
       const desired = Math.min(parsed, MAX_BATCH_PDFS);
-      sessionStorage.setItem("su-batch-open-count", String(desired));
+      safeSessionSet("su-batch-open-count", String(desired));
 
       const { results, isAuthorProfile } = scanResults();
       if (isAuthorProfile) {
@@ -15670,7 +16201,7 @@
           url.searchParams.delete("as_ylo");
           url.searchParams.delete("as_yhi");
           url.searchParams.delete("start");
-          sessionStorage.removeItem(FILTER_STORAGE_KEY);
+          safeSessionRemove(FILTER_STORAGE_KEY);
           window.location.assign(url.toString());
           return;
         }
@@ -15978,7 +16509,11 @@
     state.filters = state.filters || {};
     updateToggleLabel();
     updateQuickButtons();
-    bar.appendChild(toggleBtn);
+    const triggerRow = document.createElement("div");
+    triggerRow.className = "su-filter-trigger-row";
+    triggerRow.appendChild(toggleBtn);
+    triggerRow.appendChild(reviewBtn);
+    bar.appendChild(triggerRow);
     bar.appendChild(body);
 
     const origUpdate = updateStateAndApply;
@@ -15998,7 +16533,7 @@
     try {
       const q = getScholarSearchQuery();
       if (!q) return null;
-      const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+      const raw = safeSessionGet(FILTER_STORAGE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
       if (data && data.q === q) return data;
@@ -16012,7 +16547,7 @@
     try {
       const q = getScholarSearchQuery();
       if (!q || !state.filters) return;
-      sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+      safeSessionSet(FILTER_STORAGE_KEY, JSON.stringify({
         q,
         venueKeyword: state.filters.venueKeyword || "",
         hasPdf: !!state.filters.hasPdf,
@@ -16042,9 +16577,50 @@
   }
 
   async function run() {
-    const state = { saved: {}, settings: null, qIndex: null, venueCache: new Map(), allPublicationsLoaded: false, authorAutoLoadDisabled: false, authorStatsPartial: false, activeFilter: null, filters: {} };
-    await refreshState(state);
-    await ensureExternalSignalCacheLoaded();
+    const state = {
+      saved: {},
+      settings: null,
+      qIndex: null,
+      venueCache: new Map(),
+      allPublicationsLoaded: false,
+      authorAutoLoadDisabled: false,
+      authorStatsPartial: false,
+      activeFilter: null,
+      filters: {},
+      localCohortSampleCache: new Map(),
+      localCohortSampleAttempts: new Set(),
+      localCohortSampleInFlight: new Map(),
+      localCohortSamplePageCache: new Map(),
+      localCohortSampleRequestCount: 0,
+      localCohortPersistent: {},
+      emergingPrefetchSeen: new Set(),
+      emergingPrefetchScheduled: false,
+      criticalRenderUntil: 0
+    };
+    try {
+      await refreshState(state);
+    } catch (e) {
+      console.warn("[SU] refreshState failed during bootstrap; falling back to defaults", e);
+      state.saved = {};
+      state.settings = { ...DEFAULT_SETTINGS };
+      state.qIndex = compileQualityIndex(state.settings, {
+        quartilesIndex: {},
+        jcrIndex: {},
+        vhbIndex: new Map(),
+        impactIndex: new Map(),
+        eraSet: new Set(),
+        absIndex: new Map(),
+        norwegianMap: new Map(),
+        h5Index: {}
+      });
+      state.qIndexCache = null;
+      state.quartilesIndex = {};
+      state.quartilesMeta = null;
+      state.jcrIndex = {};
+      state.jcrMeta = null;
+      state.trajectoryVenueExpected = {};
+      state.localCohortPersistent = {};
+    }
     if (window.matchMedia && !window.__suThemeListener) {
       window.__suThemeListener = true;
       window.matchMedia("(prefers-color-scheme: dark)").addListener(() => {
@@ -16085,9 +16661,6 @@
     };
   }
 
-    await ensureSemanticExpansionPanel(state);
-    ensureSearchSyntaxHighlighting();
-
     // Extract author name if on author profile page
     let authorVariations = [];
     const isAuthorProfilePage = document.querySelector(".gsc_a_tr") !== null;
@@ -16098,10 +16671,47 @@
         state.authorVariations = authorVariations;
       }
       const scholarId = new URL(window.location.href).searchParams.get("user");
-      state.authorFeatureToggles = await getAuthorFeatureToggles(scholarId);
-      state.citedByColorScheme = await getAuthorCitedByColorScheme(scholarId);
-      await ensureGraphStateForAuthor(scholarId, authorName || getScholarAuthorName());
+      try {
+        const [featureToggles, citedByColorScheme] = await Promise.all([
+          getAuthorFeatureToggles(scholarId),
+          getAuthorCitedByColorScheme(scholarId)
+        ]);
+        state.authorFeatureToggles = featureToggles;
+        state.citedByColorScheme = citedByColorScheme;
+      } catch (e) {
+        console.warn("[SU] author profile settings bootstrap failed", e);
+      }
+      ensureGraphStateForAuthor(scholarId, authorName || getScholarAuthorName()).catch((e) => {
+        console.warn("[SU] graph state bootstrap failed", e);
+      });
     }
+
+    const scheduleNonCriticalBootstrap = () => {
+      if (state.__suNonCriticalScheduled) return;
+      state.__suNonCriticalScheduled = true;
+      const runDeferred = async () => {
+        try {
+          await ensureExternalSignalCacheLoaded();
+        } catch (e) {
+          console.warn("[SU] external signal cache bootstrap failed", e);
+        }
+        try {
+          await ensureSemanticExpansionPanel(state);
+        } catch (e) {
+          console.warn("[SU] semantic expansion bootstrap failed", e);
+        }
+        try {
+          ensureSearchSyntaxHighlighting();
+        } catch (e) {
+          console.warn("[SU] syntax highlighting bootstrap failed", e);
+        }
+      };
+      if (typeof requestIdleCallback === "function") {
+        requestIdleCallback(() => { runDeferred().catch(() => {}); }, { timeout: 1500 });
+      } else {
+        setTimeout(() => { runDeferred().catch(() => {}); }, 250);
+      }
+    };
 
     let scheduled = false;
     let processing = false;
@@ -16176,6 +16786,7 @@
         needsRerun = true;
         return;
       }
+      state.criticalRenderUntil = performance.now() + 1200;
       processing = true;
       const doFull = forceFull || pendingDirtyRows.size === 0;
       const dirtyRows = doFull ? [] : Array.from(pendingDirtyRows);
@@ -16362,6 +16973,7 @@
       if (state.settings.showEmergingScore) {
         try {
           state.localCohortExpected = buildLocalCohortExpected(results, isAuthorProfile, state.settings.emergingScoreMinCohort);
+          persistLocalCohortObservations(state);
         } catch {
           state.localCohortExpected = new Map();
         }
@@ -16383,6 +16995,7 @@
           )
         );
 
+      let initialRowsForPrefetch = [];
       if (typeof IntersectionObserver !== "undefined") {
         ensureViewObserver();
         for (const r of visibleResults) observeRow(r);
@@ -16390,6 +17003,7 @@
           if (!r.isConnected) visibleRows.delete(r);
         }
         const initialRows = visibleRows.size > 0 ? Array.from(visibleRows) : visibleResults.slice(0, UI_BATCH_SIZE);
+        initialRowsForPrefetch = initialRows.slice();
         if (initialRows.length > 0) {
           initialRows.forEach((r) => { r.dataset.suInView = "1"; });
           await processBatch(initialRows, true);
@@ -16409,10 +17023,15 @@
             if (initialRows.length >= UI_BATCH_SIZE) break;
           }
         }
+        initialRowsForPrefetch = initialRows.slice();
         if (initialRows.length > 0) {
           initialRows.forEach((r) => { r.dataset.suInView = "1"; });
           await processBatch(initialRows, true);
         }
+      }
+      state.criticalRenderUntil = performance.now() + 400;
+      if (initialRowsForPrefetch.length > 0) {
+        scheduleEmergingPrefetch(initialRowsForPrefetch, state, isAuthorProfile);
       }
 
       // Smart-rename PDF: build url -> { author, year, title } for onDeterminingFilename in background
@@ -16435,7 +17054,10 @@
         }
         if (chrome.storage?.session?.set) {
           try {
-            chrome.storage.session.set({ pdfUrlToMetadata });
+            if (!sameFlatObject(state.pdfUrlToMetadataCache, pdfUrlToMetadata)) {
+              state.pdfUrlToMetadataCache = pdfUrlToMetadata;
+              chrome.storage.session.set({ pdfUrlToMetadata });
+            }
           } catch (e) {
             if (!String(e?.message || "").includes("Extension context invalidated")) throw e;
           }
@@ -16612,6 +17234,15 @@
       }
       return false;
     };
+
+    const isWithinSuSubtree = (node) => {
+      let cur = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+      while (cur) {
+        if (isSuNode(cur)) return true;
+        cur = cur.parentElement;
+      }
+      return false;
+    };
     
     const mo = new MutationObserver((mutations) => {
       if (document.hidden) return;
@@ -16645,16 +17276,17 @@
 
       for (const m of mutations) {
         if (!(root.contains(m.target) || (typeof m.target.contains === "function" && m.target.contains(root)))) continue;
+        if (isWithinSuSubtree(m.target)) continue;
         const nodes = [];
         if (m.addedNodes && m.addedNodes.length) nodes.push(...m.addedNodes);
         if (m.removedNodes && m.removedNodes.length) nodes.push(...m.removedNodes);
         const elementNodes = nodes.filter((n) => n.nodeType === Node.ELEMENT_NODE);
-        if (elementNodes.length > 0 && elementNodes.every((n) => isSuNode(n))) {
+        if (elementNodes.length > 0 && elementNodes.every((n) => isWithinSuSubtree(n))) {
           continue;
         }
         for (const n of elementNodes) markRowFromNode(n);
         const targetRow = m.target?.closest?.(".gs_r, .gsc_a_tr");
-        if (targetRow && !isSuNode(targetRow)) dirtyRows.add(targetRow);
+        if (targetRow && !isWithinSuSubtree(m.target) && !isSuNode(targetRow)) dirtyRows.add(targetRow);
       }
 
       if (dirtyRows.size === 0 && !structural) return;
@@ -16673,7 +17305,10 @@
     window.suState = state;
 
     await processAll();
-    await ensureReadingQueueSidebar();
+    scheduleNonCriticalBootstrap();
+    ensureReadingQueueSidebar().catch((e) => {
+      console.warn("[SU] reading queue bootstrap failed", e);
+    });
 
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.onChanged?.addListener) {
@@ -17164,5 +17799,29 @@
     return div.innerHTML;
   }
 
-  run();
+  let bootAttempts = 0;
+  let bootInFlight = false;
+
+  function scheduleBoot(reason) {
+    if (bootInFlight) return;
+    bootInFlight = true;
+    const attempt = ++bootAttempts;
+    Promise.resolve()
+      .then(() => ensureModulesLoaded())
+      .then(() => run())
+      .catch((e) => {
+        console.warn(`[SU] bootstrap attempt ${attempt} failed (${reason})`, e);
+        if (attempt >= 2) return;
+        const retry = () => {
+          bootInFlight = false;
+          scheduleBoot("retry");
+        };
+        setTimeout(retry, 400);
+      })
+      .finally(() => {
+        if (bootAttempts === attempt) bootInFlight = false;
+      });
+  }
+
+  scheduleBoot("initial");
 })();

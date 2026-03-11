@@ -8,6 +8,22 @@
   const DARK_COLOR = "#e8eaed";
   const LIGHT_BG = "#fff";
   const LIGHT_COLOR = "#202124";
+  const STORAGE_CONTEXT_ERROR = "access to storage is not allowed from this context";
+
+  const swallowStorageContextError = (event, message) => {
+    if (!message || !String(message).toLowerCase().includes(STORAGE_CONTEXT_ERROR)) return;
+    try { event.preventDefault(); } catch (_) {}
+    try { event.stopImmediatePropagation(); } catch (_) {}
+  };
+
+  window.addEventListener("error", (event) => {
+    swallowStorageContextError(event, event?.message || event?.error?.message || "");
+  }, true);
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event?.reason;
+    swallowStorageContextError(event, reason?.message || reason || "");
+  }, true);
 
   const style = document.createElement("style");
   style.id = "su-early-theme";

@@ -26,6 +26,29 @@ function isScholarUrl(url) {
   }
 }
 
+function normalizeFetchHeaders(headers) {
+  if (!headers || typeof headers !== "object") return undefined;
+  const out = {};
+  for (const [key, value] of Object.entries(headers)) {
+    if (!key || value == null) continue;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      out[key] = String(value);
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const timeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 10000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Smart-rename PDF: when a PDF download matches a URL we have metadata for (from Scholar result), suggest [Author] - [Year] - [Title].pdf
 if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFilename) {
   chrome.downloads.onDeterminingFilename.addListener(function (downloadItem, suggest) {
@@ -80,20 +103,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.action === "fetchSnippet" && typeof msg.url === "string") {
-    const timeout = 8000;
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeout);
     const credentials = isScholarUrl(msg.url) ? "include" : "omit";
-    fetch(msg.url, { credentials, signal: ctrl.signal })
+    fetchWithTimeout(msg.url, { credentials }, 8000)
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((html) => {
-        clearTimeout(t);
-        sendResponse({ ok: true, html });
-      })
-      .catch((err) => {
-        clearTimeout(t);
-        sendResponse({ ok: false, error: String(err?.message || err) });
-      });
+      .then((html) => sendResponse({ ok: true, html }))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
     return true;
   }
   if (msg?.action === "fetchExternal" && typeof msg.url === "string") {
@@ -102,23 +116,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       return true;
     }
     const timeout = Number(msg.timeoutMs) > 0 ? Number(msg.timeoutMs) : 10000;
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeout);
-    const headers = msg.headers && typeof msg.headers === "object" ? msg.headers : {};
+    const headers = normalizeFetchHeaders(msg.headers);
     const responseType = msg.responseType === "text" ? "text" : "json";
-    fetch(msg.url, { credentials: "omit", headers, signal: ctrl.signal })
+    fetchWithTimeout(msg.url, { credentials: "omit", headers }, timeout)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return responseType === "text" ? r.text() : r.json();
       })
-      .then((body) => {
-        clearTimeout(t);
-        sendResponse({ ok: true, body });
-      })
-      .catch((err) => {
-        clearTimeout(t);
-        sendResponse({ ok: false, error: String(err?.message || err) });
-      });
+      .then((body) => sendResponse({ ok: true, body }))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
     return true;
   }
   if (msg?.action === "fetchPdfPageCount" && typeof msg.url === "string" && typeof msg.paperKey === "string") {
@@ -127,10 +133,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       return true;
     }
     const tailBytes = 8192;
-    fetch(msg.url, {
+    fetchWithTimeout(msg.url, {
       credentials: "omit",
       headers: { Range: `bytes=-${tailBytes}` }
-    })
+    }, 10000)
       .then((r) => {
         if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
         return r.arrayBuffer();
@@ -169,7 +175,7 @@ const GRAPH_MONITOR_MINUTES = 24 * 60;
 function normalizeOpenAlexId(id) {
   if (!id) return "";
   const raw = String(id).trim();
-  const match = raw.match(/W\\d+/i);
+  const match = raw.match(/W\d+/i);
   if (match) return match[0].toUpperCase();
   return raw;
 }
@@ -188,21 +194,29 @@ async function fetchOpenAlexWork(id) {
   const norm = normalizeOpenAlexId(id);
   if (!norm) return null;
   const url = formatOpenAlexUrl(`https://api.openalex.org/works/${encodeURIComponent(norm)}`);
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return await res.json();
+  try {
+    const res = await fetchWithTimeout(url, {}, 10000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 async function fetchOpenAlexWorks(ids) {
-  const cleaned = ids.map((id) => normalizeOpenAlexId(id)).filter(Boolean);
+  const cleaned = Array.from(new Set(ids.map((id) => normalizeOpenAlexId(id)).filter(Boolean)));
   if (!cleaned.length) return [];
   const chunk = cleaned.slice(0, 25);
   const filter = chunk.map((id) => `https://openalex.org/${id}`).join("|");
   const url = formatOpenAlexUrl(`https://api.openalex.org/works?filter=ids:${encodeURIComponent(filter)}&per_page=${chunk.length}`);
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data?.results) ? data.results : [];
+  try {
+    const res = await fetchWithTimeout(url, {}, 10000);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.results) ? data.results : [];
+  } catch {
+    return [];
+  }
 }
 
 async function checkGraphMonitors(targetAuthorId) {
@@ -216,10 +230,11 @@ async function checkGraphMonitors(targetAuthorId) {
     const seedIds = Array.isArray(entry.seedIds) ? entry.seedIds.slice(0, 6) : [];
     if (!seedIds.length) continue;
     const lastCheck = entry.lastCheck || nowIso;
-    const lastDate = new Date(lastCheck);
+    const parsedLastDate = new Date(lastCheck);
+    const lastDate = Number.isFinite(parsedLastDate.getTime()) ? parsedLastDate : new Date(0);
     const candidateIds = new Set();
-    for (const seed of seedIds) {
-      const work = await fetchOpenAlexWork(seed);
+    const seedWorks = await Promise.all(seedIds.map((seed) => fetchOpenAlexWork(seed)));
+    for (const work of seedWorks) {
       const related = Array.isArray(work?.related_works) ? work.related_works.slice(0, 8) : [];
       related.forEach((r) => {
         const id = normalizeOpenAlexId(r);
@@ -228,9 +243,12 @@ async function checkGraphMonitors(targetAuthorId) {
     }
     const candidates = Array.from(candidateIds);
     const newAlerts = [];
+    const workBatches = [];
     for (let i = 0; i < candidates.length; i += 25) {
-      const chunk = candidates.slice(i, i + 25);
-      const works = await fetchOpenAlexWorks(chunk);
+      workBatches.push(fetchOpenAlexWorks(candidates.slice(i, i + 25)));
+    }
+    const workResults = await Promise.all(workBatches);
+    for (const works of workResults) {
       for (const w of works) {
         const pubDate = w?.publication_date ? new Date(w.publication_date) : null;
         if (pubDate && pubDate > lastDate) {
@@ -258,14 +276,18 @@ async function checkGraphMonitors(targetAuthorId) {
   return true;
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+function ensureGraphMonitorAlarm() {
   try {
-    await chrome.alarms.create(GRAPH_MONITOR_ALARM, { periodInMinutes: GRAPH_MONITOR_MINUTES });
+    chrome.alarms?.create?.(GRAPH_MONITOR_ALARM, { periodInMinutes: GRAPH_MONITOR_MINUTES });
   } catch {}
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  ensureGraphMonitorAlarm();
 });
 
 chrome.runtime.onStartup?.addListener?.(() => {
-  try { chrome.alarms.create(GRAPH_MONITOR_ALARM, { periodInMinutes: GRAPH_MONITOR_MINUTES }); } catch {}
+  ensureGraphMonitorAlarm();
 });
 
 chrome.alarms?.onAlarm?.addListener?.((alarm) => {
@@ -298,28 +320,22 @@ chrome.runtime.onInstalled.addListener(async () => {
 
     try {
       const updatedSettings = { ...s };
-      
-      if (!hasAnyQuality) {
-        const [ft50, utd24, abdc, vhb, core, corePortal, ccf] = await Promise.all([
-          fetchExtText("src/data/ft50.txt"),
-          fetchExtText("src/data/utd24.txt"),
-          fetchExtText("src/data/abdc2022.csv"),
-          fetchExtText("src/data/vhb2024.csv"),
-          fetchExtText("src/data/core_icore2026.csv"),
-          fetchExtText("src/data/core_portal_ranks.csv"),
-          fetchExtText("src/data/ccf_ranks.csv")
-        ]);
-        
-        updatedSettings.showQualityBadges = true;
-        updatedSettings.qualityFt50List = ft50.trim() + "\n";
-        updatedSettings.qualityUtd24List = utd24.trim() + "\n";
-        updatedSettings.qualityAbdcRanks = abdc.trim() + "\n";
-        updatedSettings.qualityVhbRanks = vhb.trim() + "\n";
-        updatedSettings.qualityCoreRanks = [core.trim(), (corePortal || "").trim()].filter(Boolean).join("\n") + "\n";
-        updatedSettings.qualityCcfRanks = (ccf && ccf.trim()) ? ccf.trim() + "\n" : "";
-      }
-      
-
+      const [ft50, utd24, abdc, vhb, core, corePortal, ccf] = await Promise.all([
+        fetchExtText("src/data/ft50.txt"),
+        fetchExtText("src/data/utd24.txt"),
+        fetchExtText("src/data/abdc2022.csv"),
+        fetchExtText("src/data/vhb2024.csv"),
+        fetchExtText("src/data/core_icore2026.csv"),
+        fetchExtText("src/data/core_portal_ranks.csv"),
+        fetchExtText("src/data/ccf_ranks.csv")
+      ]);
+      updatedSettings.showQualityBadges = true;
+      updatedSettings.qualityFt50List = ft50.trim() + "\n";
+      updatedSettings.qualityUtd24List = utd24.trim() + "\n";
+      updatedSettings.qualityAbdcRanks = abdc.trim() + "\n";
+      updatedSettings.qualityVhbRanks = vhb.trim() + "\n";
+      updatedSettings.qualityCoreRanks = [core.trim(), (corePortal || "").trim()].filter(Boolean).join("\n") + "\n";
+      updatedSettings.qualityCcfRanks = (ccf && ccf.trim()) ? ccf.trim() + "\n" : "";
       await chrome.storage.local.set({
         savedPapers,
         settings: updatedSettings
@@ -328,12 +344,11 @@ chrome.runtime.onInstalled.addListener(async () => {
       // If seeding fails, continue with empty settings.
       await chrome.storage.local.set({ savedPapers, settings: s });
     }
-  } else {
-    await chrome.storage.local.set({ savedPapers, settings: s });
   }
 
   // Seed CORE ranks from built-in CSVs if the user hasn't set any yet.
-  if (!String(s.qualityCoreRanks || "").trim()) {
+  // Only runs when hasAnyQuality was true (main block already handled the all-empty case).
+  if (hasAnyQuality && !String(s.qualityCoreRanks || "").trim()) {
     try {
       const [core, corePortal] = await Promise.all([
         fetch(chrome.runtime.getURL("src/data/core_icore2026.csv")).then((r) => (r.ok ? r.text() : "")),
@@ -352,7 +367,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 
   // Seed VHB ranks from built-in CSV if the user hasn't set any yet.
-  if (!String(s.qualityVhbRanks || "").trim()) {
+  if (hasAnyQuality && !String(s.qualityVhbRanks || "").trim()) {
     try {
       const url = chrome.runtime.getURL("src/data/vhb2024.csv");
       const r = await fetch(url);
@@ -371,7 +386,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 
   // Seed CCF ranks from built-in CSV if the user hasn't set any yet.
-  if (!String(s.qualityCcfRanks || "").trim()) {
+  if (hasAnyQuality && !String(s.qualityCcfRanks || "").trim()) {
     try {
       const url = chrome.runtime.getURL("src/data/ccf_ranks.csv");
       const r = await fetch(url);

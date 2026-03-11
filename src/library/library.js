@@ -21,6 +21,44 @@ function el(id) {
   return document.getElementById(id);
 }
 
+function clearNode(node) {
+  if (node) node.textContent = "";
+}
+
+function appendTextEl(parent, tag, text, className = "") {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = text == null ? "" : String(text);
+  parent.appendChild(node);
+  return node;
+}
+
+function appendChip(parent, className, text) {
+  const chip = document.createElement("span");
+  chip.className = className;
+  chip.textContent = text == null ? "" : String(text);
+  parent.appendChild(chip);
+  return chip;
+}
+
+function appendFooterPart(parent, text) {
+  if (!text) return;
+  if (parent.childNodes.length > 0) parent.appendChild(document.createTextNode(" | "));
+  parent.appendChild(document.createTextNode(String(text)));
+}
+
+function renderFooter(node, parts) {
+  clearNode(node);
+  parts.forEach((part) => {
+    if (!part) return;
+    if (typeof part === "string") appendFooterPart(node, part);
+    else if (part instanceof Node) {
+      if (node.childNodes.length > 0) node.appendChild(document.createTextNode(" | "));
+      node.appendChild(part);
+    }
+  });
+}
+
 function fmtDate(iso) {
   if (!iso) return "";
   try {
@@ -357,7 +395,8 @@ function renderPdfHighlights(paper) {
   highlights.forEach((h, idx) => {
     const item = document.createElement("div");
     item.className = "pdf-highlight-item";
-    item.innerHTML = `<div>${h.quote || ""}</div><small>p.${h.page || "?"} · ${h.note || ""}</small>`;
+    appendTextEl(item, "div", h.quote || "");
+    appendTextEl(item, "small", `p.${h.page || "?"} · ${h.note || ""}`);
     const btn = document.createElement("button");
     btn.className = "btn";
     btn.textContent = "Remove";
@@ -490,7 +529,8 @@ async function renderSidebar(state, items) {
   state.collections.forEach((c) => {
     const row = document.createElement("div");
     row.className = `panel-item ${state.activeCollectionId === c.id ? "active" : ""}`;
-    row.innerHTML = `<span>${c.name}</span><small>${colCounts.get(c.id) || 0}</small>`;
+    appendTextEl(row, "span", c.name || "");
+    appendTextEl(row, "small", String(colCounts.get(c.id) || 0));
     row.addEventListener("click", async () => {
       await saveLibraryState({
         activeCollectionId: state.activeCollectionId === c.id ? "" : c.id,
@@ -519,7 +559,8 @@ async function renderSidebar(state, items) {
   state.savedSearches.forEach((s) => {
     const row = document.createElement("div");
     row.className = `panel-item ${state.activeSavedSearchId === s.id ? "active" : ""}`;
-    row.innerHTML = `<span>${s.name}</span><small>${s.query ? s.query.slice(0, 12) : ""}</small>`;
+    appendTextEl(row, "span", s.name || "");
+    appendTextEl(row, "small", s.query ? s.query.slice(0, 12) : "");
     row.addEventListener("click", async () => {
       applySavedSearch(state, s);
       await saveLibraryState({ activeSavedSearchId: s.id, activeCollectionId: s.collectionId || "" });
@@ -544,7 +585,8 @@ async function renderSidebar(state, items) {
   state.watchedFolders.forEach((f) => {
     const row = document.createElement("div");
     row.className = "panel-item";
-    row.innerHTML = `<span>${f.name}</span><small>${(f.files || []).length}</small>`;
+    appendTextEl(row, "span", f.name || "");
+    appendTextEl(row, "small", String((f.files || []).length));
     row.addEventListener("click", () => {
       pendingFolderScanId = f.id;
       el("folderPicker").click();
@@ -610,7 +652,7 @@ async function render() {
       group.list.forEach((p) => {
         const row = document.createElement("div");
         row.className = "duplicate-item";
-        row.innerHTML = `<span>${p.title || "Untitled"}</span>`;
+        appendTextEl(row, "span", p.title || "Untitled");
         const btn = document.createElement("button");
         btn.className = "btn";
         btn.textContent = "Keep";
@@ -641,9 +683,17 @@ async function render() {
 
     node.querySelector(".snippet").textContent = p.snippet || "";
 
-    const tags = (p.tags || []).map((t) => `<span class="tag-chip">${t}</span>`).join(" ");
+    const tagsNode = document.createDocumentFragment();
+    (p.tags || []).forEach((t, idx) => {
+      if (idx > 0) tagsNode.appendChild(document.createTextNode(" "));
+      appendChip(tagsNode, "tag-chip", t);
+    });
     const collectionNames = (p.collections || []).map((id) => colMap.get(id)?.name || id);
-    const collections = collectionNames.map((c) => `<span class="collection-chip">${c}</span>`).join(" ");
+    const collectionsNode = document.createDocumentFragment();
+    collectionNames.forEach((c, idx) => {
+      if (idx > 0) collectionsNode.appendChild(document.createTextNode(" "));
+      appendChip(collectionsNode, "collection-chip", c);
+    });
     const pdfNotes = p.pdfNotes || {};
     const highlightCount = Array.isArray(pdfNotes.highlights) ? pdfNotes.highlights.length : 0;
     const venue = p.venue || extractVenueFromAuthorsVenue(p.authorsVenue);
@@ -652,15 +702,16 @@ async function render() {
     const notesStr = p.notes ? "Notes: yes" : "";
     const annotStr = highlightCount ? `Highlights: ${highlightCount}` : "";
     const localStr = p.localFile ? `Local: ${p.localFile.name}` : "";
-    node.querySelector(".footer").innerHTML = [
+    const footer = node.querySelector(".footer");
+    renderFooter(footer, [
       `Saved: ${fmtDate(p.savedAt)}`,
-      tags,
-      collections,
+      tagsNode.childNodes.length ? tagsNode : null,
+      collectionsNode.childNodes.length ? collectionsNode : null,
       notesStr,
       annotStr,
       localStr,
       qualityStr
-    ].filter(Boolean).join(" | ");
+    ]);
 
     const citeMenu = node.querySelector(".cite-menu");
     citeMenu.innerHTML = buildCiteMenu(p);
@@ -740,8 +791,13 @@ async function renderCollectionModal(paper, state) {
     const row = document.createElement("label");
     row.className = "panel-item";
     const checked = (paper.collections || []).includes(c.id);
-    row.innerHTML = `<span>${c.name}</span><input type="checkbox" ${checked ? "checked" : ""} data-col-id="${c.id}"/>`;
-    row.querySelector("input").addEventListener("change", async (e) => {
+    appendTextEl(row, "span", c.name || "");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    input.dataset.colId = c.id || "";
+    row.appendChild(input);
+    input.addEventListener("change", async (e) => {
       const id = e.target.getAttribute("data-col-id");
       const saved = await getSavedPapers();
       const current = saved[paper.key] || paper;
