@@ -165,12 +165,12 @@ Current archived software DOI:
 
 ## JOSS materials
 
-This repository includes draft Journal of Open Source Software submission materials:
+This repository includes Journal of Open Source Software submission materials in the standard JOSS manuscript format (`paper.md` plus `paper.bib`):
 
 - [`paper.md`](paper.md)
 - [`paper.bib`](paper.bib)
 
-These are intended as a submission-ready starting point and may still need small final edits to author affiliation wording, release dates, and reference scope.
+The current manuscript attributes the software to Benjamin M. Ampel, Georgia State University, and includes a JOSS-style AI usage disclosure.
 
 ## Limitations
 

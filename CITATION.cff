@@ -16,6 +16,7 @@ authors:
   - family-names: Ampel
     given-names: Benjamin M.
     orcid: "https://orcid.org/0000-0003-0603-0270"
+    affiliation: "Georgia State University"
 preferred-citation:
   type: software
   title: Scholar Utility Belt
@@ -23,6 +24,7 @@ preferred-citation:
     - family-names: Ampel
       given-names: Benjamin M.
       orcid: "https://orcid.org/0000-0003-0603-0270"
+      affiliation: "Georgia State University"
   doi: 10.5281/zenodo.18645552
   version: 0.3.2
   date-released: 2026-03-25
