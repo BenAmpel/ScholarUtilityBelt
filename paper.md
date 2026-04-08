@@ -36,43 +36,25 @@ Existing bibliometric tools such as Publish or Perish focus on citation retrieva
 
 The extension is also motivated by a practical systems concern. Browser tooling around Scholar can become fragile, intrusive, or rate-limit prone when it depends on a backend service, aggressive scraping, or high-volume API traffic. Scholar Utility Belt instead prefers packaged quality lists, browser storage, and DOM-derived signals, with public APIs such as OpenAlex, Crossref, Unpaywall, OpenCitations, and Semantic Scholar used selectively and with bounded request patterns [@crossref; @unpaywall; @opencitations; @semanticscholar]. This architecture keeps the extension usable under partial failure, makes most features available without a project-run server, and reduces the amount of network activity introduced into Scholar browsing.
 
-# Functionality
+# State of the field
 
-Scholar Utility Belt provides three main classes of functionality.
+Researchers already have access to several adjacent tools, but they solve different parts of the workflow. Publish or Perish is strong for citation retrieval, bibliometric export, and reporting rather than in-page augmentation of Google Scholar [@harzing2007pop]. OpenAlex is a broad open scholarly index and API that enables external tooling, but it is not itself a Scholar-native interface layer [@openalex]. Zotero Connector supports capture into a reference manager from the browser, but its core workflow is collection and citation management rather than interactive triage, venue assessment, and author-page augmentation on Scholar itself [@zotero]. CatalyzeX enriches papers with code and implementation links, but it focuses on reproducibility and software discovery rather than local-first literature review support across ranking signals, author analytics, and screening workflows [@catalyzex].
 
-## Result-page augmentation
+Scholar Utility Belt is intended to complement rather than replace those tools. The design choice to build a browser extension instead of a standalone analytics application reflects a specific scholarly contribution: support the decision-making work that happens during search itself. The project therefore emphasizes Scholar-native augmentation, persistent local state, and bounded enrichment rather than a general-purpose scholarly database or cloud-backed reference-management platform.
 
-On Scholar result pages, the extension injects per-result controls and annotations such as save/remove actions, abstract toggles, PDF shortcuts, citation-copy utilities, local filters, and a stable action grid. It also renders venue-quality badges from packaged and user-configurable local datasets, including FT50, UTD24, ABDC, VHB, ABS/AJG, CORE/ICORE, CCF, SCImago quartiles, ERA, the Norwegian register, and venue h5-derived signals. The quality-list pipeline includes local snapshots built from sources such as the Financial Times 50, UTD24, VHB JOURQUAL, and Harzing’s Journal Quality List [@ft50; @utd24; @jql].
+# Software design
 
-The extension further adds lightweight bibliometric cues such as citation velocity and a local-cohort-based "Emerging" score. That score compares a paper against venue/year peers using results already present on the page together with cached local cohort observations, with bounded fallback to external metadata when local evidence is too sparse.
+The software is implemented as a Manifest V3 browser extension with content scripts for Scholar-page augmentation, a background service worker for bounded network requests, and extension pages for options, library, and popup workflows. The central design trade-off is local-first augmentation versus externally managed enrichment. Scholar Utility Belt deliberately computes most features from the current DOM, packaged datasets, and browser storage. External APIs are used only for targeted capabilities such as open-access detection, citation graph expansion, or sparse metadata lookup, and these calls are cached, throttled, timed out, and treated as optional rather than foundational.
 
-## Author-profile augmentation
+This design matters for the research setting because it keeps the software usable even when third-party services are slow or unavailable, reduces incremental traffic introduced into Scholar browsing, and preserves a workflow in which the user remains on the source page. It also allows venue-quality signals to be derived from packaged rank lists such as FT50, UTD24, VHB JOURQUAL, and Harzing’s Journal Quality List [@ft50; @utd24; @jql], rather than requiring a continuously running backend or proprietary service.
 
-On Scholar author pages, the extension adds local filters, extra summary metrics, and a compare-authors workflow. Users can filter by venue quality, citation bands, author position, coauthors, and topical terms. The extension also computes additional profile summaries and provides side-by-side comparison overlays that support portfolio-level inspection beyond Scholar’s default totals.
+Functionally, the extension provides three main classes of capability. On Scholar result pages it injects controls such as save/remove actions, abstract toggles, PDF shortcuts, citation-copy utilities, local filters, and a stable action grid. It also adds venue-quality badges and lightweight bibliometric cues such as citation velocity and a local-cohort-based "Emerging" score that compares a paper against venue/year peers using current-page results together with cached local cohort observations. On Scholar author pages it adds local filters, extra summary metrics, and compare-author overlays. Beyond page augmentation, it includes a local saved-paper library with tags, notes, collections, search, sorting, export/import, and a review-workspace flow for screening and report generation.
 
-## Library and review workflow
+# Research impact statement
 
-Scholar Utility Belt includes a local library for saved papers with tags, notes, collections, search, sorting, and export/import. It also includes a review-workspace flow for screening and report generation. Together, these features support active literature review work rather than citation lookup alone.
+Scholar Utility Belt has been prepared as public research software rather than a private lab script. It is distributed as an installable browser extension, versioned in a public repository, archived through Zenodo, and documented with contributor-facing project metadata including a software citation file, license, and contribution guidance [@zenodo]. The repository includes Playwright-based smoke tests covering Scholar first-load behavior, author-profile workflows, review-workspace flows, and options-page behavior, along with data-refresh sanity checks for packaged venue-quality sources. These project-readiness signals support credible near-term reuse by researchers who already rely on Google Scholar as a primary discovery interface.
 
-# Implementation
-
-The software is implemented as a Manifest V3 browser extension. Its main runtime components are:
-
-- content scripts that parse and augment Scholar pages
-- a background service worker for bounded network requests and extension coordination
-- local storage helpers for settings, caches, and library state
-- packaged data snapshots used to compile venue-quality indices
-- options, popup, and library pages implemented as extension views
-
-The architecture is deliberately local-first. Most enrichments are derived from the current page DOM and packaged resources. External APIs are used for targeted features such as open-access detection, citation graph expansion, and metadata enrichment, but these calls are cached, throttled, and treated as optional rather than foundational.
-
-# Quality control
-
-Quality control combines static checks, browser-based smoke tests, and data-build validation. The repository includes Playwright-based smoke-test scripts for Scholar first-load behavior, author-profile workflows, review-workspace flows, and options-page behavior. Data-refresh scripts include sanity checks on parsed row counts to catch upstream source changes. The codebase also includes explicit handling for browser-extension lifecycle issues such as context invalidation, storage-access failures, request timeouts, and bounded retry behavior.
-
-# Availability
-
-Scholar Utility Belt is open source and available at [https://github.com/BenAmpel/ScholarUtilityBelt](https://github.com/BenAmpel/ScholarUtilityBelt). Archived software releases are available through Zenodo [@zenodo].
+The research significance is practical rather than aspirational: the project supplies a reproducible, inspectable implementation of Scholar-native literature-review augmentation that others can install, study, extend, and evaluate. Because it operates at the interface between discovery, venue assessment, and lightweight bibliometric screening, it offers a concrete software contribution for researchers interested in bibliometrics, scholarly discovery tooling, and browser-based research workflows.
 
 # AI usage disclosure
 
@@ -80,4 +62,4 @@ Generative AI tools were used during development of the software and manuscript,
 
 # Acknowledgements
 
-The project builds on openly available scholarly infrastructure and curated quality-list resources, including OpenAlex, Crossref, Unpaywall, OpenCitations, SCImago, CORE, and Anne-Wil Harzing’s Journal Quality List.
+This work received no dedicated financial support or external funding. The project builds on openly available scholarly infrastructure and curated quality-list resources, including OpenAlex, Crossref, Unpaywall, OpenCitations, SCImago, CORE, Zotero, and Anne-Wil Harzing’s Journal Quality List.
