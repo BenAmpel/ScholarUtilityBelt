@@ -21,6 +21,10 @@ Scholar Utility Belt is a Manifest V3 browser extension for Google Scholar that 
 
 The extension layers paper triage, venue quality signals, lightweight bibliometric indicators, author-page tooling, and a local library on top of the existing Scholar interface. Most features are computed from the current DOM and packaged datasets, with external lookups used selectively and transparently.
 
+<p align="center">
+  <img src="docs/images/webstore-geoffrey-hinton.png" alt="Scholar Utility Belt author-profile augmentation on Geoffrey Hinton's Google Scholar page" width="900">
+</p>
+
 ## At a glance
 
 - Works directly on Google Scholar result pages and author profiles
