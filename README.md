@@ -1,11 +1,48 @@
-# Scholar Utility Belt
+<p align="center">
+  <img src="icons/icon128.png" alt="Scholar Utility Belt logo" width="96" height="96">
+</p>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg)](https://doi.org/10.5281/zenodo.18645552)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00)](https://buymeacoffee.com/bampel)
+<h1 align="center">Scholar Utility Belt</h1>
+
+<p align="center">
+  Local-first productivity tooling for Google Scholar.
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://github.com/BenAmpel/ScholarUtilityBelt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BenAmpel/ScholarUtilityBelt?style=flat"></a>
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.2-2f855a">
+  <a href="https://doi.org/10.5281/zenodo.18645552"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-ISC-black"></a>
+  <a href="https://buymeacoffee.com/bampel"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00"></a>
+</p>
 
 Scholar Utility Belt is a Manifest V3 browser extension for Google Scholar that adds local-first research workflow support directly inside Scholar result pages and author-profile pages. The project is designed around one constraint: enrich the literature review experience without turning Scholar into a heavy network client or sending a user’s reading behavior to a remote service.
 
 The extension layers paper triage, venue quality signals, lightweight bibliometric indicators, author-page tooling, and a local library on top of the existing Scholar interface. Most features are computed from the current DOM and packaged datasets, with external lookups used selectively and transparently.
+
+## At a glance
+
+- Works directly on Google Scholar result pages and author profiles
+- Keeps saved papers, notes, tags, and settings in browser storage
+- Uses packaged venue-quality datasets for most ranking signals
+- Adds bounded optional enrichment from public scholarly APIs
+- Avoids a project-run backend or telemetry pipeline
+
+## Key features
+
+- [x] Search-result action grid for save/remove, PDF, abstract, and citation utilities
+- [x] Venue-quality badges from FT50, UTD24, ABDC, VHB, ABS/AJG, CORE/ICORE, CCF, SCImago, ERA, Norwegian register, and related sources
+- [x] Local-first `Emerging` and citation-velocity signals to reduce scan time on dense result pages
+- [x] Author-profile filters, summary metrics, and compare-author overlays
+- [x] Local saved-paper library with notes, tags, collections, export/import, and review-workspace tooling
+- [x] Configurable options page for feature toggles, quality sources, and enrichment behavior
+
+## Links
+
+- Chrome Web Store: [Scholar Utility Belt](https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn)
+- Repository: [github.com/BenAmpel/ScholarUtilityBelt](https://github.com/BenAmpel/ScholarUtilityBelt)
+- Archived release DOI: [10.5281/zenodo.18645552](https://doi.org/10.5281/zenodo.18645552)
 
 ## Why this exists
 
@@ -104,7 +141,13 @@ Quality-list refresh helpers live in [`scripts/update_quality_lists.py`](scripts
 
 ### End users
 
-Load the extension as an unpacked MV3 extension:
+Install from the Chrome Web Store or load the repository as an unpacked MV3 extension.
+
+Chrome Web Store:
+
+- [Install Scholar Utility Belt](https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn)
+
+Load unpacked:
 
 1. Open `chrome://extensions`
 2. Enable `Developer mode`
