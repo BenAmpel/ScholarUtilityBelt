@@ -1,10 +1,29 @@
 cff-version: 1.2.0
+message: "If you use Scholar Utility Belt, please cite the software using the metadata below."
 title: Scholar Utility Belt
-version: 0.2.7
-date-released: 2026-02-18
+version: 0.3.2
+date-released: 2026-03-25
 doi: 10.5281/zenodo.18645552
+license: ISC
+repository-code: "https://github.com/BenAmpel/ScholarUtilityBelt"
+url: "https://github.com/BenAmpel/ScholarUtilityBelt"
+abstract: >-
+  Scholar Utility Belt is a browser extension for Google Scholar that adds
+  local-first paper triage, venue-quality badges, author-page analytics, and
+  library workflows directly inside Scholar pages while minimizing additional
+  network requests.
 authors:
   - family-names: Ampel
     given-names: Benjamin M.
-    orcid: https://orcid.org/0000-0003-0603-0270
-message: "If you use this software, please cite it."
+    orcid: "https://orcid.org/0000-0003-0603-0270"
+preferred-citation:
+  type: software
+  title: Scholar Utility Belt
+  authors:
+    - family-names: Ampel
+      given-names: Benjamin M.
+      orcid: "https://orcid.org/0000-0003-0603-0270"
+  doi: 10.5281/zenodo.18645552
+  version: 0.3.2
+  date-released: 2026-03-25
+  repository-code: "https://github.com/BenAmpel/ScholarUtilityBelt"

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Iterable
 
 import openpyxl
+import pdfplumber
 import requests
 from bs4 import BeautifulSoup
 
@@ -36,6 +37,7 @@ FT50_URL = "https://www.ft.com/content/3405a512-5cbb-11e1-8f1f-00144feabdc0"
 UTD24_URL = "https://jsom.utdallas.edu/the-utd-top-100-business-school-research-rankings/list-of-journals"
 ABDC_2022_URL = "https://abdc.edu.au/wp-content/uploads/2023/05/ABDC-JQL-2022-v3-100523.xlsx"
 ABS_2024_URL = "https://journalranking.org/"
+JQL_72_URL = "https://harzing.com/download/JQL-72_journal.pdf"
 CORE_PORTAL_BASE = "https://portal.core.edu.au/conf-ranks/"
 CORE_SOURCE = "ICORE2026"
 
@@ -254,6 +256,53 @@ def build_abs_2024_csv() -> str:
     return out.getvalue()
 
 
+def build_fnege_2025_csv_from_jql() -> str:
+    """Extract the FNEGE 2025 column from Harzing's JQL 72 title PDF.
+
+    Important: this covers the JQL journal set, not the full FNEGE master ranking.
+    """
+    content = fetch_bytes(JQL_72_URL)
+    out = io.StringIO()
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow(["Venue", "Rank"])
+    seen = set()
+    n = 0
+
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables() or []:
+                if not table or not table[0]:
+                    continue
+                header = [" ".join(str(cell or "").split()) for cell in table[0]]
+                if "Journal" not in header:
+                    continue
+                journal_idx = header.index("Journal")
+                fnege_idx = None
+                for idx, h in enumerate(header):
+                    if h.upper().startswith("FNEGE"):
+                        fnege_idx = idx
+                        break
+                if fnege_idx is None:
+                    continue
+                for row in table[1:]:
+                    if not row or len(row) <= max(journal_idx, fnege_idx):
+                        continue
+                    journal = " ".join(str(row[journal_idx] or "").split()).strip()
+                    rank = " ".join(str(row[fnege_idx] or "").split()).strip().replace(" ", "")
+                    if not journal or journal.lower() == "journal" or rank not in {"1*", "1", "2", "3", "4"}:
+                        continue
+                    k = journal.casefold()
+                    if k in seen:
+                        continue
+                    seen.add(k)
+                    w.writerow([journal, rank])
+                    n += 1
+
+    if n < 400:
+        die(f"FNEGE 2025 parse error: suspiciously low row count: {n}")
+    return out.getvalue()
+
+
 def build_core_csv() -> tuple[str, dict]:
     # CORE portal supports paging with a 'page' param. For ICORE2026 it appears to be 20 pages.
     # We'll discover the last page by looking at the pagination jumpPage('N') links.
@@ -349,6 +398,22 @@ def main() -> int:
     write_text(DATA_DIR / "abs2024.csv", abs_csv)
     meta["sources"]["abs2024"] = {"url": ABS_2024_URL, "rows": abs_csv.count("\n") - 1}
 
+    print("[fnege2025] fetch+parse", flush=True)
+    fnege_csv = build_fnege_2025_csv_from_jql()
+    write_text(DATA_DIR / "fnege2025.csv", fnege_csv)
+    meta["sources"]["jql72"] = {
+        "url": "https://harzing.com/resources/journal-quality-list",
+        "pdf": JQL_72_URL,
+        "edition": "72nd",
+        "updated": "2026-03-27",
+    }
+    meta["sources"]["fnege2025"] = {
+        "url": JQL_72_URL,
+        "rows": fnege_csv.count("\n") - 1,
+        "source": "Harzing Journal Quality List 72nd edition (title PDF, FNEGE 2025 column)",
+        "coverage": "JQL journal set",
+    }
+
     print("[core] fetch+parse", flush=True)
     core_csv, core_meta = build_core_csv()
     write_text(DATA_DIR / "core_icore2026.csv", core_csv)
@@ -357,7 +422,7 @@ def main() -> int:
     write_text(DATA_DIR / "quality_sources.json", json.dumps(meta, indent=2, sort_keys=True) + "\n")
 
     print("Wrote:")
-    for p in ["ft50.txt", "utd24.txt", "abdc2022.csv", "abs2024.csv", "core_icore2026.csv", "quality_sources.json"]:
+    for p in ["ft50.txt", "utd24.txt", "abdc2022.csv", "abs2024.csv", "fnege2025.csv", "core_icore2026.csv", "quality_sources.json"]:
         print(" -", (DATA_DIR / p).relative_to(ROOT))
 
     return 0

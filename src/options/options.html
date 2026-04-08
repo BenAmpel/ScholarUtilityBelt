@@ -15,6 +15,19 @@
         <span id="statusTop" class="status"></span>
       </div>
 
+      <section class="card support-card">
+        <h2>Support</h2>
+        <p class="sub">If Scholar Utility Belt saves you time, you can support ongoing development here.</p>
+        <a
+          class="support-link"
+          href="https://www.buymeacoffee.com/BAmpel"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Buy me a coffee
+        </a>
+      </section>
+
       <section class="card">
         <h2>Appearance</h2>
         <label class="field">
@@ -294,6 +307,7 @@
           <label class="row"><input type="checkbox" id="qbQuartile" /> Quartile (Q1–Q4)</label>
           <label class="row"><input type="checkbox" id="qbAbdc" /> ABDC</label>
           <label class="row"><input type="checkbox" id="qbVhb" /> VHB</label>
+          <label class="row"><input type="checkbox" id="qbFnege" /> FNEGE</label>
           <label class="row"><input type="checkbox" id="qbJcr" /> JCR</label>
           <label class="row"><input type="checkbox" id="qbIf" /> Impact Factor (IF)</label>
           <label class="row"><input type="checkbox" id="qbFt50" /> FT50</label>
@@ -529,6 +543,12 @@
         </label>
 
         <label class="field">
+          <div class="label">FNEGE 2025 ranks CSV (Venue, 1*/1/2/3/4)</div>
+          <textarea id="qualityFnegeRanks" rows="6" placeholder="Example:\nAcademy of Management Journal,1*\nJournal of Management Studies,2"></textarea>
+        </label>
+        <p class="sub">Built-in FNEGE coverage comes from the latest Harzing JQL (72nd edition, March 27, 2026), so it covers the JQL journal set rather than the full master ranking.</p>
+
+        <label class="field">
           <div class="label">Quartiles CSV (Venue, Q1/Q2/Q3/Q4)</div>
           <textarea id="qualityQuartiles" rows="6" placeholder="Example:\nMIS Quarterly,Q1\nDecision Support Systems,Q1"></textarea>
         </label>
@@ -594,6 +614,7 @@
         <h2>Domain Note</h2>
         <p class="sub">This build matches common Scholar domains (e.g., <code>scholar.google.com</code>, <code>scholar.google.de</code>, <code>scholar.google.co.uk</code>). If you use a different Scholar domain, tell us and we’ll add it.</p>
       </section>
+
     </main>
 
     <script type="module" src="options.js"></script>

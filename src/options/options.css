@@ -208,7 +208,8 @@ select {
 .su-badge.su-vhb { background: #f0f9ff; border-color: rgba(7,89,133,0.28); }
 .su-badge.su-ft50 { background: #fff7ed; border-color: rgba(154,52,18,0.24); }
 .su-badge.su-utd24 { background: #f5f3ff; border-color: rgba(91,33,182,0.24); }
-.su-badge.su-abs { background: #fef3c7; border-color: rgba(180,83,9,0.28); }
+.su-badge.su-abs,
+.su-badge.su-fnege { background: #fef3c7; border-color: rgba(180,83,9,0.28); }
 
 [data-badge-palette="bold"] .su-badge.su-quartile { background: #bbf7d0; border-color: #22c55e; color: #065f46; }
 [data-badge-palette="bold"] .su-badge.su-abdc { background: #a7f3d0; border-color: #10b981; color: #065f46; }
@@ -429,4 +430,30 @@ textarea {
   color: var(--muted);
   list-style: none;
   margin-left: -20px;
+}
+
+.support-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.support-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid #000000;
+  border-radius: 999px;
+  background: #ffdd00;
+  color: #000000;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.support-link:hover {
+  background: #f4cf00;
+  border-color: #000000;
 }

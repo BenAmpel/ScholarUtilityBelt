@@ -34,6 +34,7 @@ const QUALITY_BADGE_IDS = {
   quartile: "qbQuartile",
   abdc: "qbAbdc",
   vhb: "qbVhb",
+  fnege: "qbFnege",
   jcr: "qbJcr",
   if: "qbIf",
   ft50: "qbFt50",
@@ -180,6 +181,7 @@ async function load() {
   el("qualityUtd24List").value = s.qualityUtd24List || "";
   el("qualityAbdcRanks").value = s.qualityAbdcRanks || "";
   el("qualityVhbRanks").value = s.qualityVhbRanks || "";
+  el("qualityFnegeRanks").value = s.qualityFnegeRanks || "";
   el("qualityQuartiles").value = s.qualityQuartiles || "";
   el("qualityCoreRanks").value = s.qualityCoreRanks || "";
   el("qualityCcfRanks").value = s.qualityCcfRanks || "";
@@ -195,6 +197,18 @@ async function load() {
       if (vhb && vhb.trim().length > 10) {
         el("qualityVhbRanks").value = vhb.trim() + "\n";
         await setSettings({ qualityVhbRanks: el("qualityVhbRanks").value });
+      }
+    } catch {
+      // Ignore; user can load manually.
+    }
+  }
+
+  if (!el("qualityFnegeRanks").value.trim()) {
+    try {
+      const fnege = await fetchExtText("src/data/fnege2025.csv");
+      if (fnege && fnege.trim().length > 10) {
+        el("qualityFnegeRanks").value = fnege.trim() + "\n";
+        await setSettings({ qualityFnegeRanks: el("qualityFnegeRanks").value });
       }
     } catch {
       // Ignore; user can load manually.
@@ -588,6 +602,7 @@ async function handleSave() {
     qualityUtd24List: el("qualityUtd24List").value,
     qualityAbdcRanks: el("qualityAbdcRanks").value,
     qualityVhbRanks: el("qualityVhbRanks").value,
+    qualityFnegeRanks: el("qualityFnegeRanks").value,
     qualityQuartiles: el("qualityQuartiles").value,
     qualityCoreRanks: el("qualityCoreRanks").value,
     qualityCcfRanks: el("qualityCcfRanks").value
@@ -786,11 +801,12 @@ el("clearScimagoQuartiles").addEventListener("click", async () => {
 
 el("loadQualityDefaults").addEventListener("click", async () => {
   try {
-    const [ft50, utd24, abdc, vhb, core, corePortal] = await Promise.all([
+    const [ft50, utd24, abdc, vhb, fnege, core, corePortal] = await Promise.all([
       fetchExtText("src/data/ft50.txt"),
       fetchExtText("src/data/utd24.txt"),
       fetchExtText("src/data/abdc2022.csv"),
       fetchExtText("src/data/vhb2024.csv"),
+      fetchExtText("src/data/fnege2025.csv"),
       fetchExtText("src/data/core_icore2026.csv"),
       fetchExtText("src/data/core_portal_ranks.csv")
     ]);
@@ -801,6 +817,7 @@ el("loadQualityDefaults").addEventListener("click", async () => {
     if (!el("qualityUtd24List").value.trim()) el("qualityUtd24List").value = utd24.trim() + "\n";
     if (!el("qualityAbdcRanks").value.trim()) el("qualityAbdcRanks").value = abdc.trim() + "\n";
     if (!el("qualityVhbRanks").value.trim()) el("qualityVhbRanks").value = vhb.trim() + "\n";
+    if (!el("qualityFnegeRanks").value.trim()) el("qualityFnegeRanks").value = fnege.trim() + "\n";
     if (!el("qualityCoreRanks").value.trim()) el("qualityCoreRanks").value = coreMerged + "\n";
 
     if (!el("showQualityBadges").checked) el("showQualityBadges").checked = true;
@@ -816,6 +833,7 @@ el("clearQualityLists").addEventListener("click", async () => {
   el("qualityUtd24List").value = "";
   el("qualityAbdcRanks").value = "";
   el("qualityVhbRanks").value = "";
+  el("qualityFnegeRanks").value = "";
   el("qualityQuartiles").value = "";
   el("qualityCoreRanks").value = "";
   setQualityStatus("Cleared (not saved yet).");

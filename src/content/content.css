@@ -1217,7 +1217,8 @@ body[data-su-theme="light"] .su-has-fma .gs_fma * {
 .su-badge.su-norwegian { background: #ecfdf5; border-color: rgba(5,150,105,0.28); }
 .su-badge.su-h5 { background: #e0f2fe; border-color: rgba(6,182,212,0.28); }
 .su-badge.su-emerging { background: #ecfdf3; border-color: rgba(16,185,129,0.28); color: #065f46; }
-.su-badge.su-abs { background: #fef3c7; border-color: rgba(180,83,9,0.28); }
+.su-badge.su-abs,
+.su-badge.su-fnege { background: #fef3c7; border-color: rgba(180,83,9,0.28); }
 .su-badge.su-abs4star { background: #fef3c7; border-color: rgba(180,83,9,0.28); }
 
 /* Bold badge palette (higher contrast) */
@@ -3177,6 +3178,7 @@ body[data-su-theme="dark"] .su-badge.su-era { background: #1a2d4d; border-color:
 body[data-su-theme="dark"] .su-badge.su-norwegian { background: #1a3d2d; border-color: #2d5c47; }
 body[data-su-theme="dark"] .su-badge.su-h5 { background: #1a2d3d; border-color: #2d4a60; }
 body[data-su-theme="dark"] .su-badge.su-preprint { background: #2d2d2d; border-color: #5f6368; color: #bdc1c6; }
+body[data-su-theme="dark"] .su-badge.su-fnege { background: #3d3320; border-color: #5c4a28; }
 
 /* Bold badge palette in dark mode */
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-quartile { background: #0f4d2d; border-color: #22c55e; color: #bbf7d0; }
@@ -4383,6 +4385,7 @@ body[data-su-theme="dark"] .su-reading-guide-toggle.su-reading-guide-on {
 body[data-su-theme="dark"] .su-idea-lineage-paper {
   color: #60a5fa;
 }
+
 body[data-su-theme="dark"] .su-idea-lineage-popover,
 body[data-su-theme="dark"] .su-idea-lineage-paper-panel {
   background: #1f2937;

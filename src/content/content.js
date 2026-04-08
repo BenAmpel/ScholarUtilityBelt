@@ -6078,6 +6078,7 @@
       era:       [...qIndex.era],
       abdc:      [...qIndex.abdc.entries()],
       vhb:       [...qIndex.vhb.entries()],
+      fnege:     [...qIndex.fnege.entries()],
       quartiles: [...qIndex.quartiles.entries()],
       core:      [...qIndex.core.entries()],
       ccf:       [...qIndex.ccf.entries()],
@@ -6096,6 +6097,7 @@
       era:       new Set(s.era       || []),
       abdc:      new Map(s.abdc      || []),
       vhb:       new Map(s.vhb       || []),
+      fnege:     new Map(s.fnege     || []),
       quartiles: new Map(s.quartiles || []),
       core:      new Map(s.core      || []),
       ccf:       new Map(s.ccf       || []),
@@ -6158,12 +6160,13 @@
     // Hash uses only in-memory data so cache can be checked before any file I/O.
     // VHB/Impact index sizes are omitted; settings changes (rank filters) act as
     // a sufficient proxy for detecting when those files' effective contents change.
-    const QUALITY_INDEX_VERSION = 2;
+    const QUALITY_INDEX_VERSION = 3;
     const settingsHash = JSON.stringify({
       qualityFt50List: settings.qualityFt50List || "",
       qualityUtd24List: settings.qualityUtd24List || "",
       qualityAbdcRanks: settings.qualityAbdcRanks || "",
       qualityVhbRanks: settings.qualityVhbRanks || "",
+      qualityFnegeRanks: settings.qualityFnegeRanks || "",
       qualityQuartiles: settings.qualityQuartiles || "",
       qualityCoreRanks: settings.qualityCoreRanks || "",
       qualityCcfRanks: settings.qualityCcfRanks || "",
@@ -6726,28 +6729,29 @@
       }
 
       const authorText = authorDiv.textContent || "";
-      let foundVariation = null;
-      for (const variation of authorVariations) {
-        const escaped = variation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const pattern = new RegExp(`(^|,\\s*)(${escaped})(\\s*,|$)`, "i");
-        if (pattern.test(authorText)) {
-          foundVariation = variation;
-          break;
-        }
-      }
-
-      if (foundVariation) {
+      const authorNames = parseAuthors(authorText);
+      if (authorNames.some((name) => isAuthorVariation(name, authorVariations))) {
         authorDiv.dataset.suAuthorHighlighted = "true";
         if (authorDiv.__suOrigAuthorHTML === undefined) {
           authorDiv.__suOrigAuthorHTML = authorDiv.innerHTML;
         }
-        authorDiv.innerHTML = authorDiv.__suOrigAuthorHTML;
-        const escaped = foundVariation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const pattern = new RegExp(`(^|,\\s*)(${escaped})(\\s*,|$)`, "gi");
-        authorDiv.innerHTML = authorDiv.innerHTML.replace(
-          pattern,
-          (match, before, name, after) => `${before}<span class="su-author-highlight">${name}</span>${after}`
-        );
+        const fragments = authorText.split(/(\s*,\s*)/);
+        authorDiv.textContent = "";
+        for (const fragment of fragments) {
+          if (!fragment) continue;
+          if (/^\s*,\s*$/.test(fragment)) {
+            authorDiv.appendChild(document.createTextNode(fragment));
+            continue;
+          }
+          if (isAuthorVariation(fragment, authorVariations)) {
+            const span = document.createElement("span");
+            span.className = "su-author-highlight";
+            span.textContent = fragment;
+            authorDiv.appendChild(span);
+          } else {
+            authorDiv.appendChild(document.createTextNode(fragment));
+          }
+        }
       }
     }
   }
@@ -6838,8 +6842,14 @@
     "facp", "facc", "facs", "frcpc", "frcs", "frs"
   ]);
 
+  function stripDiacritics(value) {
+    return String(value || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
   function normalizeNameToken(token) {
-    return String(token || "")
+    return stripDiacritics(token)
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
   }
@@ -6974,6 +6984,11 @@
         input: "A. B. Chen, MEng, P.Eng",
         stripped: "A. B. Chen",
         last: "chen"
+      },
+      {
+        input: "F Özel",
+        stripped: "F Özel",
+        last: "ozel"
       }
     ];
 
@@ -7011,7 +7026,7 @@
     // Strip "*" markers used by Google Scholar to mark corresponding authors
     const cleaned = stripNameCredentials(name);
     const noSuffix = stripTrailingSuffixTokens(cleaned);
-    return noSuffix.replace(/\*+$/, "").toLowerCase().trim();
+    return stripDiacritics(noSuffix.replace(/\*+$/, "")).toLowerCase().trim();
   }
 
   function paperHasCoauthor(paper, normalizedCoauthor) {
@@ -7027,7 +7042,7 @@
     // Strip "*" markers that might be attached to the last name
     const cleaned = stripTrailingSuffixTokens(stripNameCredentials(name)).replace(/\*+$/, "").trim();
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    return parts.length > 0 ? parts[parts.length - 1].toLowerCase() : "";
+    return parts.length > 0 ? stripDiacritics(parts[parts.length - 1]).toLowerCase() : "";
   }
 
   function extractInitials(name) {

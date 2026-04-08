@@ -163,6 +163,7 @@ export function compileQualityIndex(settings, extra = {}) {
   const utd24 = new Set();
   const abdc = new Map(); // venue -> A*/A/B/C/D
   const vhb = new Map(); // venue -> A+/A/B/C/D/E
+  const fnege = new Map(); // venue -> 1*/1/2/3/4
   const quartiles = new Map(); // venue -> Q1/Q2/Q3/Q4
   const core = new Map(); // venue -> A*/A/B/C or similar (includes ICORE)
   const ccf = new Map(); // venue -> A/B/C (CCF rankings)
@@ -173,6 +174,7 @@ export function compileQualityIndex(settings, extra = {}) {
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   const VALID_ABS = /^4\*?$|^[1234]$/i;
   const VALID_VHB = /^A\+?$|^[BCDE]$/i;
+  const VALID_FNEGE = /^1\*?$|^[234]$/i;
   const VALID_QUARTILE = /^Q[1-4]$/i;
   const VALID_CORE = /^A\*?$|^[ABC]$/i;
   const VALID_CCF = /^[ABC]$/i;
@@ -205,6 +207,15 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = normalizeVhbRank(rankRaw);
     if (!name || !rank || !VALID_VHB.test(rank)) continue;
     addSynonymsToMap(vhb, name, rank);
+  }
+
+  for (const line of parseLines(settings.qualityFnegeRanks || "")) {
+    const idx = line.lastIndexOf(",");
+    if (idx <= 0 || idx >= line.length - 1) continue;
+    const name = line.slice(0, idx).trim();
+    const rank = line.slice(idx + 1).trim().replace(/\s+/g, "");
+    if (!name || !rank || !VALID_FNEGE.test(rank)) continue;
+    addSynonymsToMap(fnege, name, rank);
   }
 
   // Large-scale quartiles can be supplied as a prebuilt index (already normalized keys).
@@ -290,7 +301,7 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
-  return { ft50, utd24, abdc, vhb, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
+  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
 }
 
 
@@ -374,6 +385,14 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (vhb && VALID_VHB.test(String(vhb).trim())) {
     const r = String(vhb).trim().toUpperCase().replace("*", "+");
     badges.push({ kind: "vhb", text: `VHB ${r}`, metadata: { rank: r, system: "VHB JOURQUAL 2024" } });
+  }
+
+  let fnege = qIndex.fnege?.get?.(v);
+  if (!fnege && qIndex.fnege) fnege = findBestMatch(v, qIndex.fnege);
+  const VALID_FNEGE = /^1\*?$|^[234]$/i;
+  if (fnege && VALID_FNEGE.test(String(fnege).trim())) {
+    const r = String(fnege).trim().replace(/\s+/g, "");
+    badges.push({ kind: "fnege", text: `FNEGE ${r}`, metadata: { rank: r, system: "FNEGE 2025 (via Harzing JQL 72)" } });
   }
 
   let abs = qIndex.abs?.get?.(v);
