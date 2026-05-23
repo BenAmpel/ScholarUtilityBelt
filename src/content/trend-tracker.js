@@ -98,3 +98,49 @@ export async function evictCache() {
   for (const k of toRemove) delete cache[k];
   await setCache(cache);
 }
+
+export const OPENALEX_RATE_LIMIT_MS = 1000;
+let lastApiCallTs = 0;
+
+async function rateLimitedFetch(url) {
+  const now = Date.now();
+  const wait = OPENALEX_RATE_LIMIT_MS - (now - lastApiCallTs);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastApiCallTs = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    return res;
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+export async function fetchConceptTrends(query) {
+  try {
+    const encoded = encodeURIComponent(String(query || "").trim());
+    if (!encoded) return [];
+    const url = `https://api.openalex.org/concepts?search=${encoded}&per_page=8&mailto=scholar-extension@local`;
+    const res = await rateLimitedFetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const results = data?.results || [];
+    const currentYear = new Date().getFullYear();
+    return results.slice(0, 8).map(concept => {
+      const name = concept.display_name || "Unknown";
+      const countsByYear = concept.counts_by_year || [];
+      const last5 = [];
+      for (let y = currentYear - 4; y <= currentYear; y++) {
+        const entry = countsByYear.find(c => c.year === y);
+        last5.push(entry ? entry.works_count : 0);
+      }
+      const totalWorks = last5.reduce((a, b) => a + b, 0);
+      return { name, trend: computeTrend(last5), worksCount: totalWorks };
+    });
+  } catch {
+    return [];
+  }
+}

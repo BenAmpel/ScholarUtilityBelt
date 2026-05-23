@@ -219,3 +219,73 @@ describe("cache logic", () => {
     assert.ok(keys.length <= CACHE_MAX);
   });
 });
+
+const { fetchConceptTrends, OPENALEX_RATE_LIMIT_MS } = await import("../src/content/trend-tracker.js");
+
+describe("fetchConceptTrends", () => {
+  it("OPENALEX_RATE_LIMIT_MS is 1000", () => {
+    assert.equal(OPENALEX_RATE_LIMIT_MS, 1000);
+  });
+
+  it("returns concepts with trend arrows from mock API response", async () => {
+    const currentYear = new Date().getFullYear();
+    const mockResponse = {
+      results: [
+        {
+          display_name: "Machine Learning",
+          counts_by_year: [
+            { year: currentYear, works_count: 500 },
+            { year: currentYear - 1, works_count: 400 },
+            { year: currentYear - 2, works_count: 300 },
+            { year: currentYear - 3, works_count: 200 },
+            { year: currentYear - 4, works_count: 100 }
+          ]
+        },
+        {
+          display_name: "Data Mining",
+          counts_by_year: [
+            { year: currentYear, works_count: 100 },
+            { year: currentYear - 1, works_count: 100 },
+            { year: currentYear - 2, works_count: 100 },
+            { year: currentYear - 3, works_count: 100 },
+            { year: currentYear - 4, works_count: 100 }
+          ]
+        }
+      ]
+    };
+
+    globalThis.fetch = () => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(mockResponse)
+    });
+
+    const concepts = await fetchConceptTrends("machine learning");
+    assert.ok(concepts.length >= 1);
+    const ml = concepts.find(c => c.name === "Machine Learning");
+    assert.ok(ml);
+    assert.equal(ml.trend, "up");
+    const dm = concepts.find(c => c.name === "Data Mining");
+    assert.ok(dm);
+    assert.equal(dm.trend, "flat");
+  });
+
+  it("returns empty array on fetch failure", async () => {
+    globalThis.fetch = () => Promise.reject(new Error("network error"));
+    const concepts = await fetchConceptTrends("anything");
+    assert.deepEqual(concepts, []);
+  });
+
+  it("limits to 8 concepts", async () => {
+    const currentYear = new Date().getFullYear();
+    const results = Array.from({ length: 15 }, (_, i) => ({
+      display_name: `Concept ${i}`,
+      counts_by_year: [{ year: currentYear, works_count: 100 }]
+    }));
+    globalThis.fetch = () => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ results })
+    });
+    const concepts = await fetchConceptTrends("query");
+    assert.ok(concepts.length <= 8);
+  });
+});
