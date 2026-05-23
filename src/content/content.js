@@ -49,6 +49,17 @@
   let getCachedElement;
   let getCachedElements;
 
+  let loadEraAndNorwegian;
+  let loadH5Index;
+  let loadVhbIndex;
+  let loadImpactIndex;
+  let loadRetractionBloom;
+  let bloomHasDoi;
+  let checkRetractionStatus;
+
+  let trendTracker_initTrendPanel;
+  let trendTracker_destroyTrendPanel;
+
   async function importModuleWithRetry(path, attempts = 2) {
     let lastError = null;
     for (let i = 0; i < attempts; i++) {
@@ -64,9 +75,13 @@
 
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
-    const storage = await importModuleWithRetry("src/common/storage.js");
-    const quality = await importModuleWithRetry("src/common/quality.js");
-    const domCache = await importModuleWithRetry("src/content/dom-cache.js");
+    // Load all three modules in parallel instead of sequentially (Option C)
+    const [storage, quality, domCache, dataLoader] = await Promise.all([
+      importModuleWithRetry("dist/common/storage.js"),
+      importModuleWithRetry("dist/common/quality.js"),
+      importModuleWithRetry("dist/content/dom-cache.js"),
+      importModuleWithRetry("dist/content/data-loader.js"),
+    ]);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -98,6 +113,13 @@
       setTrajectoryVenueExpectedCache,
       setPageVisitCacheEntry,
       setReadingLoadPageCount,
+      getStorageMapEntry,
+      setStorageMapEntry,
+      getStorageMap,
+      setStorageMap,
+      removeStorageKeys,
+      setStorageValue,
+      getStorageValue,
       uniqTags,
       upsertPaper,
       DEFAULT_SETTINGS
@@ -112,6 +134,15 @@
       venueWeightForVenue
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
+    ({
+      loadEraAndNorwegian,
+      loadH5Index,
+      loadVhbIndex,
+      loadImpactIndex,
+      loadRetractionBloom,
+      bloomHasDoi,
+      checkRetractionStatus
+    } = dataLoader);
     modulesLoaded = true;
   }
 
@@ -224,7 +255,7 @@
   let _authorModule = null;
   async function getAuthorModule() {
     if (_authorModule) return _authorModule;
-    _authorModule = await import(chrome.runtime.getURL("src/content/content-author.js"));
+    _authorModule = await import(chrome.runtime.getURL("dist/content/content-author.js"));
     return _authorModule;
   }
 
@@ -253,7 +284,7 @@
     // L2: chrome.storage.local — 30-day persistent cache.
     let cached = null;
     try {
-      cached = await chrome.storage.local.get({ [cacheKey]: null });
+      cached = { [cacheKey]: await getStorageValue(cacheKey, null) };
     } catch (_) {
       window.__suSelfCiteState = { key: scholarId, loading: false, data: { status: "error", message: "Extension context invalidated." } };
       return;
@@ -289,7 +320,7 @@
     window.__suSelfCiteState = { key: scholarId, loading: false, data: result };
     if (result.status === "success") {
       // Write to both caches.
-      chrome.storage.local.set({ [cacheKey]: { data: result, timestamp: Date.now() } }).catch(() => {});
+      setStorageValue(cacheKey, { data: result, timestamp: Date.now() });
       if (chrome.storage?.session?.set) {
         try { chrome.storage.session.set({ [SESSION_KEY]: result }); } catch (_) {}
       }
@@ -331,51 +362,25 @@
     if (!scholarId || !chrome?.storage?.local?.get) {
       return { ...DEFAULT_AUTHOR_FEATURE_TOGGLES };
     }
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_FEATURE_TOGGLES_KEY]: {} });
-      const map = stored[AUTHOR_FEATURE_TOGGLES_KEY] || {};
-      const entry = map[scholarId] || {};
-      return { ...DEFAULT_AUTHOR_FEATURE_TOGGLES, ...entry };
-    } catch {
-      return { ...DEFAULT_AUTHOR_FEATURE_TOGGLES };
-    }
+    return getStorageMapEntry(AUTHOR_FEATURE_TOGGLES_KEY, scholarId, DEFAULT_AUTHOR_FEATURE_TOGGLES);
   }
 
   async function setAuthorFeatureToggles(scholarId, next) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_FEATURE_TOGGLES_KEY]: {} });
-      const map = stored[AUTHOR_FEATURE_TOGGLES_KEY] || {};
-      map[scholarId] = { ...DEFAULT_AUTHOR_FEATURE_TOGGLES, ...next };
-      await chrome.storage.local.set({ [AUTHOR_FEATURE_TOGGLES_KEY]: map });
-    } catch {
-      // ignore
-    }
+    await setStorageMapEntry(AUTHOR_FEATURE_TOGGLES_KEY, scholarId, { ...DEFAULT_AUTHOR_FEATURE_TOGGLES, ...next });
   }
 
   async function getAuthorCitedByColorScheme(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) {
       return DEFAULT_CITEDBY_COLOR_SCHEME;
     }
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_CITEDBY_COLOR_KEY]: {} });
-      const map = stored[AUTHOR_CITEDBY_COLOR_KEY] || {};
-      return map[scholarId] || DEFAULT_CITEDBY_COLOR_SCHEME;
-    } catch {
-      return DEFAULT_CITEDBY_COLOR_SCHEME;
-    }
+    const entry = await getStorageMapEntry(AUTHOR_CITEDBY_COLOR_KEY, scholarId);
+    return (typeof entry === "string" ? entry : null) || DEFAULT_CITEDBY_COLOR_SCHEME;
   }
 
   async function setAuthorCitedByColorScheme(scholarId, scheme) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_CITEDBY_COLOR_KEY]: {} });
-      const map = stored[AUTHOR_CITEDBY_COLOR_KEY] || {};
-      map[scholarId] = scheme || DEFAULT_CITEDBY_COLOR_SCHEME;
-      await chrome.storage.local.set({ [AUTHOR_CITEDBY_COLOR_KEY]: map });
-    } catch {
-      // ignore
-    }
+    await setStorageMapEntry(AUTHOR_CITEDBY_COLOR_KEY, scholarId, scheme || DEFAULT_CITEDBY_COLOR_SCHEME);
   }
 
   let popPeerCache = null;
@@ -438,8 +443,7 @@
       return popPeerCache;
     }
     try {
-      const stored = await chrome.storage.local.get({ [POP_PEER_CACHE_KEY]: {} });
-      const cache = stored[POP_PEER_CACHE_KEY] || {};
+      const cache = await getStorageMap(POP_PEER_CACHE_KEY);
       popPeerCache = {
         peers: cache.peers || {},
         concepts: cache.concepts || {}
@@ -457,103 +461,53 @@
     popPeerCacheSaveTimer = setTimeout(() => {
       popPeerCacheSaveTimer = null;
       if (!popPeerCache || popPeerStorageBlocked || !chrome?.storage?.local?.set) return;
-      try {
-        chrome.storage.local.set({ [POP_PEER_CACHE_KEY]: popPeerCache }).catch((err) => {
-          if (isStorageBlockedError(err)) popPeerStorageBlocked = true;
-        });
-      } catch (err) {
+      setStorageMap(POP_PEER_CACHE_KEY, popPeerCache).catch((err) => {
         if (isStorageBlockedError(err)) popPeerStorageBlocked = true;
-      }
+      });
     }, 1000);
   }
 
   async function getAuthorGraphCollections(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return [];
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_COLLECTIONS_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_COLLECTIONS_KEY] || {};
-      const list = map[scholarId];
-      return Array.isArray(list) ? list : [];
-    } catch {
-      return [];
-    }
+    const entry = await getStorageMapEntry(AUTHOR_GRAPH_COLLECTIONS_KEY, scholarId);
+    return Array.isArray(entry) ? entry : [];
   }
 
   async function setAuthorGraphCollections(scholarId, list) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_COLLECTIONS_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_COLLECTIONS_KEY] || {};
-      map[scholarId] = Array.isArray(list) ? list : [];
-      await chrome.storage.local.set({ [AUTHOR_GRAPH_COLLECTIONS_KEY]: map });
-    } catch {
-      // ignore
-    }
+    await setStorageMapEntry(AUTHOR_GRAPH_COLLECTIONS_KEY, scholarId, Array.isArray(list) ? list : []);
   }
 
   async function getAuthorGraphState(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return null;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_STATE_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_STATE_KEY] || {};
-      return map[scholarId] || null;
-    } catch {
-      return null;
-    }
+    const entry = await getStorageMapEntry(AUTHOR_GRAPH_STATE_KEY, scholarId);
+    return entry && Object.keys(entry).length > 0 ? entry : null;
   }
 
   async function setAuthorGraphState(scholarId, graphState) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_STATE_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_STATE_KEY] || {};
-      map[scholarId] = graphState || null;
-      await chrome.storage.local.set({ [AUTHOR_GRAPH_STATE_KEY]: map });
-    } catch {
-      // ignore
-    }
+    await setStorageMapEntry(AUTHOR_GRAPH_STATE_KEY, scholarId, graphState || null);
   }
 
   async function getAuthorGraphAlerts(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return null;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_ALERTS_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_ALERTS_KEY] || {};
-      return map[scholarId] || null;
-    } catch {
-      return null;
-    }
+    const entry = await getStorageMapEntry(AUTHOR_GRAPH_ALERTS_KEY, scholarId);
+    return entry && Object.keys(entry).length > 0 ? entry : null;
   }
 
   async function setAuthorGraphAlerts(scholarId, data) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
-    try {
-      const stored = await chrome.storage.local.get({ [AUTHOR_GRAPH_ALERTS_KEY]: {} });
-      const map = stored[AUTHOR_GRAPH_ALERTS_KEY] || {};
-      map[scholarId] = data || null;
-      await chrome.storage.local.set({ [AUTHOR_GRAPH_ALERTS_KEY]: map });
-    } catch {
-      // ignore
-    }
+    await setStorageMapEntry(AUTHOR_GRAPH_ALERTS_KEY, scholarId, data || null);
   }
 
   async function getReviewProjects() {
     if (!chrome?.storage?.local?.get) return {};
-    try {
-      const stored = await chrome.storage.local.get({ [REVIEW_PROJECTS_KEY]: {} });
-      return stored[REVIEW_PROJECTS_KEY] || {};
-    } catch {
-      return {};
-    }
+    return getStorageMap(REVIEW_PROJECTS_KEY);
   }
 
   async function setReviewProjects(map) {
     if (!chrome?.storage?.local?.set) return;
-    try {
-      await chrome.storage.local.set({ [REVIEW_PROJECTS_KEY]: map || {} });
-    } catch {
-      // ignore
-    }
+    await setStorageMap(REVIEW_PROJECTS_KEY, map);
   }
 
   function normalizeReviewProject(project) {
@@ -809,224 +763,6 @@
     if (rect.top < pad) top = pad;
     el.style.left = left + "px";
     el.style.top = top + "px";
-  }
-
-  async function loadEraAndNorwegian() {
-    if (window.__suEraNorwegian) return window.__suEraNorwegian;
-    let eraSet = new Set();
-    let norwegianMap = new Map();
-    let absIndex = new Map();
-    try {
-      const base = chrome.runtime.getURL("src/data/");
-      const [eraText, absText] = await Promise.all([
-        fetch(base + "era2023.txt").then((r) => (r.ok ? r.text() : "")).catch(() => ""),
-        fetch(base + "abs2024.csv").then((r) => (r.ok ? r.text() : "")).catch(() => "")
-      ]);
-
-      for (const line of (eraText || "").split(/\r?\n/)) {
-        const t = line.trim();
-        if (!t || t.startsWith("#")) continue;
-        const n = normalizeVenueName(t);
-        if (n) eraSet.add(n);
-      }
-
-      // Norwegian register: prefer the pre-processed compact JSON (1 MB) over the raw
-      // 15 MB CSV.  Fall back to the CSV only if the compact file is missing (e.g., in a
-      // dev environment before running scripts/build_norwegian_compact.js).
-      let norwegianLoaded = false;
-      try {
-        const norJson = await fetch(base + "norwegian_compact.json").then((r) => r.ok ? r.json() : null).catch(() => null);
-        if (norJson && typeof norJson === "object") {
-          for (const [key, level] of Object.entries(norJson)) {
-            if (level === "1" || level === "2") norwegianMap.set(key, level);
-          }
-          norwegianLoaded = true;
-        }
-      } catch (_) {}
-
-      if (!norwegianLoaded) {
-        // Fallback: parse the full CSV (slow but always available).
-        const norwegianText = await fetch(base + "norwegian_register.csv").then((r) => (r.ok ? r.text() : "")).catch(() => "");
-        const norLines = (norwegianText || "").split(/\r?\n/).filter((l) => l.trim());
-        if (norLines.length > 0) {
-          const header = parseCsvLine(norLines[0], ";");
-          const titleIdx = header.findIndex((h) => /International Title|Original Title/i.test(String(h)));
-          const levelIdx = header.findIndex((h) => /^Level 20\d{2}$/.test(String(h).trim()));
-          const useTitleIdx = titleIdx >= 0 ? titleIdx : 2;
-          const useLevelIdx = levelIdx >= 0 ? levelIdx : 9;
-          for (let i = 1; i < norLines.length; i++) {
-            const cells = parseCsvLine(norLines[i], ";");
-            const name = (cells[useTitleIdx] || "").trim();
-            const level = String(cells[useLevelIdx] || "").replace(/\D/g, "").slice(0, 1);
-            if (name && (level === "1" || level === "2")) {
-              const n = normalizeVenueName(name);
-              if (n) norwegianMap.set(n, level);
-            }
-          }
-        }
-      }
-
-      for (const line of (absText || "").split(/\r?\n/)) {
-        const idx = line.lastIndexOf(",");
-        if (idx <= 0 || idx >= line.length - 1) continue;
-        const name = line.slice(0, idx).trim().replace(/^"|"$/g, "");
-        const rank = line.slice(idx + 1).trim();
-        if (!name || !rank) continue;
-        const n = normalizeVenueName(name);
-        if (n && /^4\*?$|^[1234]$/i.test(rank)) absIndex.set(n, rank);
-      }
-    } catch (_) {
-      eraSet = new Set();
-      norwegianMap = new Map();
-      absIndex = new Map();
-    }
-    window.__suEraNorwegian = { eraSet, norwegianMap, absIndex };
-    return window.__suEraNorwegian;
-  }
-
-  async function loadH5Index() {
-    if (window.__suH5Index) return window.__suH5Index;
-    try {
-      const url = chrome.runtime.getURL("src/data/venue_h5_index.json");
-      const r = await fetch(url);
-      const data = (r.ok ? await r.json() : null) || {};
-      window.__suH5Index = data;
-      return data;
-    } catch (_) {
-      window.__suH5Index = {};
-      return {};
-    }
-  }
-
-  async function loadVhbIndex() {
-    if (window.__suVhbIndex) return window.__suVhbIndex;
-    const map = new Map();
-    try {
-      const url = chrome.runtime.getURL("src/data/vhb2024.csv");
-      const r = await fetch(url);
-      const text = r.ok ? await r.text() : "";
-      for (const line of (text || "").split(/\r?\n/)) {
-        const idx = line.lastIndexOf(",");
-        if (idx <= 0 || idx >= line.length - 1) continue;
-        const name = line.slice(0, idx).trim();
-        const rank = normalizeVhbRank(line.slice(idx + 1).trim());
-        if (!name || !rank) continue;
-        for (const syn of String(name).split("|")) {
-          const n = normalizeVenueName(syn);
-          if (n) map.set(n, rank);
-        }
-      }
-    } catch (_) {
-      // Ignore; fall back to user list.
-    }
-    window.__suVhbIndex = map;
-    return map;
-  }
-
-  async function loadImpactIndex() {
-    if (window.__suImpactIndex) return window.__suImpactIndex;
-    const map = new Map();
-    try {
-      const url = chrome.runtime.getURL("src/data/journal_impact_2024.csv");
-      const r = await fetch(url);
-      const text = r.ok ? await r.text() : "";
-      for (const line of (text || "").split(/\r?\n/)) {
-        if (!line || /^\\s*Journal\\s*Name\\s*,/i.test(line)) continue;
-        const idx = line.lastIndexOf(",");
-        if (idx <= 0 || idx >= line.length - 1) continue;
-        const name = line.slice(0, idx).trim().replace(/^\"|\"$/g, "");
-        const raw = line.slice(idx + 1).trim();
-        const val = parseFloat(String(raw || "").replace(/[^0-9.]/g, ""));
-        if (!name || !Number.isFinite(val) || val <= 0) continue;
-        const n = normalizeVenueName(name);
-        if (n) map.set(n, val);
-      }
-    } catch (_) {
-      // Ignore; IF badge will be unavailable if load fails.
-    }
-    window.__suImpactIndex = map;
-    return map;
-  }
-
-  // ——— Retraction Watch (local Bloom filter + optional Crossref check) ———
-  const retractionCheckCache = new Map();
-
-  function fnv1a32(str) {
-    let h = 2166136261;
-    const prime = 16777619;
-    for (let i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, prime);
-    }
-    return h >>> 0;
-  }
-
-  function bloomIndices(doi, m, k) {
-    const s = String(doi).toLowerCase().trim();
-    const h1 = fnv1a32(s);
-    const h2 = (fnv1a32(s + "\u0001salt") | 1) >>> 0;
-    const indices = [];
-    for (let i = 0; i < k; i++) {
-      indices.push(((h1 + i * h2) >>> 0) % m);
-    }
-    return indices;
-  }
-
-  function decodeBloomBits(bitsBase64) {
-    const bin = atob(String(bitsBase64 || ""));
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-
-  async function loadRetractionBloom() {
-    if (window.__suRetractionBloom) return window.__suRetractionBloom;
-    try {
-      const url = chrome.runtime.getURL("src/data/retraction_bloom.json");
-      const r = await fetch(url);
-      const data = r.ok ? await r.json() : null;
-      if (!data || !data.bits || !data.m || !data.k) throw new Error("Invalid bloom data");
-      const bits = decodeBloomBits(data.bits);
-      window.__suRetractionBloom = { m: data.m, k: data.k, bits, source: data.source, built: data.built, count: data.count };
-      return window.__suRetractionBloom;
-    } catch (_) {
-      window.__suRetractionBloom = null;
-      return null;
-    }
-  }
-
-  function bloomHasDoi(doi, bloom) {
-    if (!doi || !bloom) return false;
-    const { m, k, bits } = bloom;
-    if (!m || !k || !bits) return false;
-    for (const idx of bloomIndices(doi, m, k)) {
-      const byteIdx = idx >> 3;
-      const mask = 1 << (idx & 7);
-      if ((bits[byteIdx] & mask) === 0) return false;
-    }
-    return true;
-  }
-
-  async function checkRetractionStatus(doi) {
-    const key = String(doi).toLowerCase().trim();
-    if (!key || key.length < 10) return false;
-    if (retractionCheckCache.has(key)) return retractionCheckCache.get(key);
-    try {
-      const url = `https://api.crossref.org/works/${encodeURIComponent(key)}?mailto=scholar-extension@local`;
-      const r = await fetch(url);
-      if (!r.ok) {
-        retractionCheckCache.set(key, false);
-        return false;
-      }
-      const data = await r.json();
-      const updatedBy = data?.message?.["updated-by"];
-      const isRetracted = Array.isArray(updatedBy) && updatedBy.length > 0;
-      retractionCheckCache.set(key, isRetracted);
-      return isRetracted;
-    } catch {
-      retractionCheckCache.set(key, false);
-      return false;
-    }
   }
 
   const DOI_REGEX = /10\.\d{4,}\/[^\s"'<>]+/gi;
@@ -6198,7 +5934,7 @@
       } catch (_) {}
     }
 
-    if (!qIndexResolved) {
+    if (!qIndexResolved && settings.showQualityBadges) {
       // On cache miss, load all data sources in parallel.
       // (All four loaders cache at window level, so repeated calls within a session are instant.)
       const [eraNorwegian, h5Index, vhbIndex, impactIndex] = await Promise.all([
@@ -6223,6 +5959,14 @@
           });
         } catch (_) {}
       }
+    } else if (!qIndexResolved) {
+      state.qIndex = {
+        ft50: new Set(), utd24: new Set(), preprint: new Set(),
+        era: new Set(), abdc: new Map(), vhb: new Map(),
+        fnege: new Map(), quartiles: new Map(), core: new Map(),
+        ccf: new Map(), jcr: new Map(), impact: new Map(),
+        norwegian: new Map(), abs: new Map(), h5: new Map()
+      };
     }
     state.hiddenPapers = new Set(hiddenPapers);
     state.hiddenVenues = new Set(hiddenVenues);
@@ -8232,7 +7976,7 @@
           e.preventDefault();
           const scholarId = new URL(window.location.href).searchParams.get("user");
           if (scholarId) {
-            await chrome.storage.local.remove(`selfcite_${scholarId}`);
+            await removeStorageKeys(`selfcite_${scholarId}`);
           }
           window.__suSelfCiteState = { key: null, loading: false, data: null };
           await ensureSelfCitationEstimate();
@@ -9032,9 +8776,7 @@
         <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${popReportBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
       `;
       window.suLastCoauthorsHtml = coauthorsHtml || "";
-      renderRightPanel(stats, coauthorsHtml);
-      applyAuthorFeatureToggles(window.suState);
-      ensureCitedByChartObserver();
+      // Restore open settings panel immediately — operates on statsContainer, not right panel
       if (window.suKeepViewSettingsOpen) {
         const dropdown = statsContainer.querySelector(".su-view-settings-dropdown");
         const trigger = dropdown?.querySelector(".su-view-settings-trigger");
@@ -9056,6 +8798,20 @@
           });
         }
         window.suKeepViewSettingsOpen = false;
+      }
+      // Defer right panel + chart enhancement (Option B): sidebar is non-critical
+      // for paper-row interaction. Use requestIdleCallback so the browser renders
+      // the badge/stats row first, then fills in the right column when idle.
+      const _rStats = stats, _rCoauthorsHtml = coauthorsHtml;
+      const _renderSidebar = () => {
+        renderRightPanel(_rStats, _rCoauthorsHtml);
+        applyAuthorFeatureToggles(window.suState);
+        ensureCitedByChartObserver();
+      };
+      if (typeof requestIdleCallback === "function") {
+        requestIdleCallback(_renderSidebar, { timeout: 600 });
+      } else {
+        setTimeout(_renderSidebar, 50);
       }
       // Self-citation estimate handled via metrics dropdown.
       
@@ -17096,6 +16852,27 @@
       }
 
       if (isAuthorProfile) markAuthorProfileTitleToolbar();
+
+      if (!isAuthorProfile && state.settings.showTrendTracker) {
+        const q = getScholarSearchQuery();
+        if (q) {
+          try {
+            if (!trendTracker_initTrendPanel) {
+              const trendMod = await importModuleWithRetry("dist/content/trend-tracker.js");
+              trendTracker_initTrendPanel = trendMod.initTrendPanel;
+              trendTracker_destroyTrendPanel = trendMod.destroyTrendPanel;
+            }
+            const container = document.getElementById("gs_res_ccl_mid") || document.getElementById("gs_res_ccl") || document.querySelector("#gs_bdy");
+            if (container) {
+              trendTracker_initTrendPanel(container, q, state.settings);
+            }
+          } catch (e) {
+            console.warn("[SU] trend tracker init failed", e);
+          }
+        }
+      } else if (!isAuthorProfile && !state.settings.showTrendTracker && trendTracker_destroyTrendPanel) {
+        trendTracker_destroyTrendPanel();
+      }
 
       // Update author stats if on author profile page (use only visible rows when a filter is active)
       if (isAuthorProfile && state.settings && state.settings.showQualityBadges) {
