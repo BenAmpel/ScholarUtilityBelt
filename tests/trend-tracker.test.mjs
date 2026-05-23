@@ -146,3 +146,76 @@ describe("computeTrend", () => {
     assert.equal(computeTrend([130, 100, 100, 100, 100]), "down");
   });
 });
+
+const { readCache, writeCache, evictCache, CACHE_MAX, CACHE_TTL_MS } = await import("../src/content/trend-tracker.js");
+
+describe("cache logic", () => {
+  let storage;
+
+  function mockChromeStorage() {
+    storage = {};
+    globalThis.chrome = {
+      storage: {
+        local: {
+          get: (keys) => Promise.resolve(
+            typeof keys === "string" ? { [keys]: storage[keys] } :
+            Array.isArray(keys) ? Object.fromEntries(keys.map(k => [k, storage[k]])) :
+            Object.fromEntries(Object.entries(keys).map(([k, def]) => [k, storage[k] ?? def]))
+          ),
+          set: (obj) => { Object.assign(storage, obj); return Promise.resolve(); }
+        }
+      }
+    };
+  }
+
+  it("CACHE_MAX is 200", () => {
+    assert.equal(CACHE_MAX, 200);
+  });
+
+  it("CACHE_TTL_MS is 7 days", () => {
+    assert.equal(CACHE_TTL_MS, 7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("readCache returns null for missing key", async () => {
+    mockChromeStorage();
+    const result = await readCache("nonexistent query");
+    assert.equal(result, null);
+  });
+
+  it("writeCache stores and readCache retrieves", async () => {
+    mockChromeStorage();
+    const data = { concepts: [{ name: "AI", trend: "up", worksCount: 100 }], yearlyWorks: { "2023": 5 } };
+    await writeCache("test query", data);
+    const result = await readCache("test query");
+    assert.deepEqual(result.concepts, data.concepts);
+    assert.deepEqual(result.yearlyWorks, data.yearlyWorks);
+  });
+
+  it("readCache returns null for expired entries", async () => {
+    mockChromeStorage();
+    const data = { concepts: [], yearlyWorks: {} };
+    await writeCache("old query", data);
+    const cache = storage.trendCache;
+    const key = normalizeCacheKey("old query");
+    cache[key].ts = Date.now() - CACHE_TTL_MS - 1000;
+    storage.trendCache = cache;
+    const result = await readCache("old query");
+    assert.equal(result, null);
+  });
+
+  it("evictCache removes oldest-accessed entry when over limit", async () => {
+    mockChromeStorage();
+    storage.trendCache = {};
+    for (let i = 0; i < CACHE_MAX + 5; i++) {
+      storage.trendCache[`query${i}`] = {
+        ts: Date.now(),
+        lastAccess: Date.now() - (CACHE_MAX + 5 - i) * 1000,
+        concepts: [],
+        yearlyWorks: {}
+      };
+    }
+    await evictCache();
+    const keys = Object.keys(storage.trendCache);
+    assert.ok(keys.length <= CACHE_MAX);
+  });
+});

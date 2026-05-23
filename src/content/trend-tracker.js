@@ -43,3 +43,58 @@ export function computeTrend(yearlyCountsArray) {
   if (slope < -threshold) return "down";
   return "flat";
 }
+
+export const CACHE_MAX = 200;
+export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function getCache() {
+  try {
+    const data = await chrome.storage.local.get({ trendCache: {} });
+    return data.trendCache || {};
+  } catch {
+    return {};
+  }
+}
+
+async function setCache(cache) {
+  try {
+    await chrome.storage.local.set({ trendCache: cache });
+  } catch {}
+}
+
+export async function readCache(query) {
+  const key = normalizeCacheKey(query);
+  if (!key) return null;
+  const cache = await getCache();
+  const entry = cache[key];
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) return null;
+  entry.lastAccess = Date.now();
+  cache[key] = entry;
+  await setCache(cache);
+  return entry;
+}
+
+export async function writeCache(query, data) {
+  const key = normalizeCacheKey(query);
+  if (!key) return;
+  const cache = await getCache();
+  cache[key] = {
+    ts: Date.now(),
+    lastAccess: Date.now(),
+    concepts: data.concepts || [],
+    yearlyWorks: data.yearlyWorks || {}
+  };
+  await setCache(cache);
+  await evictCache();
+}
+
+export async function evictCache() {
+  const cache = await getCache();
+  const keys = Object.keys(cache);
+  if (keys.length <= CACHE_MAX) return;
+  const sorted = keys.sort((a, b) => (cache[a].lastAccess || 0) - (cache[b].lastAccess || 0));
+  const toRemove = sorted.slice(0, keys.length - CACHE_MAX);
+  for (const k of toRemove) delete cache[k];
+  await setCache(cache);
+}
