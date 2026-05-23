@@ -63,3 +63,86 @@ describe("detectMethods", () => {
     assert.equal(result.size, 0);
   });
 });
+
+const { normalizeCacheKey, extractYearsFromResults, computeTrend } = await import("../src/content/trend-tracker.js");
+
+describe("normalizeCacheKey", () => {
+  it("lowercases and trims", () => {
+    assert.equal(normalizeCacheKey("  Deep Learning  "), "deep learning");
+  });
+
+  it("sorts words alphabetically", () => {
+    assert.equal(normalizeCacheKey("machine learning survey"), "learning machine survey");
+  });
+
+  it("deduplicates words", () => {
+    assert.equal(normalizeCacheKey("learning learning deep"), "deep learning");
+  });
+
+  it("returns empty string for empty input", () => {
+    assert.equal(normalizeCacheKey(""), "");
+    assert.equal(normalizeCacheKey(null), "");
+  });
+});
+
+describe("extractYearsFromResults", () => {
+  function mockResults(yearStrings) {
+    return yearStrings.map(y => ({
+      querySelector: (sel) => {
+        if (sel === ".gs_a") return { textContent: `B Ampel - Journal of AI, ${y} - Springer` };
+        return null;
+      }
+    }));
+  }
+
+  it("extracts years from Scholar result metadata", () => {
+    const counts = extractYearsFromResults(mockResults(["2023", "2023", "2021"]));
+    assert.equal(counts["2023"], 2);
+    assert.equal(counts["2021"], 1);
+  });
+
+  it("handles results with no year", () => {
+    const counts = extractYearsFromResults([{
+      querySelector: () => ({ textContent: "B Ampel - Some Journal - Publisher" })
+    }]);
+    assert.deepEqual(counts, {});
+  });
+
+  it("returns empty object for empty input", () => {
+    assert.deepEqual(extractYearsFromResults([]), {});
+  });
+
+  it("ignores years before 1900 and after 2100", () => {
+    const counts = extractYearsFromResults(mockResults(["1800", "2200", "2020"]));
+    assert.equal(counts["2020"], 1);
+    assert.equal(counts["1800"], undefined);
+    assert.equal(counts["2200"], undefined);
+  });
+});
+
+describe("computeTrend", () => {
+  it("returns 'up' for increasing counts", () => {
+    assert.equal(computeTrend([10, 20, 30, 40, 50]), "up");
+  });
+
+  it("returns 'down' for decreasing counts", () => {
+    assert.equal(computeTrend([50, 40, 30, 20, 10]), "down");
+  });
+
+  it("returns 'flat' for stable counts", () => {
+    assert.equal(computeTrend([100, 101, 99, 100, 102]), "flat");
+  });
+
+  it("returns 'flat' for empty or single-element arrays", () => {
+    assert.equal(computeTrend([]), "flat");
+    assert.equal(computeTrend([42]), "flat");
+  });
+
+  it("returns 'up' when slope > 10% of mean", () => {
+    assert.equal(computeTrend([100, 100, 100, 100, 130]), "up");
+  });
+
+  it("returns 'down' when slope < -10% of mean", () => {
+    assert.equal(computeTrend([130, 100, 100, 100, 100]), "down");
+  });
+});
