@@ -80,7 +80,10 @@ const BADGE_PALETTE_LABELS = {
   monoAccent: "Mono + Accent",
   highContrast: "High-contrast",
   inverted: "Inverted",
-  warm: "Warm"
+  warm: "Warm",
+  refined: "Refined Academic",
+  inkPaper: "Ink & Paper",
+  signal: "Signal-Forward"
 };
 
 function setBadgePaletteUI(value, silent = false) {
@@ -100,6 +103,50 @@ function setBadgePaletteUI(value, silent = false) {
     });
   }
   if (!silent) maybeDirty();
+}
+
+const BADGE_SAMPLES = [
+  { cls: "su-quartile",      text: "Q1"       },
+  { cls: "su-abdc",          text: "ABDC A*"  },
+  { cls: "su-vhb",           text: "VHB A"    },
+  { cls: "su-ft50",          text: "FT50"     },
+  { cls: "su-utd24",         text: "UTD24"    },
+  { cls: "su-core",          text: "CORE A*"  },
+  { cls: "su-ccf",           text: "CCF A"    },
+  { cls: "su-jcr",           text: "JIF Q1"   },
+  { cls: "su-if su-jcr",     text: "IF 12.3"  },
+  { cls: "su-era",           text: "ERA 2023" },
+  { cls: "su-norwegian",     text: "Level 2"  },
+  { cls: "su-h5",            text: "h5 50"    },
+  { cls: "su-preprint",      text: "arXiv"    },
+  { cls: "su-abs",           text: "ABS 4*"   },
+];
+
+function badgePreviewHTML(palette) {
+  const badges = BADGE_SAMPLES
+    .map(b => `<span class="su-badge ${b.cls}">${b.text}</span>`)
+    .join("");
+  return `<span class="badge-preview-mini" data-badge-palette="${palette}">${badges}</span>`;
+}
+
+function buildBadgePaletteMenu() {
+  const menu = el("badgePaletteMenu");
+  const triggerPreview = el("badgePaletteTrigger")?.querySelector(".badge-preview-mini");
+  if (menu) {
+    menu.innerHTML = Object.entries(BADGE_PALETTE_LABELS)
+      .map(([value, label]) =>
+        `<button type="button" class="palette-option" role="option" data-value="${value}" aria-selected="false">` +
+        `<span class="palette-option-label">${label}</span>` +
+        badgePreviewHTML(value) +
+        `</button>`
+      )
+      .join("");
+  }
+  if (triggerPreview) {
+    triggerPreview.innerHTML = BADGE_SAMPLES
+      .map(b => `<span class="su-badge ${b.cls}">${b.text}</span>`)
+      .join("");
+  }
 }
 
 function initBadgePaletteDropdown() {
@@ -170,6 +217,7 @@ async function load() {
   el("showReadingLoadEstimator").checked = !!s.showReadingLoadEstimator;
   el("showResearchIntel").checked = s.showResearchIntel !== false;
   el("showAdvancedFilters").checked = s.showAdvancedFilters !== false;
+  el("showTrendTracker").checked = s.showTrendTracker !== false;
   el("groupVersions").checked = !!s.groupVersions;
   el("versionOrder").value = s.versionOrder || "journal-first";
   el("showNewSinceLastVisit").checked = s.showNewSinceLastVisit !== false;
@@ -256,6 +304,7 @@ async function load() {
 
   await renderHiddenLists();
   await updateOptionalPermStatus();
+  await updateStorageUsage();
 }
 
 async function updateOptionalPermStatus() {
@@ -594,6 +643,7 @@ async function handleSave() {
     showReadingLoadEstimator: el("showReadingLoadEstimator").checked,
     showResearchIntel: el("showResearchIntel").checked,
     showAdvancedFilters: el("showAdvancedFilters").checked,
+    showTrendTracker: el("showTrendTracker").checked,
     groupVersions: el("groupVersions").checked,
     versionOrder: el("versionOrder").value || "journal-first",
 
@@ -611,7 +661,7 @@ async function handleSave() {
   markClean();
 }
 
-el("save").addEventListener("click", handleSave);
+el("save")?.addEventListener("click", handleSave);
 el("saveTop")?.addEventListener("click", handleSave);
 
 let isDirty = false;
@@ -675,7 +725,7 @@ document.addEventListener("change", (e) => {
   maybeDirty();
 });
 
-el("importScimagoFile").addEventListener("change", async (e) => {
+el("importScimagoFile")?.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
@@ -700,7 +750,7 @@ el("importScimagoFile").addEventListener("change", async (e) => {
   }
 });
 
-el("tryDownloadScimago").addEventListener("click", async () => {
+el("tryDownloadScimago")?.addEventListener("click", async () => {
   const year = Number(el("scimagoYear").value) || new Date().getFullYear() - 1;
   const url = `https://www.scimagojr.com/journalrank.php?year=${encodeURIComponent(
     String(year)
@@ -736,7 +786,7 @@ el("tryDownloadScimago").addEventListener("click", async () => {
   }
 });
 
-el("importJcrFiles").addEventListener("change", async (e) => {
+el("importJcrFiles")?.addEventListener("change", async (e) => {
   const files = Array.from(e.target.files || []);
   if (!files.length) return;
 
@@ -787,19 +837,19 @@ el("importJcrFiles").addEventListener("change", async (e) => {
   }
 });
 
-el("clearJcrIndex").addEventListener("click", async () => {
+el("clearJcrIndex")?.addEventListener("click", async () => {
   await clearQualityJcrIndex();
   el("jcrMeta").textContent = "Imported JCR: none";
   setJcrStatus("Cleared JCR index.");
 });
 
-el("clearScimagoQuartiles").addEventListener("click", async () => {
+el("clearScimagoQuartiles")?.addEventListener("click", async () => {
   await clearQualityQuartilesIndex();
   el("scimagoMeta").textContent = "Imported quartiles: none";
   setScimagoStatus("Cleared imported quartiles.");
 });
 
-el("loadQualityDefaults").addEventListener("click", async () => {
+el("loadQualityDefaults")?.addEventListener("click", async () => {
   try {
     const [ft50, utd24, abdc, vhb, fnege, core, corePortal] = await Promise.all([
       fetchExtText("src/data/ft50.txt"),
@@ -828,7 +878,7 @@ el("loadQualityDefaults").addEventListener("click", async () => {
   }
 });
 
-el("clearQualityLists").addEventListener("click", async () => {
+el("clearQualityLists")?.addEventListener("click", async () => {
   el("qualityFt50List").value = "";
   el("qualityUtd24List").value = "";
   el("qualityAbdcRanks").value = "";
@@ -839,19 +889,19 @@ el("clearQualityLists").addEventListener("click", async () => {
   setQualityStatus("Cleared (not saved yet).");
 });
 
-el("clearHiddenPapers").addEventListener("click", async () => {
+el("clearHiddenPapers")?.addEventListener("click", async () => {
   await clearHiddenPapers();
   await renderHiddenLists();
   setStatus("Cleared hidden papers.");
 });
 
-el("clearHiddenVenues").addEventListener("click", async () => {
+el("clearHiddenVenues")?.addEventListener("click", async () => {
   await clearHiddenVenues();
   await renderHiddenLists();
   setStatus("Cleared hidden venues.");
 });
 
-el("clearHiddenAuthors").addEventListener("click", async () => {
+el("clearHiddenAuthors")?.addEventListener("click", async () => {
   await clearHiddenAuthors();
   await renderHiddenLists();
   setStatus("Cleared hidden authors.");
@@ -872,5 +922,125 @@ for (const listId of ["hiddenPapersList", "hiddenVenuesList", "hiddenAuthorsList
   });
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+}
+
+async function updateStorageUsage() {
+  const quota = chrome.storage.local.QUOTA_BYTES || 10 * 1024 * 1024;
+  const totalBytes = await chrome.storage.local.getBytesInUse(null);
+
+  const categories = [
+    { key: "savedPapers", label: "Saved papers" },
+    { key: "qualityQuartilesIndex", label: "SCImago quartiles" },
+    { key: "qualityJcrIndex", label: "JCR index" },
+    { key: "externalSignalCache", label: "API cache" },
+    { key: "citationSnapshots", label: "Citation snapshots" },
+    { key: "localCohortCache", label: "Cohort cache" }
+  ];
+
+  const sizes = await Promise.all(
+    categories.map((c) => chrome.storage.local.getBytesInUse([c.key]))
+  );
+
+  let knownBytes = 0;
+  const items = [];
+  for (let i = 0; i < categories.length; i++) {
+    knownBytes += sizes[i];
+    items.push({ label: categories[i].label, bytes: sizes[i] });
+  }
+  items.push({ label: "Settings & other", bytes: totalBytes - knownBytes });
+
+  const pct = Math.min(100, (totalBytes / quota) * 100);
+  const bar = el("storageBar");
+  if (bar) bar.style.width = pct.toFixed(1) + "%";
+
+  const totalEl = el("storageTotal");
+  if (totalEl) totalEl.textContent = formatBytes(totalBytes) + " of " + formatBytes(quota) + " used (" + pct.toFixed(1) + "%)";
+
+  const breakdownEl = el("storageBreakdown");
+  if (breakdownEl) {
+    breakdownEl.innerHTML = items
+      .map(
+        (it) =>
+          "<div class=\"storage-item\"><span class=\"storage-label\">" +
+          escapeHtml(it.label) +
+          "</span><span class=\"storage-value\">" +
+          formatBytes(it.bytes) +
+          "</span></div>"
+      )
+      .join("");
+  }
+}
+
+el("clearCaches")?.addEventListener("click", async () => {
+  const cacheStatus = el("cacheStatus");
+  try {
+    await chrome.storage.local.remove([
+      "externalSignalCache",
+      "localCohortCache",
+      "citationSnapshots",
+      "authorHIndexSnapshots"
+    ]);
+    if (cacheStatus) cacheStatus.textContent = "Caches cleared.";
+    setTimeout(() => {
+      if (cacheStatus && cacheStatus.textContent === "Caches cleared.") cacheStatus.textContent = "";
+    }, 2000);
+    await updateStorageUsage();
+  } catch (err) {
+    if (cacheStatus) cacheStatus.textContent = "Error: " + (err?.message || String(err));
+  }
+});
+
+// ── Collapsible sections ────────────────────────────────────
+function initCollapsibleSections() {
+  document.querySelectorAll(".card-header").forEach((header) => {
+    const card = header.closest(".card");
+    if (!card) return;
+    const toggle = () => {
+      const collapsed = card.classList.toggle("collapsed");
+      header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    };
+    header.addEventListener("click", toggle);
+    header.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
+}
+
+// ── Settings search/filter ─────────────────────────────────
+function initSettingsFilter() {
+  const input = el("settingsFilter");
+  if (!input) return;
+  input.addEventListener("input", () => {
+    const query = input.value.toLowerCase().trim();
+    document.querySelectorAll(".card[data-section]").forEach((card) => {
+      if (!query) {
+        card.style.display = "";
+        card.classList.remove("collapsed");
+        card.querySelectorAll(".toggle-row, .row, .field").forEach((r) => (r.style.display = ""));
+        return;
+      }
+      card.classList.remove("collapsed");
+      let anyVisible = false;
+      card.querySelectorAll(".toggle-row, .row, .field").forEach((r) => {
+        const text = (r.textContent || "").toLowerCase();
+        const match = text.includes(query);
+        r.style.display = match ? "" : "none";
+        if (match) anyVisible = true;
+      });
+      card.style.display = anyVisible ? "" : "none";
+    });
+  });
+}
+
+buildBadgePaletteMenu();
 initBadgePaletteDropdown();
+initCollapsibleSections();
+initSettingsFilter();
 load();

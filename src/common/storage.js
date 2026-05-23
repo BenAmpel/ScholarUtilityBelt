@@ -87,6 +87,7 @@ export const DEFAULT_SETTINGS = {
   showReadingLoadEstimator: true,
   showResearchIntel: true,
   showAdvancedFilters: true,
+  showTrendTracker: true,
   groupVersions: true,
   versionOrder: "journal-first", // "journal-first" | "conference-first" | "preprint-first"
 
@@ -748,6 +749,81 @@ export async function setExternalSignalCache(cache) {
     await chrome.storage.local.set({ [EXTERNAL_SIGNAL_CACHE_KEY]: pruned });
   } catch (e) {
     if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+/**
+ * Generic get/set for keyed map storage (e.g., per-author-ID settings).
+ * Each map is stored as { [storageKey]: { [entryKey]: value, ... } }.
+ */
+export async function getStorageMapEntry(storageKey, entryKey, defaults) {
+  try {
+    const stored = await chrome.storage.local.get({ [storageKey]: {} });
+    const map = stored[storageKey] || {};
+    const entry = map[entryKey] || {};
+    return defaults ? { ...defaults, ...entry } : entry;
+  } catch (e) {
+    if (isContextInvalidated(e)) return defaults ? { ...defaults } : {};
+    throw e;
+  }
+}
+
+export async function setStorageMapEntry(storageKey, entryKey, value) {
+  try {
+    const stored = await chrome.storage.local.get({ [storageKey]: {} });
+    const map = stored[storageKey] || {};
+    map[entryKey] = value;
+    await chrome.storage.local.set({ [storageKey]: map });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function getStorageMap(storageKey) {
+  try {
+    const stored = await chrome.storage.local.get({ [storageKey]: {} });
+    return stored[storageKey] || {};
+  } catch (e) {
+    if (isContextInvalidated(e)) return {};
+    throw e;
+  }
+}
+
+export async function setStorageMap(storageKey, map) {
+  try {
+    await chrome.storage.local.set({ [storageKey]: map || {} });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function removeStorageKeys(...keys) {
+  try {
+    await chrome.storage.local.remove(keys);
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function setStorageValue(key, value) {
+  try {
+    await chrome.storage.local.set({ [key]: value });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function getStorageValue(key, defaultValue) {
+  try {
+    const result = await chrome.storage.local.get({ [key]: defaultValue });
+    return result[key] ?? defaultValue;
+  } catch (e) {
+    if (isContextInvalidated(e)) return defaultValue;
     throw e;
   }
 }

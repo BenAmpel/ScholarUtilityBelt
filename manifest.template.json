@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Scholar Utility Belt",
+  "version": "0.3.2",
+  "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
+  "action": {
+    "default_title": "Scholar Utility Belt",
+    "default_popup": "src/popup/popup.html"
+  },
+  "options_page": "src/options/options.html",
+  "background": {
+    "service_worker": "src/sw.js"
+  },
+  "permissions": ["storage", "unlimitedStorage", "downloads"],
+  "host_permissions": [
+    "$SCHOLAR_MATCHES",
+    "https://scholar.googleusercontent.com/*",
+    "https://api.crossref.org/*",
+    "https://api.openalex.org/*",
+    "https://www.scimagojr.com/*",
+    "https://api.unpaywall.org/*",
+    "https://api.datacite.org/*",
+    "https://opencitations.net/*",
+    "https://export.arxiv.org/*",
+    "https://www.ebi.ac.uk/*",
+    "https://eutils.ncbi.nlm.nih.gov/*",
+    "https://api.ror.org/*",
+    "https://dblp.org/*",
+    "https://sparql.dblp.org/*",
+    "https://api.semanticscholar.org/*"
+  ],
+  "optional_host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["$SCHOLAR_MATCHES"],
+      "js": ["dist/content/content-early.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["$SCHOLAR_MATCHES"],
+      "js": ["dist/content/content.js"],
+      "css": ["dist/content/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["dist/common/*.js", "dist/content/dom-cache.js", "dist/content/worker.js", "dist/content/content-author.js", "dist/content/data-loader.js", "dist/content/trend-tracker.js", "dist/content/trend-methods.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json", "src/data/*.gz", "src/data/*.bin"],
+      "matches": ["$SCHOLAR_MATCHES"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

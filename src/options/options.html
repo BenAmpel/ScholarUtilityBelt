@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,8 +11,15 @@
       <h1>Scholar Utility Belt</h1>
       <p class="sub">Everything is local-only by default. These settings affect how Scholar pages are annotated.</p>
       <div class="actions actions-top">
-        <button id="saveTop" class="primary">Save changes</button>
+        <button id="saveTop" type="button" class="primary">Save changes</button>
         <span id="statusTop" class="status"></span>
+      </div>
+
+      <div class="settings-search">
+        <div class="settings-search-wrap">
+          <span class="search-icon" aria-hidden="true">&#x1F50D;</span>
+          <input type="search" id="settingsFilter" placeholder="Filter settings..." aria-label="Filter settings" />
+        </div>
       </div>
 
       <section class="card support-card">
@@ -28,6 +35,7 @@
         </a>
       </section>
 
+      <!-- ── Appearance ────────────────────────────────────────────── -->
       <section class="card">
         <h2>Appearance</h2>
         <label class="field">
@@ -42,255 +50,11 @@
           <div class="label">Badge colors</div>
           <div class="badge-palette-select" id="badgePaletteSelect">
             <button type="button" id="badgePaletteTrigger" class="palette-trigger" aria-haspopup="listbox" aria-expanded="false">
-              <span class="palette-trigger-label">Soft (current)</span>
-              <span class="badge-preview-mini" data-badge-palette="soft">
-                <span class="su-badge su-quartile">Q1</span>
-                <span class="su-badge su-abdc">ABDC A*</span>
-                <span class="su-badge su-vhb">VHB A</span>
-                <span class="su-badge su-ft50">FT50</span>
-                <span class="su-badge su-utd24">UTD24</span>
-                <span class="su-badge su-core">CORE A*</span>
-                <span class="su-badge su-ccf">CCF A</span>
-                <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                <span class="su-badge su-era">ERA 2023</span>
-                <span class="su-badge su-norwegian">Level 2</span>
-                <span class="su-badge su-h5">h5 50</span>
-                <span class="su-badge su-preprint">arXiv</span>
-                <span class="su-badge su-abs">ABS 4*</span>
-              </span>
-              <span class="palette-trigger-caret">▼</span>
+              <span class="palette-trigger-label">Soft</span>
+              <span class="badge-preview-mini" data-badge-palette="soft"></span>
+              <span class="palette-trigger-caret" aria-hidden="true">▼</span>
             </button>
-            <div id="badgePaletteMenu" class="palette-menu" role="listbox">
-              <button type="button" class="palette-option" role="option" data-value="soft">
-                <span class="palette-option-label">Soft (current)</span>
-                <span class="badge-preview-mini" data-badge-palette="soft">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="bold">
-                <span class="palette-option-label">Bold</span>
-                <span class="badge-preview-mini" data-badge-palette="bold">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="colorblind">
-                <span class="palette-option-label">Colorblind-safe</span>
-                <span class="badge-preview-mini" data-badge-palette="colorblind">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="mono">
-                <span class="palette-option-label">Monochrome</span>
-                <span class="badge-preview-mini" data-badge-palette="mono">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="material">
-                <span class="palette-option-label">Material Bold</span>
-                <span class="badge-preview-mini" data-badge-palette="material">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="fluent">
-                <span class="palette-option-label">Fluent Soft</span>
-                <span class="badge-preview-mini" data-badge-palette="fluent">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="nord">
-                <span class="palette-option-label">Nord</span>
-                <span class="badge-preview-mini" data-badge-palette="nord">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="solarized">
-                <span class="palette-option-label">Solarized</span>
-                <span class="badge-preview-mini" data-badge-palette="solarized">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="monoAccent">
-                <span class="palette-option-label">Mono + Accent</span>
-                <span class="badge-preview-mini" data-badge-palette="monoAccent">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="highContrast">
-                <span class="palette-option-label">High-contrast</span>
-                <span class="badge-preview-mini" data-badge-palette="highContrast">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="inverted">
-                <span class="palette-option-label">Inverted</span>
-                <span class="badge-preview-mini" data-badge-palette="inverted">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-              <button type="button" class="palette-option" role="option" data-value="warm">
-                <span class="palette-option-label">Warm</span>
-                <span class="badge-preview-mini" data-badge-palette="warm">
-                  <span class="su-badge su-quartile">Q1</span>
-                  <span class="su-badge su-abdc">ABDC A*</span>
-                  <span class="su-badge su-vhb">VHB A</span>
-                  <span class="su-badge su-ft50">FT50</span>
-                  <span class="su-badge su-utd24">UTD24</span>
-                  <span class="su-badge su-core">CORE A*</span>
-                  <span class="su-badge su-ccf">CCF A</span>
-                  <span class="su-badge su-jcr">JIF Q1</span>
-                <span class="su-badge su-if su-jcr">IF 12.3</span>
-                  <span class="su-badge su-era">ERA 2023</span>
-                  <span class="su-badge su-norwegian">Level 2</span>
-                  <span class="su-badge su-h5">h5 50</span>
-                  <span class="su-badge su-preprint">arXiv</span>
-                  <span class="su-badge su-abs">ABS 4*</span>
-                </span>
-              </button>
-            </div>
+            <div id="badgePaletteMenu" class="palette-menu" role="listbox" aria-label="Badge color palette"></div>
             <input type="hidden" id="badgePalette" value="soft" />
           </div>
         </label>
@@ -302,7 +66,7 @@
           </select>
         </label>
         <div class="label">Quality badge types to show</div>
-        <p class="sub">When “Show venue quality badges” is on, only the checked kinds are shown.</p>
+        <p class="sub">When "Show venue quality badges" is on, only the checked kinds are shown.</p>
         <div class="quality-badge-kinds">
           <label class="row"><input type="checkbox" id="qbQuartile" /> Quartile (Q1–Q4)</label>
           <label class="row"><input type="checkbox" id="qbAbdc" /> ABDC</label>
@@ -343,9 +107,7 @@
           <label class="row"><input type="checkbox" id="asDrift" /> Drift</label>
         </div>
 
-        <hr />
-
-        <label class="row">
+        <label class="row" style="margin-top:12px">
           <input type="checkbox" id="highlightSaved" />
           <span>Highlight saved results on Scholar pages</span>
         </label>
@@ -369,152 +131,201 @@
           <div class="label">Hide results where authors/venue matches regex (case-insensitive)</div>
           <input type="text" id="hideAuthorsRegex" placeholder="e.g. \bmedRxiv\b" />
         </label>
+      </section>
 
-        <h2>Hidden forever</h2>
-        <p class="sub">Items you hid via the "Hide" button on results. Stored locally. Unhide or clear below.</p>
-        <div class="hidden-lists">
-          <div class="hidden-list">
-            <div class="label">Hidden papers <button type="button" id="clearHiddenPapers" class="su-options-small">Clear all</button></div>
-            <ul id="hiddenPapersList"></ul>
-          </div>
-          <div class="hidden-list">
-            <div class="label">Hidden venues <button type="button" id="clearHiddenVenues" class="su-options-small">Clear all</button></div>
-            <ul id="hiddenVenuesList"></ul>
-          </div>
-          <div class="hidden-list">
-            <div class="label">Hidden authors <button type="button" id="clearHiddenAuthors" class="su-options-small">Clear all</button></div>
-            <ul id="hiddenAuthorsList"></ul>
-          </div>
+      <!-- ── Display Features ──────────────────────────────────────── -->
+      <section class="card" data-section="display">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="true">
+          <h2>Display Features</h2>
+          <span class="collapse-icon" aria-hidden="true">&#x25BC;</span>
         </div>
-
-        <label class="row">
-          <input type="checkbox" id="showSemanticExpansion" />
+        <div class="card-body">
+        <label class="toggle-row">
           <span>Show <strong>Semantic Expansion</strong> panel on search results (suggests synonyms, broader/narrower terms to escape keyword silos)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showSemanticExpansion" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showFundingTag" />
+        <label class="toggle-row">
           <span>Show <strong>Funding</strong> tag on hover (detects funding in snippet: government, industry, or generic)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showFundingTag" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showHoverSummary" />
-          <span>Show <strong>hover-summary</strong> tooltip: fetch paper landing page on hover and show meta description or abstract (instant expansion without opening “… more”)</span>
+        <label class="toggle-row">
+          <span>Show <strong>hover-summary</strong> tooltip: fetch paper landing page on hover and show meta description or abstract (instant expansion without opening "… more")</span>
+          <span class="toggle-switch"><input type="checkbox" id="showHoverSummary" /><span class="slider"></span></span>
         </label>
         <p class="sub" id="hoverSummaryPermNote">Hover summary, Copy Bib from publisher pages, and PDF page count need permission to fetch from publisher sites. <button type="button" id="grantOptionalPermission" class="su-options-small">Grant permission</button> <span id="optionalPermStatus"></span></p>
 
-        <label class="row">
-          <input type="checkbox" id="showReadingGuide" />
+        <label class="toggle-row">
           <span>Show <strong>Reading guide</strong> button (visor: dims the page except a band at your cursor for focused screening)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReadingGuide" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showEmergingScore" />
+        <label class="toggle-row">
           <span>Show <strong>Emerging Paper Score</strong> badge (trajectory-based signals: momentum, venue-adjusted performance, acceleration, half-life)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showEmergingScore" /><span class="slider"></span></span>
         </label>
-        <div class="field">
+        <label class="field" for="emergingScoreDataSource">
           <div class="label">Emerging score data source</div>
           <select id="emergingScoreDataSource">
             <option value="hybrid">Hybrid (local cohort + OpenAlex fallback)</option>
             <option value="local">Local cohort only</option>
             <option value="openalex">OpenAlex only</option>
           </select>
-        </div>
-        <div class="field">
+        </label>
+        <label class="field" for="emergingScoreMinCohort">
           <div class="label">Minimum cohort size (local baseline)</div>
-          <input type="number" id="emergingScoreMinCohort" min="3" max="50" step="1" style="width: 90px" />
-        </div>
+          <input type="number" id="emergingScoreMinCohort" min="3" max="50" step="1" class="input-narrow" />
+        </label>
 
-        <label class="row">
-          <input type="checkbox" id="showRetractionWatch" />
+        <label class="toggle-row">
           <span>Show <strong>Retraction Watch</strong> badge when a result has a DOI that is marked as retracted in Crossref (includes Retraction Watch data). Only results with a DOI in the snippet or links are checked.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showRetractionWatch" /><span class="slider"></span></span>
         </label>
         <p class="sub">Disclaimer: Retraction/updates data comes from third-party sources and may be incomplete or outdated. Treat as a signal only and verify via DOI or the publisher.</p>
 
-        <label class="row">
-          <input type="checkbox" id="showArtifactBadge" />
-          <span>Show <strong>Data &amp; Code</strong> badge (💻/📊) next to the title when the snippet or links mention GitHub, Zenodo, OSF, dataset, supplementary, etc.—quick signal for reproducible papers.</span>
+        <label class="toggle-row">
+          <span>Show <strong>Data &amp; Code</strong> badge next to the title when the snippet or links mention GitHub, Zenodo, OSF, dataset, supplementary, etc. — quick signal for reproducible papers.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showArtifactBadge" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showCSS" />
-          <span>Show <strong>Contribution Signal Score (CSS)</strong> (0–100): composite of citation velocity (log‑normalized), venue tier weight, and artifact novelty. Tooltip shows the formula. Reference entropy omitted (no data).</span>
+        <label class="toggle-row">
+          <span>Show <strong>Contribution Signal Score (CSS)</strong> (0–100): composite of citation velocity (log-normalized), venue tier weight, and artifact novelty.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showCSS" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showAgeBiasHeatmap" />
+        <label class="toggle-row">
           <span>Show <strong>publication date color-coding</strong>: left border gradient from bright blue (≤2 years) to muted gray (≥10 years) so you can spot freshness at a glance.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showAgeBiasHeatmap" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showAuthorshipHeatmap" />
+        <label class="toggle-row">
           <span>Show <strong>authorship heatmap</strong>: first author bold+underline (primary), last author dotted border (PI/senior). Spot rising stars vs lab leads at a glance.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showAuthorshipHeatmap" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showRelevancySparkline" />
+        <label class="toggle-row">
           <span>Show <strong>relevancy sparkline</strong>: small bar chart under each snippet showing where your search terms appear (left = start). Clustered at start suggests the paper focuses on your query.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showRelevancySparkline" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showSnippetCueEmphasis" />
-          <span>Bold <strong>abstract cues</strong> in snippets (e.g. “We propose…”, “We evaluate…”, “Using X dataset…”, “We find that…”). Visual salience only—no summarization.</span>
+        <label class="toggle-row">
+          <span>Bold <strong>abstract cues</strong> in snippets (e.g. "We propose…", "We evaluate…", "Using X dataset…", "We find that…"). Visual salience only — no summarization.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showSnippetCueEmphasis" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showSkimmabilityStrip" />
+        <label class="toggle-row">
           <span>Show <strong>skimmability heat strip</strong>: green = PDF + abstract + citations; yellow = missing abstract or venue; red = no PDF, no citations, odd venue.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showSkimmabilityStrip" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="showReadingLoadEstimator" />
+        <label class="toggle-row">
           <span>Show <strong>reading load</strong> label: skim / read / deep read (from venue type; page count from PDF metadata when you click PDF).</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReadingLoadEstimator" /><span class="slider"></span></span>
         </label>
 
-        <label class="row">
-          <input type="checkbox" id="groupVersions" />
+        <label class="toggle-row">
           <span><strong>Group versions</strong>: collapse near-identical titles (preprint + journal + mirror) into one row; show best version first with a chevron to expand.</span>
+          <span class="toggle-switch"><input type="checkbox" id="groupVersions" /><span class="slider"></span></span>
         </label>
-        <p class="sub">
-          Version order (which row is shown first): <select id="versionOrder">
+        <label class="field" for="versionOrder">
+          <div class="label">Version order (which row is shown first)</div>
+          <select id="versionOrder">
             <option value="journal-first">Journal first</option>
             <option value="conference-first">Conference first</option>
             <option value="preprint-first">Preprint first</option>
           </select>
-        </p>
+        </label>
+        </div>
+      </section>
 
-        <hr />
-        <h2>Research intelligence</h2>
-        <label class="row">
-          <input type="checkbox" id="showResearchIntel" />
+      <!-- ── Research Intelligence ─────────────────────────────────── -->
+      <section class="card" data-section="research">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="true">
+          <h2>Research Intelligence</h2>
+          <span class="collapse-icon" aria-hidden="true">&#x25BC;</span>
+        </div>
+        <div class="card-body">
+        <label class="toggle-row">
           <span>Enable <strong>Publish or Perish</strong> metrics + report on author pages</span>
+          <span class="toggle-switch"><input type="checkbox" id="showResearchIntel" /><span class="slider"></span></span>
         </label>
-        <label class="row">
-          <input type="checkbox" id="showAdvancedFilters" />
+        <label class="toggle-row">
           <span>Show <strong>advanced filters</strong> on search results (affiliations, funders, influential cites, cites/year)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showAdvancedFilters" /><span class="slider"></span></span>
         </label>
 
-        <hr />
-        <h2>Power user</h2>
-        <label class="row">
-          <input type="checkbox" id="showNewSinceLastVisit" />
-          <span><strong>Highlight new papers since last visit</strong>: mark results that weren’t on this page the last time you visited (uses a local timestamp cache).</span>
+        <label class="toggle-row">
+          <span>Show <strong>Trend Tracker</strong> panel on search results pages with year distribution, rising concepts from OpenAlex, and method signals.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showTrendTracker" /><span class="slider"></span></span>
         </label>
-        <label class="row">
-          <input type="checkbox" id="showCitationSpike" />
-          <span><strong>Detect citation spikes</strong>: show a badge when a paper’s citations increased by more than the threshold in the lookback period (e.g. “↑50% in 6mo”).</span>
+        </div>
+      </section>
+
+      <!-- ── Power User ─────────────────────────────────────────────── -->
+      <section class="card" data-section="power">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="true">
+          <h2>Power User</h2>
+          <span class="collapse-icon" aria-hidden="true">&#x25BC;</span>
+        </div>
+        <div class="card-body">
+        <label class="toggle-row">
+          <span><strong>Highlight new papers since last visit</strong>: mark results that weren't on this page the last time you visited (uses a local timestamp cache).</span>
+          <span class="toggle-switch"><input type="checkbox" id="showNewSinceLastVisit" /><span class="slider"></span></span>
         </label>
-        <p class="sub">
-          Spike threshold: <input type="number" id="citationSpikeThresholdPct" min="10" max="500" step="10" style="width: 60px" /> % &nbsp;
-          Lookback: <input type="number" id="citationSpikeMonths" min="1" max="24" step="1" style="width: 50px" /> months
-        </p>
-        <p class="sub">On author profile pages, use <strong>Compare authors</strong> to open a side‑by‑side overlay (paste another author’s profile URL).</p>
+        <label class="toggle-row">
+          <span><strong>Detect citation spikes</strong>: show a badge when a paper's citations increased by more than the threshold in the lookback period (e.g. "↑50% in 6mo").</span>
+          <span class="toggle-switch"><input type="checkbox" id="showCitationSpike" /><span class="slider"></span></span>
+        </label>
+        <div class="spike-params">
+          <label class="spike-param" for="citationSpikeThresholdPct">
+            <span class="label">Spike threshold (%)</span>
+            <input type="number" id="citationSpikeThresholdPct" min="10" max="500" step="10" class="input-narrow" />
+          </label>
+          <label class="spike-param" for="citationSpikeMonths">
+            <span class="label">Lookback (months)</span>
+            <input type="number" id="citationSpikeMonths" min="1" max="24" step="1" class="input-narrow" />
+          </label>
+        </div>
+        <p class="sub">On author profile pages, use <strong>Compare authors</strong> to open a side-by-side overlay (paste another author's profile URL).</p>
+        </div>
+      </section>
 
-        <hr />
+      <!-- ── Hidden Forever ─────────────────────────────────────────── -->
+      <section class="card" data-section="hidden">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="true">
+          <h2>Hidden Forever</h2>
+          <span class="collapse-icon" aria-hidden="true">&#x25BC;</span>
+        </div>
+        <div class="card-body">
+        <p class="sub">Items you hid via the "Hide" button on results. Stored locally. Unhide or clear below.</p>
+        <div class="hidden-lists">
+          <div class="hidden-list">
+            <div class="label">Hidden papers <button type="button" id="clearHiddenPapers" class="su-options-small" aria-label="Clear all hidden papers">Clear all</button></div>
+            <ul id="hiddenPapersList"></ul>
+          </div>
+          <div class="hidden-list">
+            <div class="label">Hidden venues <button type="button" id="clearHiddenVenues" class="su-options-small" aria-label="Clear all hidden venues">Clear all</button></div>
+            <ul id="hiddenVenuesList"></ul>
+          </div>
+          <div class="hidden-list">
+            <div class="label">Hidden authors <button type="button" id="clearHiddenAuthors" class="su-options-small" aria-label="Clear all hidden authors">Clear all</button></div>
+            <ul id="hiddenAuthorsList"></ul>
+          </div>
+        </div>
+        </div>
+      </section>
 
-        <label class="row">
-          <input type="checkbox" id="showQualityBadges" />
+      <!-- ── Quality Badges ─────────────────────────────────────────── -->
+      <section class="card" data-section="quality">
+        <div class="card-header" role="button" tabindex="0" aria-expanded="true">
+          <h2>Quality Badges</h2>
+          <span class="collapse-icon" aria-hidden="true">&#x25BC;</span>
+        </div>
+        <div class="card-body">
+        <label class="toggle-row">
           <span>Show venue quality badges under results (local lists)</span>
+          <span class="toggle-switch"><input type="checkbox" id="showQualityBadges" /><span class="slider"></span></span>
         </label>
 
         <p class="sub">
@@ -553,7 +364,7 @@
           <textarea id="qualityQuartiles" rows="6" placeholder="Example:\nMIS Quarterly,Q1\nDecision Support Systems,Q1"></textarea>
         </label>
 
-        <h2>Quartiles At Scale (Q1-Q4)</h2>
+        <h2>Quartiles At Scale (Q1–Q4)</h2>
         <p class="sub">
           For a comprehensive Q1/Q2/Q3/Q4 index, import an export from SCImago Journal Rank (SJR). This is stored as a
           local lookup table (fast; no impact on Scholar page loading). The small Quartiles CSV box above remains for
@@ -565,7 +376,7 @@
             Import SJR Export
             <input id="importScimagoFile" type="file" accept=".xls,.csv,.html,text/html,text/csv,application/vnd.ms-excel" />
           </label>
-          <input id="scimagoYear" type="number" min="1999" max="2099" step="1" style="width: 110px" />
+          <input id="scimagoYear" type="number" min="1999" max="2099" step="1" class="input-year" aria-label="SCImago import year" />
           <button id="tryDownloadScimago" type="button">Try Download</button>
           <button id="clearScimagoQuartiles" type="button">Clear Imported Quartiles</button>
           <span id="scimagoStatus" class="status"></span>
@@ -605,14 +416,28 @@
         <p class="sub" id="qualityMeta"></p>
 
         <div class="actions">
-          <button id="save" class="primary">Save changes</button>
+          <button id="save" type="button" class="primary">Save changes</button>
           <span id="status" class="status"></span>
+        </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Storage Usage</h2>
+        <div class="storage-bar-container">
+          <div class="storage-bar" id="storageBar"></div>
+        </div>
+        <div class="storage-total" id="storageTotal"></div>
+        <div class="storage-breakdown" id="storageBreakdown"></div>
+        <div class="actions">
+          <button id="clearCaches" type="button">Clear caches</button>
+          <span id="cacheStatus" class="status"></span>
         </div>
       </section>
 
       <section class="card">
         <h2>Domain Note</h2>
-        <p class="sub">This build matches common Scholar domains (e.g., <code>scholar.google.com</code>, <code>scholar.google.de</code>, <code>scholar.google.co.uk</code>). If you use a different Scholar domain, tell us and we’ll add it.</p>
+        <p class="sub">This build matches common Scholar domains (e.g., <code>scholar.google.com</code>, <code>scholar.google.de</code>, <code>scholar.google.co.uk</code>). If you use a different Scholar domain, tell us and we'll add it.</p>
       </section>
 
     </main>
