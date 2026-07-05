@@ -161,6 +161,51 @@ function formatRIS(p) {
   return lines.join("\n");
 }
 
+function downloadText(filename, text, mime = "text/plain") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function escapeCsvField(val) {
+  const s = String(val ?? "");
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function buildCsvExport(papers) {
+  const header = ["title", "authors", "year", "venue", "citationCount", "url"];
+  const rows = [header.join(",")];
+  for (const p of papers) {
+    const authors = parseAuthors(p.authorsVenue).join("; ");
+    const venue = p.venue || extractVenueFromAuthorsVenue(p.authorsVenue) || "";
+    rows.push([
+      escapeCsvField(p.title || ""),
+      escapeCsvField(authors),
+      escapeCsvField(p.year || ""),
+      escapeCsvField(venue),
+      escapeCsvField(p.citations || 0),
+      escapeCsvField(p.url || "")
+    ].join(","));
+  }
+  return rows.join("\n");
+}
+
+function buildBibtexExport(papers) {
+  return papers.map((p) => {
+    if (p.bibtex) return p.bibtex;
+    return formatBibTeX(p);
+  }).join("\n\n");
+}
+
 async function copyText(txt) {
   try {
     await navigator.clipboard.writeText(txt);
@@ -340,8 +385,18 @@ function renderActiveFilters(state, collectionName) {
   });
 }
 
+// Track the element that triggered the modal so we can restore focus on close
+const _modalOpeners = {};
+
 function openModal(id) {
-  el(id).classList.add("open");
+  _modalOpeners[id] = document.activeElement;
+  const modalEl = el(id);
+  modalEl.classList.add("open");
+  // Move focus into the modal panel
+  const firstFocusable = modalEl.querySelector(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  if (firstFocusable) firstFocusable.focus();
 }
 
 function closeModal(id) {
@@ -353,7 +408,40 @@ function closeModal(id) {
   if (id === "pdfModal") {
     activePdfKey = null;
   }
+  // Restore focus to the trigger element
+  if (_modalOpeners[id] && typeof _modalOpeners[id].focus === "function") {
+    _modalOpeners[id].focus();
+    delete _modalOpeners[id];
+  }
 }
+
+// Trap focus inside open modals and close on Escape
+document.addEventListener("keydown", (e) => {
+  const openModal = document.querySelector(".modal.open");
+  if (!openModal) return;
+  if (e.key === "Escape") {
+    openModal.classList.remove("open");
+    const id = openModal.id;
+    if (_modalOpeners[id] && typeof _modalOpeners[id].focus === "function") {
+      _modalOpeners[id].focus();
+      delete _modalOpeners[id];
+    }
+    return;
+  }
+  if (e.key === "Tab") {
+    const focusable = Array.from(openModal.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.closest(".modal-backdrop"));
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+});
 
 function buildCiteMenu(paper) {
   const opts = [
@@ -671,6 +759,22 @@ async function render() {
     return;
   }
 
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "list-empty";
+    if (items.length === 0) {
+      empty.innerHTML =
+        '<p class="list-empty-title">No saved papers yet</p>' +
+        '<p class="list-empty-sub">Visit a Google Scholar search page and click <strong>Save</strong> on any result to add it here.</p>';
+    } else {
+      empty.innerHTML =
+        '<p class="list-empty-title">No papers match your search</p>' +
+        '<p class="list-empty-sub">Try adjusting your search terms or clearing active filters.</p>';
+    }
+    list.appendChild(empty);
+    return;
+  }
+
   const tpl = document.getElementById("itemTpl");
   for (const p of filtered) {
     const node = tpl.content.firstElementChild.cloneNode(true);
@@ -890,6 +994,20 @@ el("toggleDuplicates").addEventListener("click", async () => {
   const state = await loadLibraryState();
   await saveLibraryState({ showDuplicates: !state.showDuplicates });
   render();
+});
+
+el("exportCsv").addEventListener("click", async () => {
+  const saved = await getSavedPapers();
+  const papers = Object.values(saved);
+  const csv = buildCsvExport(papers);
+  downloadText(`library-export-${Date.now()}.csv`, csv, "text/csv");
+});
+
+el("exportBibtex").addEventListener("click", async () => {
+  const saved = await getSavedPapers();
+  const papers = Object.values(saved);
+  const bib = buildBibtexExport(papers);
+  downloadText(`library-export-${Date.now()}.bib`, bib, "application/x-bibtex");
 });
 
 el("exportLibrary").addEventListener("click", async () => {

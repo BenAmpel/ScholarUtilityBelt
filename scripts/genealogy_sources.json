@@ -45,6 +45,135 @@
       "base": "http://repositories.tdl.org/dspace-oai/request",
       "metadataPrefixes": ["oai_etdms", "mods", "oai_dc"],
       "setRegex": "thesis|dissertation|etd"
+    },
+    {
+      "key": "digitalcommons_usu",
+      "label": "Digital Commons (Utah State)",
+      "base": "https://digitalcommons.usu.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_wayne",
+      "label": "Digital Commons (Wayne State)",
+      "base": "https://digitalcommons.wayne.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_lsu",
+      "label": "Digital Commons (LSU)",
+      "base": "https://digitalcommons.lsu.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_uconn",
+      "label": "Digital Commons (UConn)",
+      "base": "https://digitalcommons.uconn.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_fiu",
+      "label": "Digital Commons (FIU)",
+      "base": "https://digitalcommons.fiu.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "digitalcommons_georgiasouthern",
+      "label": "Digital Commons (Georgia Southern)",
+      "base": "https://digitalcommons.georgiasouthern.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "scholarworks_umass",
+      "label": "ScholarWorks (UMass Amherst)",
+      "base": "https://scholarworks.umass.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "scholarworks_gsu",
+      "label": "ScholarWorks (Georgia State)",
+      "base": "https://scholarworks.gsu.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "scholarworks_wm",
+      "label": "ScholarWorks (William & Mary)",
+      "base": "https://scholarworks.wm.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "vtechworks",
+      "label": "VTechWorks (Virginia Tech)",
+      "base": "https://vtechworks.lib.vt.edu/server/oai/request",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "com_10919_5534|com_10919_11041"
+    },
+    {
+      "key": "mit_dspace",
+      "label": "MIT DSpace",
+      "base": "https://dspace.mit.edu/oai/request",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "hdl_1721\\.1_7582"
+    },
+    {
+      "key": "columbia_ac",
+      "label": "Columbia Academic Commons",
+      "base": "https://academiccommons.columbia.edu/oai",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "thesis|dissertation"
+    },
+    {
+      "key": "deep_blue_umich",
+      "label": "Deep Blue (U Michigan)",
+      "base": "https://deepblue.lib.umich.edu/oai/request",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "hdl_2027\\.42_.*"
+    },
+    {
+      "key": "dash_harvard",
+      "label": "DASH (Harvard)",
+      "base": "https://dash.harvard.edu/oai/request",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "com_1_4927603"
+    },
+    {
+      "key": "pqdtopen",
+      "label": "PQDT Open (ProQuest)",
+      "base": "https://pqdtopen.proquest.com/OAIHandler",
+      "metadataPrefixes": ["oai_dc"],
+      "enabled": false,
+      "note": "May require API key; enable after testing"
+    },
+    {
+      "key": "ndltd_union",
+      "label": "NDLTD Union Catalog",
+      "base": "http://union.ndltd.org/OAI-PMH/",
+      "metadataPrefixes": ["oai_dc"],
+      "note": "Global thesis/dissertation catalog"
+    },
+    {
+      "key": "scholarspace_hawaii",
+      "label": "ScholarSpace (U Hawaii)",
+      "base": "https://scholarspace.manoa.hawaii.edu/server/oai/request",
+      "metadataPrefixes": ["oai_dc"],
+      "setRegex": "com_10125_25918"
+    },
+    {
+      "key": "ir_uiowa",
+      "label": "Iowa Research Online",
+      "base": "https://iro.uiowa.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "trace_utk",
+      "label": "TRACE (U Tennessee)",
+      "base": "https://trace.tennessee.edu/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
+    },
+    {
+      "key": "ir_lib_uwo",
+      "label": "Scholarship@Western (Western U, Canada)",
+      "base": "https://ir.lib.uwo.ca/do/oai/",
+      "metadataPrefixes": ["oai_etdms", "oai_dc", "qdc"]
     }
   ]
 }

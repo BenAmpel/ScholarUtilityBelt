@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scholar Utility Belt",
-  "version": "0.3.2",
+  "version": "0.5.0",
   "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
   "action": {
     "default_title": "Scholar Utility Belt",
@@ -11,7 +11,11 @@
   "background": {
     "service_worker": "src/sw.js"
   },
-  "permissions": ["storage", "unlimitedStorage", "downloads"],
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "downloads"
+  ],
   "host_permissions": [
     "https://scholar.google.com/*",
     "https://scholar.google.ca/*",
@@ -68,7 +72,9 @@
     "https://sparql.dblp.org/*",
     "https://api.semanticscholar.org/*"
   ],
-  "optional_host_permissions": ["<all_urls>"],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -113,7 +119,9 @@
         "https://scholar.google.sa/*",
         "https://scholar.google.co.za/*"
       ],
-      "js": ["src/content/content-early.js"],
+      "js": [
+        "dist/content/content-early.js"
+      ],
       "run_at": "document_start"
     },
     {
@@ -159,14 +167,31 @@
         "https://scholar.google.sa/*",
         "https://scholar.google.co.za/*"
       ],
-      "js": ["src/content/content.js"],
-      "css": ["src/content/content.css"],
+      "js": [
+        "dist/content/content.js"
+      ],
+      "css": [
+        "dist/content/content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/common/*.js", "src/content/dom-cache.js", "src/content/worker.js", "src/content/content-author.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json", "src/data/*.gz", "src/data/*.bin"],
+      "resources": [
+        "dist/common/*.js",
+        "dist/content/dom-cache.js",
+        "dist/content/worker.js",
+        "dist/content/content-author.js",
+        "dist/content/data-loader.js",
+        "dist/content/trend-tracker.js",
+        "dist/content/trend-methods.js",
+        "src/data/*.txt",
+        "src/data/*.csv",
+        "src/data/*.json",
+        "src/data/*.gz",
+        "src/data/*.bin"
+      ],
       "matches": [
         "https://scholar.google.com/*",
         "https://scholar.google.ca/*",

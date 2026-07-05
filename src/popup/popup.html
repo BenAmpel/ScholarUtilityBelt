@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,21 +9,43 @@
   <body>
     <header>
       <div class="title">Scholar Utility Belt</div>
-      <div class="subtitle">Local-only by default</div>
+      <div class="subtitle">Local-only · <span id="savedCount">—</span> saved papers</div>
     </header>
 
     <main>
-      <div class="row">
-        <div class="metric">
-          <div class="metricLabel">Saved papers</div>
-          <div class="metricValue" id="savedCount">0</div>
-        </div>
-      </div>
-
       <div class="buttons">
         <button id="openLibrary">Open Library</button>
         <button id="openOptions">Options</button>
       </div>
+
+      <section class="quick-settings">
+        <div class="section-label">Quick Settings</div>
+        <label class="toggle-row">
+          <span class="toggle-label">Quality badges</span>
+          <input type="checkbox" id="showQualityBadges" class="toggle-input" />
+          <span class="toggle-switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="toggle-label">Emerging score</span>
+          <input type="checkbox" id="showEmergingScore" class="toggle-input" />
+          <span class="toggle-switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="toggle-label">Retraction watch</span>
+          <input type="checkbox" id="showRetractionWatch" class="toggle-input" />
+          <span class="toggle-switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="toggle-label">Hover summary</span>
+          <input type="checkbox" id="showHoverSummary" class="toggle-input" />
+          <span class="toggle-switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="toggle-label">Reading guide</span>
+          <input type="checkbox" id="showReadingGuide" class="toggle-input" />
+          <span class="toggle-switch"></span>
+        </label>
+      </section>
 
       <hr />
 
@@ -38,6 +60,6 @@
       <div class="hint" id="hint"></div>
     </main>
 
-    <script type="module" src="popup.js"></script>
+    <script type="module" src="../../dist/popup/popup.js"></script>
   </body>
 </html>

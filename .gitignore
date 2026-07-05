@@ -5,3 +5,12 @@ __pycache__/
 *.pyc
 output/
 node_modules/
+tmp/
+CC-Session-Logs/
+.claude/
+skill-observations/
+skill-updates/
+.playwright-cli/
+dist/
+store-assets/*.html
+store-assets/render.mjs

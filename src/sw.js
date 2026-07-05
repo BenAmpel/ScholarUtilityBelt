@@ -57,14 +57,14 @@ if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFil
         (downloadItem.mimeType && downloadItem.mimeType.toLowerCase() === "application/pdf") ||
         (downloadItem.filename && /\.pdf$/i.test(downloadItem.filename));
       if (!isPdf || !downloadItem.url) {
-        suggest({});
+        suggest({ filename: downloadItem.filename || "download" });
         return;
       }
       chrome.storage.session.get("pdfUrlToMetadata").then(function (st) {
         const map = st.pdfUrlToMetadata && typeof st.pdfUrlToMetadata === "object" ? st.pdfUrlToMetadata : {};
         const meta = map[downloadItem.url] || map[downloadItem.finalUrl];
         if (!meta || (meta.author == null && meta.title == null)) {
-          suggest({});
+          suggest({ filename: downloadItem.filename || "download" });
           return;
         }
         const author = sanitizeFilenameSegment(String(meta.author || "Unknown").trim(), 60);
@@ -72,7 +72,7 @@ if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFil
         const title = sanitizeFilenameSegment(String(meta.title || "Paper").trim(), 80);
         const parts = [author, year, title].filter(Boolean);
         suggest({ filename: (parts.join(" - ") || "download") + ".pdf" });
-      }).catch(function () { suggest({}); });
+      }).catch(function () { suggest({ filename: downloadItem.filename || "download" }); });
     })();
     return true;
   });

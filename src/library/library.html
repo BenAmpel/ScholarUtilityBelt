@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,6 +13,8 @@
         <div class="sub">Local-only list of saved Scholar results</div>
       </div>
       <div class="right">
+        <button id="exportCsv" class="btn">Export CSV</button>
+        <button id="exportBibtex" class="btn">Export BibTeX</button>
         <button id="openOptions">Options</button>
       </div>
     </header>
@@ -20,23 +22,23 @@
     <main class="layout">
       <aside class="sidebar">
         <section class="panel">
-          <div class="panel-title">Collections</div>
+          <h2 class="panel-title">Collections</h2>
           <div id="collectionList" class="panel-list"></div>
           <button id="newCollection" class="btn full">New collection</button>
         </section>
         <section class="panel">
-          <div class="panel-title">Saved searches</div>
+          <h2 class="panel-title">Saved searches</h2>
           <div id="savedSearchList" class="panel-list"></div>
           <button id="saveSearch" class="btn full">Save current search</button>
         </section>
         <section class="panel">
-          <div class="panel-title">Watched folders</div>
+          <h2 class="panel-title">Watched folders</h2>
           <div id="folderList" class="panel-list"></div>
           <button id="scanFolder" class="btn full">Scan folder</button>
           <input id="folderPicker" type="file" webkitdirectory multiple hidden />
         </section>
         <section class="panel">
-          <div class="panel-title">Sharing</div>
+          <h2 class="panel-title">Sharing</h2>
           <button id="exportLibrary" class="btn full">Export library</button>
           <button id="importLibrary" class="btn full">Import library</button>
           <input id="importLibraryFile" type="file" accept="application/json" hidden />
@@ -45,7 +47,9 @@
 
       <section class="content">
         <section class="controls">
+          <label class="sr-only" for="q">Search saved papers</label>
           <input id="q" type="search" placeholder="Search title, authors, tags, notes, annotations" />
+          <label class="sr-only" for="tagFilter">Filter by tags</label>
           <input id="tagFilter" type="text" placeholder="Filter tags (comma)" />
           <select id="sort">
             <option value="savedAt">Sort: Saved time</option>
@@ -84,11 +88,11 @@
       </section>
     </main>
 
-    <div id="collectionModal" class="modal">
-      <div class="modal-backdrop" data-modal-close="1"></div>
+    <div id="collectionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
       <div class="modal-panel">
         <div class="modal-header">
-          <h3>Manage collections</h3>
+          <h3 id="collectionModalTitle">Manage collections</h3>
           <button class="btn" data-modal-close="1">Close</button>
         </div>
         <div id="collectionModalList" class="modal-list"></div>
@@ -99,8 +103,8 @@
       </div>
     </div>
 
-    <div id="pdfModal" class="modal">
-      <div class="modal-backdrop" data-modal-close="1"></div>
+    <div id="pdfModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
       <div class="modal-panel modal-wide">
         <div class="modal-header">
           <h3 id="pdfModalTitle">PDF reader</h3>
@@ -112,7 +116,7 @@
         <div class="pdf-layout">
           <iframe id="pdfFrame" class="pdf-frame"></iframe>
           <div class="pdf-side">
-            <label class="pdf-label">Summary</label>
+            <label class="pdf-label" for="pdfSummary">Summary</label>
             <textarea id="pdfSummary" placeholder="Add a short summary..."></textarea>
             <div class="pdf-highlights">
               <div class="pdf-label">Highlights</div>

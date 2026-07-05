@@ -2,8 +2,9 @@
   // Content scripts are loaded as classic scripts in many Chrome setups.
   // Use dynamic import() with chrome.runtime.getURL so we can share modules.
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const CLS_BTN_SEC = "su-graph-btn su-graph-btn-secondary";
+  const CLS_METRIC = "su-stat-item su-stat-item-with-tooltip su-metrics-row";
   let modulesLoaded = false;
-
   let addHiddenAuthor;
   let addHiddenPaper;
   let addHiddenVenue;
@@ -37,7 +38,6 @@
   let uniqTags;
   let upsertPaper;
   let DEFAULT_SETTINGS;
-
   let compileQualityIndex;
   let extractVenueFromAuthorsVenue;
   let isPreprintVenue;
@@ -45,10 +45,8 @@
   let normalizeVhbRank;
   let qualityBadgesForVenue;
   let venueWeightForVenue;
-
   let getCachedElement;
   let getCachedElements;
-
   let loadEraAndNorwegian;
   let loadH5Index;
   let loadVhbIndex;
@@ -56,10 +54,8 @@
   let loadRetractionBloom;
   let bloomHasDoi;
   let checkRetractionStatus;
-
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
-
   async function importModuleWithRetry(path, attempts = 2) {
     let lastError = null;
     for (let i = 0; i < attempts; i++) {
@@ -72,7 +68,6 @@
     }
     throw lastError;
   }
-
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
@@ -145,7 +140,6 @@
     } = dataLoader);
     modulesLoaded = true;
   }
-
   function safeSessionGet(key) {
     try {
       return sessionStorage.getItem(key);
@@ -153,7 +147,6 @@
       return null;
     }
   }
-
   function safeSessionSet(key, value) {
     try {
       sessionStorage.setItem(key, value);
@@ -162,7 +155,6 @@
       return false;
     }
   }
-
   function safeSessionRemove(key) {
     try {
       sessionStorage.removeItem(key);
@@ -171,31 +163,7 @@
       return false;
     }
   }
-
-  function parseCsvLine(line, delim = ";") {
-    const s = String(line || "");
-    const out = [];
-    let cur = "";
-    let inQ = false;
-    for (let i = 0; i < s.length; i++) {
-      const ch = s[i];
-      if (inQ) {
-        if (ch === '"') {
-          if (s[i + 1] === '"') { cur += '"'; i++; }
-          else inQ = false;
-        } else cur += ch;
-      } else {
-        if (ch === '"') inQ = true;
-        else if (ch === delim) { out.push(cur.replace(/^"|"$/g, "").replace(/""/g, '"').trim()); cur = ""; }
-        else cur += ch;
-      }
-    }
-    out.push(cur.replace(/^"|"$/g, "").replace(/""/g, '"').trim());
-    return out;
-  }
-
   const SELF_CITE_CACHE_MS = 30 * 24 * 60 * 60 * 1000; // Used by ensureSelfCitationEstimate
-
   function normalizeText(str) {
     return String(str || "")
       .toLowerCase()
@@ -203,7 +171,6 @@
       .replace(/\s+/g, " ")
       .trim();
   }
-
   function jaroWinkler(a, b) {
     if (!a || !b) return 0;
     if (a === b) return 1;
@@ -240,16 +207,13 @@
     while (l < 4 && s1[l] === s2[l]) l++;
     return jaro + l * 0.1 * (1 - jaro);
   }
-
   function getScholarAuthorName() {
     const el = document.getElementById("gsc_prf_in");
     return el ? el.textContent.trim() : "";
   }
-
   function getScholarSampleTitles(limit = 10) {
     return Array.from(document.querySelectorAll(".gsc_a_at")).slice(0, limit).map((el) => el.textContent.trim());
   }
-
   // Lazy reference to the dynamically-imported author module. Populated on first
   // call to ensureSelfCitationEstimate() on an author profile page.
   let _authorModule = null;
@@ -258,17 +222,14 @@
     _authorModule = await import(chrome.runtime.getURL("dist/content/content-author.js"));
     return _authorModule;
   }
-
   async function ensureSelfCitationEstimate() {
     const scholarId = new URL(window.location.href).searchParams.get("user");
     if (!scholarId) return;
     const state = window.__suSelfCiteState || { key: null, loading: false, data: null };
     if (state.key === scholarId && (state.loading || state.data)) return;
     window.__suSelfCiteState = { key: scholarId, loading: true, data: null };
-
     const cacheKey    = `selfcite_${scholarId}`;
     const SESSION_KEY = `suSC_${scholarId}`;
-
     // L1: chrome.storage.session — same browser session, fastest lookup.
     if (chrome.storage?.session?.get) {
       try {
@@ -280,7 +241,6 @@
         }
       } catch (_) {}
     }
-
     // L2: chrome.storage.local — 30-day persistent cache.
     let cached = null;
     try {
@@ -299,7 +259,6 @@
       await renderAuthorStatsWithGrowth(window.suFullAuthorStats);
       return;
     }
-
     // Cache miss: fetch from OpenAlex via the lazily-imported author module.
     const authorName = getScholarAuthorName();
     const titles     = getScholarSampleTitles(10);
@@ -308,7 +267,6 @@
       await renderAuthorStatsWithGrowth(window.suFullAuthorStats);
       return;
     }
-
     let result;
     try {
       const mod = await getAuthorModule();
@@ -316,7 +274,6 @@
     } catch (_) {
       result = { status: "error", message: "Author module unavailable." };
     }
-
     window.__suSelfCiteState = { key: scholarId, loading: false, data: result };
     if (result.status === "success") {
       // Write to both caches.
@@ -327,7 +284,6 @@
     }
     await renderAuthorStatsWithGrowth(window.suFullAuthorStats);
   }
-
   const AUTHOR_FEATURE_TOGGLES_KEY = "authorFeatureToggles";
   const AUTHOR_CITEDBY_COLOR_KEY = "authorCitedByColorScheme";
   const AUTHOR_GRAPH_COLLECTIONS_KEY = "authorGraphCollections";
@@ -357,19 +313,16 @@
     researchIntel: true
   };
   const DEFAULT_CITEDBY_COLOR_SCHEME = "red-blue";
-
   async function getAuthorFeatureToggles(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) {
       return { ...DEFAULT_AUTHOR_FEATURE_TOGGLES };
     }
     return getStorageMapEntry(AUTHOR_FEATURE_TOGGLES_KEY, scholarId, DEFAULT_AUTHOR_FEATURE_TOGGLES);
   }
-
   async function setAuthorFeatureToggles(scholarId, next) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
     await setStorageMapEntry(AUTHOR_FEATURE_TOGGLES_KEY, scholarId, { ...DEFAULT_AUTHOR_FEATURE_TOGGLES, ...next });
   }
-
   async function getAuthorCitedByColorScheme(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) {
       return DEFAULT_CITEDBY_COLOR_SCHEME;
@@ -377,12 +330,10 @@
     const entry = await getStorageMapEntry(AUTHOR_CITEDBY_COLOR_KEY, scholarId);
     return (typeof entry === "string" ? entry : null) || DEFAULT_CITEDBY_COLOR_SCHEME;
   }
-
   async function setAuthorCitedByColorScheme(scholarId, scheme) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
     await setStorageMapEntry(AUTHOR_CITEDBY_COLOR_KEY, scholarId, scheme || DEFAULT_CITEDBY_COLOR_SCHEME);
   }
-
   let popPeerCache = null;
   let popPeerCacheSaveTimer = null;
   let popPeerStorageBlocked = false;
@@ -402,7 +353,6 @@
     "Sociology": ["Sociology"],
     "Custom…": []
   };
-
   function getPopPeerConfig() {
     const defaults = { preset: "Information Systems", yearWindow: 2, customConcepts: "" };
     const cfg = window.suPopPeerConfig && typeof window.suPopPeerConfig === "object" ? window.suPopPeerConfig : {};
@@ -411,13 +361,11 @@
     const customConcepts = typeof cfg.customConcepts === "string" ? cfg.customConcepts : defaults.customConcepts;
     return { preset, yearWindow, customConcepts };
   }
-
   function setPopPeerConfig(next) {
     const cfg = getPopPeerConfig();
     window.suPopPeerConfig = { ...cfg, ...next };
     return window.suPopPeerConfig;
   }
-
   function getPopPeerConceptQueries(cfg) {
     if (!cfg) return [];
     if (cfg.preset === "Custom…") {
@@ -430,12 +378,10 @@
     if (Array.isArray(presetList) && presetList.length) return presetList;
     return cfg.preset ? [cfg.preset] : [];
   }
-
   function isStorageBlockedError(err) {
     const msg = String(err?.message || err || "").toLowerCase();
     return msg.includes("access to storage is not allowed") || msg.includes("context invalidated");
   }
-
   async function getPopPeerCache() {
     if (popPeerCache) return popPeerCache;
     if (popPeerStorageBlocked || !chrome?.storage?.local?.get) {
@@ -455,7 +401,6 @@
       return popPeerCache;
     }
   }
-
   function schedulePopPeerCacheSave() {
     if (popPeerCacheSaveTimer) return;
     popPeerCacheSaveTimer = setTimeout(() => {
@@ -466,50 +411,41 @@
       });
     }, 1000);
   }
-
   async function getAuthorGraphCollections(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return [];
     const entry = await getStorageMapEntry(AUTHOR_GRAPH_COLLECTIONS_KEY, scholarId);
     return Array.isArray(entry) ? entry : [];
   }
-
   async function setAuthorGraphCollections(scholarId, list) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
     await setStorageMapEntry(AUTHOR_GRAPH_COLLECTIONS_KEY, scholarId, Array.isArray(list) ? list : []);
   }
-
   async function getAuthorGraphState(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return null;
     const entry = await getStorageMapEntry(AUTHOR_GRAPH_STATE_KEY, scholarId);
     return entry && Object.keys(entry).length > 0 ? entry : null;
   }
-
   async function setAuthorGraphState(scholarId, graphState) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
     await setStorageMapEntry(AUTHOR_GRAPH_STATE_KEY, scholarId, graphState || null);
   }
-
   async function getAuthorGraphAlerts(scholarId) {
     if (!scholarId || !chrome?.storage?.local?.get) return null;
     const entry = await getStorageMapEntry(AUTHOR_GRAPH_ALERTS_KEY, scholarId);
     return entry && Object.keys(entry).length > 0 ? entry : null;
   }
-
   async function setAuthorGraphAlerts(scholarId, data) {
     if (!scholarId || !chrome?.storage?.local?.get || !chrome?.storage?.local?.set) return;
     await setStorageMapEntry(AUTHOR_GRAPH_ALERTS_KEY, scholarId, data || null);
   }
-
   async function getReviewProjects() {
     if (!chrome?.storage?.local?.get) return {};
     return getStorageMap(REVIEW_PROJECTS_KEY);
   }
-
   async function setReviewProjects(map) {
     if (!chrome?.storage?.local?.set) return;
     await setStorageMap(REVIEW_PROJECTS_KEY, map);
   }
-
   function normalizeReviewProject(project) {
     if (!project || typeof project !== "object") return null;
     project.papers = project.papers || {};
@@ -540,7 +476,6 @@
     project.lastUpdateCheck = project.lastUpdateCheck || null;
     return project;
   }
-
   function createReviewProject(name, query) {
     const id = `rev_${Date.now().toString(36)}`;
     return {
@@ -569,7 +504,6 @@
       updates: []
     };
   }
-
   async function exportAuthorCsv(state) {
     const { results, isAuthorProfile } = scanResults();
     if (!isAuthorProfile) return;
@@ -653,7 +587,6 @@
     row.__suDirty = false;
     return paper;
   }
-
   function getCachedAuthorPaper(row) {
     if (!row) return null;
     const cache = getRowCache(row);
@@ -662,7 +595,6 @@
     cache.author = paper;
     return paper;
   }
-
   function getCachedAuthorCitationCount(row) {
     if (!row) return 0;
     const cache = getRowCache(row);
@@ -671,7 +603,6 @@
     cache.authorCitations = citations;
     return citations;
   }
-
   function attachFloatingTooltip(el, text) {
     if (!el || !text) return;
     if (el.__suFloatingTooltip) {
@@ -686,7 +617,6 @@
     document.body.appendChild(tip);
     el.__suFloatingTooltip = tip;
     tip.__suOwner = el;
-
     if (!window.__suFloatingTooltipObserver) {
       window.__suFloatingTooltipObserver = new MutationObserver(() => {
         const tips = document.querySelectorAll(".su-floating-tooltip");
@@ -699,7 +629,6 @@
       });
       window.__suFloatingTooltipObserver.observe(document.body, { childList: true, subtree: true });
     }
-
     const hide = () => {
       tip.classList.remove("su-floating-tooltip-visible");
       tip.style.display = "none";
@@ -707,7 +636,6 @@
         tip.remove();
       }
     };
-
     const position = (e) => {
       if (!tip.classList.contains("su-floating-tooltip-visible")) return;
       if (!el.isConnected) {
@@ -728,7 +656,6 @@
       tip.style.left = left + "px";
       tip.style.top = top + "px";
     };
-
     const show = (e) => {
       const openTips = document.querySelectorAll(".su-floating-tooltip-visible");
       for (const t of openTips) {
@@ -748,7 +675,6 @@
     window.addEventListener("scroll", hide, true);
     window.addEventListener("blur", hide);
   }
-
   /** Keep a fixed-position tooltip inside the viewport. Call after making it visible. */
   function clampFixedToViewport(el, pad = 8) {
     if (!el || !el.isConnected) return;
@@ -764,7 +690,6 @@
     el.style.left = left + "px";
     el.style.top = top + "px";
   }
-
   const DOI_REGEX = /10\.\d{4,}\/[^\s"'<>]+/gi;
   function extractDOIFromResult(container) {
     const seen = new Set();
@@ -794,11 +719,9 @@
     if (candidates.length === 0) scanText(text(container));
     return candidates[0] || null;
   }
-
   function text(el) {
     return (el?.innerText || "").replace(/\s+/g, " ").trim();
   }
-
   function escapeHtml(s) {
     const t = String(s ?? "");
     return t
@@ -807,7 +730,6 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   }
-
   /** Abstract/snippet cue phrases (regex): bold for visual salience, no LLM. */
   const SNIPPET_CUE_PATTERNS = [
     /\bWe propose\b/gi,
@@ -819,7 +741,6 @@
     /\bOur results?\s+(?:show|suggest|indicate)\b/gi,
     /\bIn this paper\b/gi
   ];
-
   function applySnippetCueEmphasis(snippetText) {
     if (!snippetText || typeof snippetText !== "string") return "";
     let out = escapeHtml(snippetText);
@@ -828,7 +749,6 @@
     }
     return out;
   }
-
   /**
    * Detect code/data artifact mentions in snippet and links (GitHub, Zenodo, OSF, etc.).
    * Returns { code: boolean, data: boolean }.
@@ -858,7 +778,6 @@
     const data = dataPatterns.some((p) => p.test(joined));
     return { code, data };
   }
-
   // --- External signals (no-key APIs) ---
   const EXTERNAL_SIGNAL_TTLS = {
     crossref: 30 * 24 * 60 * 60 * 1000,
@@ -884,11 +803,9 @@
   let externalSignalActive = 0;
   const openalexWorkInFlight = new Map();
   let openalexRateLimitUntil = 0;
-
   function markOpenAlexRateLimited() {
     openalexRateLimitUntil = Date.now() + OPENALEX_RATE_LIMIT_TTL_MS;
   }
-
   function isOpenAlexRateLimited() {
     return Date.now() < openalexRateLimitUntil;
   }
@@ -913,7 +830,6 @@
   };
   const externalSignalProviderNext = new Map();
   let externalSignalReapplyTimer = null;
-
   function normalizeDoi(doi) {
     if (!doi) return null;
     let d = String(doi).trim().toLowerCase();
@@ -921,14 +837,12 @@
     d = d.replace(/^doi:\s*/i, "");
     return d || null;
   }
-
   function makeExternalKey(prefix, raw) {
     const v = String(raw || "").trim();
     if (!v) return null;
     const clean = v.toLowerCase();
     return prefix ? `${prefix}:${clean}` : clean;
   }
-
   async function fetchExternalJson(url, { timeoutMs = 10000, headers = null, preferBackground = true } = {}) {
     if (!url) return null;
     try {
@@ -958,7 +872,6 @@
     } catch (_) {}
     return null;
   }
-
   async function fetchExternalText(url, { timeoutMs = 10000, headers = null, preferBackground = true } = {}) {
     if (!url) return null;
     try {
@@ -982,13 +895,11 @@
     } catch (_) {}
     return null;
   }
-
   async function ensureExternalSignalCacheLoaded() {
     if (externalSignalCache) return externalSignalCache;
     externalSignalCache = await getExternalSignalCache();
     return externalSignalCache;
   }
-
   function getExternalSignalEntry(key, provider) {
     if (!key || !provider || !externalSignalCache) return null;
     const entry = externalSignalCache[key]?.[provider];
@@ -998,7 +909,6 @@
     if (ts && Date.now() - ts > ttl) return null;
     return entry;
   }
-
   function scheduleExternalSignalSave() {
     if (externalSignalSaveTimer) return;
     externalSignalSaveTimer = setTimeout(() => {
@@ -1008,7 +918,6 @@
       }
     }, 1200);
   }
-
   function setExternalSignalEntry(key, provider, data) {
     if (!key || !provider) return;
     if (!externalSignalCache) externalSignalCache = {};
@@ -1016,7 +925,6 @@
     externalSignalCache[key][provider] = { ts: Date.now(), data: data == null ? null : data };
     scheduleExternalSignalSave();
   }
-
   function scheduleExternalSignalReapply() {
     if (externalSignalReapplyTimer) return;
     externalSignalReapplyTimer = setTimeout(() => {
@@ -1027,7 +935,6 @@
       } catch (_) {}
     }, 250);
   }
-
   async function fetchCrossrefSignal(doi) {
     const url = `https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=scholar-extension@local`;
     const data = await fetchExternalJson(url, { timeoutMs: 12000 });
@@ -1045,7 +952,6 @@
       : [];
     return { hasLicense, hasFullText, hasFunder, hasUpdate, funderNames, awardNumbers };
   }
-
   async function fetchOpenCitationsSignal(doi) {
     const url = `https://opencitations.net/index/coci/api/v1/citations/${encodeURIComponent(doi)}`;
     const data = await fetchExternalJson(url, { timeoutMs: 12000 });
@@ -1053,7 +959,6 @@
     const count = Array.isArray(data) ? data.length : 0;
     return { count };
   }
-
   async function fetchDataCiteSignal(doi) {
     const url = `https://api.datacite.org/dois/${encodeURIComponent(doi)}`;
     const data = await fetchExternalJson(url, { timeoutMs: 12000 });
@@ -1063,7 +968,6 @@
     const hasSoftware = rel.some((r) => String(r?.resourceTypeGeneral || "").toLowerCase() === "software");
     return { hasDataset, hasSoftware };
   }
-
   async function fetchUnpaywallSignal(doi) {
     const url = `https://api.unpaywall.org/v2/${encodeURIComponent(doi)}?email=scholar-extension@local`;
     const data = await fetchExternalJson(url, { timeoutMs: 12000 });
@@ -1086,7 +990,6 @@
       bestOaUrlPdf
     };
   }
-
   async function fetchArxivSignal(lookup) {
     const raw = typeof lookup === "string" ? lookup : (lookup?.id || "");
     const id = String(raw || "").replace(/^arxiv:/i, "").trim();
@@ -1110,7 +1013,6 @@
       .filter(Boolean);
     return { id, version, primaryCategory, categories, published, updated };
   }
-
   async function fetchEpmcSignal(lookup) {
     let doi = null;
     let pmid = null;
@@ -1153,7 +1055,6 @@
       fullTextUrls
     };
   }
-
   async function fetchNcbiSignal(lookup) {
     let pmid = null;
     if (lookup && typeof lookup === "object") {
@@ -1175,7 +1076,6 @@
       .filter(Boolean);
     return { pmid, meshTerms, publicationTypes };
   }
-
   async function fetchRorSignal(lookup) {
     const q = String(lookup || "").trim();
     if (!q) return null;
@@ -1193,7 +1093,6 @@
       score
     };
   }
-
   async function fetchDblpAuthorSignal(lookup) {
     const name = String(lookup || "").trim();
     if (!name) return null;
@@ -1206,7 +1105,6 @@
       name: hit.author || name
     };
   }
-
   async function fetchDblpSparqlSignal(lookup) {
     let pid = "";
     if (typeof lookup === "string") {
@@ -1226,7 +1124,6 @@
     const count = Number(countRaw) || 0;
     return { pid, count };
   }
-
   async function fetchSemanticScholarSignal(doi) {
     if (!doi) return null;
     const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(doi)}?fields=paperId,fieldsOfStudy,influentialCitationCount,abstract`;
@@ -1240,7 +1137,6 @@
       influential
     };
   }
-
   function normalizeOpenAlexId(id) {
     if (!id) return null;
     const raw = String(id).trim();
@@ -1248,7 +1144,6 @@
     if (match) return match[0].toUpperCase();
     return raw;
   }
-
   function normalizeOpenAlexAuthorId(id) {
     if (!id) return null;
     const raw = String(id).trim();
@@ -1256,8 +1151,6 @@
     if (match) return match[0].toUpperCase();
     return raw;
   }
-
-
   function formatOpenAlexUrl(url) {
     try {
       const u = new URL(url);
@@ -1267,7 +1160,6 @@
       return url;
     }
   }
-
   function compactOpenAlexWork(work) {
     if (!work || typeof work !== "object") return null;
     const authorships = Array.isArray(work.authorships) ? work.authorships : [];
@@ -1304,12 +1196,13 @@
       hostVenue: work?.host_venue?.display_name || work?.primary_location?.source?.display_name || "",
       hostVenueId: work?.host_venue?.id || work?.primary_location?.source?.id || work?.locations?.[0]?.source?.id || "",
       countsByYear: Array.isArray(work?.counts_by_year) ? work.counts_by_year : [],
+      citedByPercentileYear: work?.cited_by_percentile_year?.min ?? null,
+      oaStatus: String(work?.open_access?.oa_status || "").toLowerCase() || null,
       authors,
       grants,
       concepts
     };
   }
-
   function normalizeTitleForMatch(title) {
     return String(title || "")
       .toLowerCase()
@@ -1317,12 +1210,10 @@
       .replace(/\\s+/g, " ")
       .trim();
   }
-
   function looksLikeDoi(raw) {
     const d = normalizeDoi(raw);
     return !!(d && /^10\.\d{4,9}\/\S+$/i.test(d));
   }
-
   function titleSimilarity(a, b) {
     const aTokens = new Set(normalizeTitleForMatch(a).split(" ").filter(Boolean));
     const bTokens = new Set(normalizeTitleForMatch(b).split(" ").filter(Boolean));
@@ -1332,7 +1223,6 @@
     const union = new Set([...aTokens, ...bTokens]).size;
     return union ? inter / union : 0;
   }
-
   function scoreOpenAlexCandidate(work, title, year, authorName) {
     if (!work) return 0;
     let score = titleSimilarity(title, work.display_name || work.title || "");
@@ -1346,7 +1236,6 @@
     }
     return score;
   }
-
   function decodeOpenAlexAbstract(index) {
     if (!index || typeof index !== "object") return null;
     let maxPos = -1;
@@ -1367,7 +1256,6 @@
     const text = words.filter(Boolean).join(" ");
     return text.length > 50 ? text : null;
   }
-
   async function fetchOpenAlexAbstractForTitle(title, year, authorName) {
     const q = String(title || "").trim();
     if (!q) return null;
@@ -1397,7 +1285,6 @@
     if (bestScore < 0.2) return null;
     return decodeOpenAlexAbstract(best.abstract_inverted_index);
   }
-
   async function fetchOpenAlexWorkById(id) {
     const norm = normalizeOpenAlexId(id);
     if (!norm) return null;
@@ -1410,7 +1297,6 @@
     if (compact) setExternalSignalEntry(cacheKey, "openalex", compact);
     return compact || null;
   }
-
   async function fetchOpenAlexWorkByDoi(doi) {
     const norm = normalizeDoi(doi);
     if (!norm) return null;
@@ -1423,7 +1309,6 @@
     if (compact) setExternalSignalEntry(cacheKey, "openalex", compact);
     return compact || null;
   }
-
   async function fetchOpenAlexAuthorById(id) {
     const norm = normalizeOpenAlexAuthorId(id);
     if (!norm) return null;
@@ -1431,8 +1316,6 @@
     const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     return data || null;
   }
-
-
   async function fetchOpenAlexAuthorFirstYear(id) {
     const norm = normalizeOpenAlexAuthorId(id);
     if (!norm) return null;
@@ -1446,7 +1329,6 @@
     const year = Number(data?.results?.[0]?.publication_year) || null;
     return year;
   }
-
   async function searchOpenAlexWorkByTitle(title, year, authorName) {
     const q = String(title || "").trim();
     if (!q) return null;
@@ -1475,7 +1357,6 @@
     if (bestScore < 0.2) return null;
     return compactOpenAlexWork(best);
   }
-
   async function fetchOpenAlexWorkForPaper(paper, authorName) {
     if (!paper) return null;
     const cacheKey = buildOpenAlexKeyForPaper(paper);
@@ -1513,13 +1394,11 @@
     if (cacheKey) setExternalSignalEntry(cacheKey, "openalex", work);
     return work;
   }
-
   function pickFirstAuthorName(paper) {
     if (!paper) return "";
     const authors = parseAuthors((paper.authorsVenue || "").split(" - ")[0] || paper.authorsVenue || "");
     return authors && authors.length ? authors[0] : "";
   }
-
   function buildOpenAlexKeyForPaper(paper) {
     if (!paper) return null;
     const doi = normalizeDoi(paper.doi || paper.url || "");
@@ -1530,14 +1409,12 @@
     const hash = hashString(`${title}|${year}`);
     return makeExternalKey("openalex", `title:${hash}`);
   }
-
   async function fetchOpenAlexSignalForPaper(lookup) {
     const paper = lookup?.paper || null;
     const authorName = lookup?.authorName || "";
     if (!paper) return null;
     return await fetchOpenAlexWorkForPaper(paper, authorName);
   }
-
   function scoreOpenAlexConcept(concept, name) {
     if (!concept || !name) return 0;
     const display = String(concept.display_name || concept.displayName || "").trim();
@@ -1548,7 +1425,6 @@
     if (displayLower.replace(/s$/i, "") === target.replace(/s$/i, "")) return 0.95;
     return titleSimilarity(display, name);
   }
-
   async function fetchOpenAlexConceptByName(name) {
     const q = String(name || "").trim();
     if (!q) return null;
@@ -1574,7 +1450,6 @@
       displayName: best.display_name || best.displayName || q
     };
   }
-
   async function getOpenAlexConceptInfo(name) {
     const cache = await getPopPeerCache();
     const key = String(name || "").trim().toLowerCase();
@@ -1590,7 +1465,6 @@
     schedulePopPeerCacheSave();
     return entry;
   }
-
   function extractOpenAlexAuthorYearBounds(author) {
     const years = Array.isArray(author?.counts_by_year)
       ? author.counts_by_year.map((c) => Number(c?.year)).filter((y) => Number.isFinite(y))
@@ -1601,7 +1475,6 @@
       lastYear: Math.max(...years)
     };
   }
-
   function compactOpenAlexAuthor(author) {
     if (!author || typeof author !== "object") return null;
     const { firstYear, lastYear } = extractOpenAlexAuthorYearBounds(author);
@@ -1619,7 +1492,6 @@
       orcid: author.orcid || ""
     };
   }
-
   async function fetchOpenAlexAuthorsPage(conceptId, cursor, perPage = 200) {
     if (!conceptId) return { results: [], nextCursor: null };
     const params = new URLSearchParams();
@@ -1633,7 +1505,6 @@
     const nextCursor = data?.meta?.next_cursor || null;
     return { results, nextCursor, error: null };
   }
-
   async function fetchOpenAlexWorksPage({ conceptId, year, perPage = 200, page = 1 }) {
     if (!conceptId || !year) return { results: [], error: "Missing concept or year" };
     const params = new URLSearchParams();
@@ -1647,7 +1518,6 @@
     const results = Array.isArray(data?.results) ? data.results : [];
     return { results, error: null };
   }
-
   function collectCandidateAuthorsFromWorks(works, map) {
     for (const work of works || []) {
       const authorships = Array.isArray(work?.authorships) ? work.authorships : [];
@@ -1668,7 +1538,6 @@
       }
     }
   }
-
   async function fetchCandidateAuthorsFromWorks(concepts, years, opts = {}) {
     const perPage = Number(opts.perPage) || 200;
     const pagesPerYear = Number(opts.pagesPerYear) || 1;
@@ -1692,7 +1561,6 @@
     authors.sort((a, b) => b.count - a.count);
     return { authors, scannedWorks, requests, error: null };
   }
-
   async function fetchPopPeersByStartYear(conceptId, year, opts = {}) {
     const perPage = Number(opts.perPage) || 200;
     const maxPages = Number(opts.maxPages) || 2;
@@ -1727,7 +1595,6 @@
     peers.sort((a, b) => (b.citedByCount || 0) - (a.citedByCount || 0));
     return { peers, scanned, pages, error, yearWindow };
   }
-
   async function fetchPopPeersByStartYearMulti(concepts, year, opts = {}) {
     const perPage = Number(opts.perPage) || 200;
     const maxPages = Number(opts.maxPages) || 2;
@@ -1772,7 +1639,6 @@
     peers.sort((a, b) => (b.citedByCount || 0) - (a.citedByCount || 0));
     return { peers, scanned, pages, error, yearWindow, concepts: conceptNames.filter(Boolean) };
   }
-
   async function fetchOpenCitationsCociList(doi) {
     const norm = normalizeDoi(doi);
     if (!norm) return null;
@@ -1786,7 +1652,6 @@
     setExternalSignalEntry(cacheKey, "opencitations_coci", citing);
     return citing;
   }
-
   function enqueueExternalSignalFetch(key, provider, fetcher, lookup) {
     if (!key || !provider || typeof fetcher !== "function") return;
     const inflightKey = `${provider}|${key}`;
@@ -1795,17 +1660,14 @@
     externalSignalQueue.push({ key, provider, fetcher, inflightKey, lookup: lookup || key });
     pumpExternalSignalQueue();
   }
-
   function providerReadyAt(provider) {
     const next = externalSignalProviderNext.get(provider);
     return Number.isFinite(next) ? next : 0;
   }
-
   function markProviderUsed(provider) {
     const minDelay = EXTERNAL_SIGNAL_PROVIDER_LIMITS[provider]?.minDelay || EXTERNAL_SIGNAL_DELAY_MS;
     externalSignalProviderNext.set(provider, Date.now() + minDelay);
   }
-
   function pickNextExternalJob() {
     if (!externalSignalQueue.length) return null;
     const now = Date.now();
@@ -1825,7 +1687,6 @@
     }
     return null;
   }
-
   function pumpExternalSignalQueue() {
     if (externalSignalActive >= EXTERNAL_SIGNAL_CONCURRENCY) return;
     const job = pickNextExternalJob();
@@ -1847,9 +1708,7 @@
       }
     })();
   }
-
   const CODE_LINK_CACHE = new Map(); // key -> { status: "pending"|"found"|"none", url: string|null }
-
   function extractArxivIdFromUrl(url) {
     const u = String(url || "");
     const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\\d+)?/i);
@@ -1858,7 +1717,6 @@
     if (m2) return m2[1];
     return null;
   }
-
   function extractArxivIdFromResult(container) {
     if (!container) return null;
     const links = Array.from(container.querySelectorAll("a[href]"));
@@ -1878,7 +1736,6 @@
     if (sm) return sm[1];
     return null;
   }
-
   function extractPubmedIdFromResult(container) {
     if (!container) return null;
     const links = Array.from(container.querySelectorAll("a[href]"));
@@ -1889,7 +1746,6 @@
     }
     return null;
   }
-
   function extractPmcIdFromResult(container) {
     if (!container) return null;
     const links = Array.from(container.querySelectorAll("a[href]"));
@@ -1900,7 +1756,6 @@
     }
     return null;
   }
-
   async function fetchCatalyzeXCodeLink({ title, url }) {
     const arxivId = extractArxivIdFromUrl(url);
     let api = "https://www.catalyzex.com/api/code?extension=true";
@@ -1923,7 +1778,6 @@
     const link = data?.code_url || data?.unshortened_url || data?.cx_url || null;
     return link || null;
   }
-
   async function renderCodeLinkBadge(container, paper) {
     const existing = container.querySelector(".su-code-badge");
     if (existing) existing.remove();
@@ -1964,61 +1818,56 @@
       CODE_LINK_CACHE.set(key, { status: "none", url: null });
     }
   }
-
   /**
    * Detect funding mentions in snippet/abstract text (e.g. from .gs_rs).
    * Returns { label, type: 'government'|'industry'|'unknown', excerpt } or null.
    */
+  // Hoisted constants for detectFunding — built once, not on every call
+  const _FUNDING_GOV_PATTERNS = [
+    /\b(?:supported|funded)\s+by\s+(?:the\s+)?(?:NIH|NSF|NIH\/NIAID|NIEHS|NCI)\b/i,
+    /\b(?:NIH|NSF)\s+grant\s*#?\s*\w+/i,
+    /\bGrant\s*#?\s*\w+.*?(?:NIH|NSF|DOE|FDA|CDC)\b/i,
+    /\b(?:European\s+Research\s+Council|ERC)\s+(?:Grant|funding)\b/i,
+    /\bHorizon\s+(?:2020|Europe)\b/i,
+    /\bWellcome\s+(?:Trust|Foundation)\b/i,
+    /\b(?:UKRI|MRC|BBSRC|EPSRC)\b/i,
+    /\b(?:supported|funded)\s+in\s+part\s+by\s+(?:the\s+)?(?:NIH|NSF|government)\b/i,
+    /\bgovernment\s+funding\b/i,
+    /\b(?:NIH|NSF|DOE|FDA)\s+(?:award|grant)\b/i
+  ];
+  const _FUNDING_INDUSTRY_NAMES = [
+    "Google", "Microsoft", "Meta", "Facebook", "Amazon", "Apple", "IBM",
+    "Pfizer", "Johnson\\s*&\\s*Johnson", "Merck", "Novartis", "Roche",
+    "AstraZeneca", "Bayer", "Sanofi", "GSK", "GlaxoSmithKline", "Eli\\s+Lilly",
+    "Bristol-Myers", "BMS", "AbbVie", "Amgen", "Gilead", "Moderna",
+    "OpenAI", "Anthropic", "NVIDIA", "Intel", "Qualcomm"
+  ];
+  const _FUNDING_INDUSTRY_PATTERN = new RegExp(
+    "\\b(?:supported|funded|sponsored|grant from)\\s+(?:by\\s+)?(?:the\\s+)?(" +
+    _FUNDING_INDUSTRY_NAMES.join("|") + ")\\b",
+    "i"
+  );
+  const _FUNDING_INDUSTRY_ONLY = new RegExp("\\b(" + _FUNDING_INDUSTRY_NAMES.join("|") + ")\\b", "i");
+  const _FUNDING_GENERIC_PATTERNS = [
+    /\b(?:supported|funded)\s+by\s+.{5,80}/gi,
+    /\bsponsored\s+by\s+.{5,80}/gi,
+    /\bGrant\s*#?\s*[\w-]+/gi,
+    /\bGrant\s+[Nn]o\.?\s*[\w-]+/gi,
+    /\b(?:Acknowledgments?|Acknowledgements?)\s*[.:]\s*.{10,200}/gi,
+    /\b(?:Funding|Funder)s?\s*[.:]\s*.{10,200}/gi
+  ];
   function detectFunding(snippetText) {
     const t = String(snippetText || "").trim();
     if (!t) return null;
-
     const excerptLen = 120;
     const takeExcerpt = (str) =>
       str.length <= excerptLen ? str : str.slice(0, excerptLen).trim() + "…";
-
-    // Government / public funding patterns (case-insensitive)
-    const govPatterns = [
-      /\b(?:supported|funded)\s+by\s+(?:the\s+)?(?:NIH|NSF|NIH\/NIAID|NIEHS|NCI)\b/i,
-      /\b(?:NIH|NSF)\s+grant\s*#?\s*\w+/i,
-      /\bGrant\s*#?\s*\w+.*?(?:NIH|NSF|DOE|FDA|CDC)\b/i,
-      /\b(?:European\s+Research\s+Council|ERC)\s+(?:Grant|funding)\b/i,
-      /\bHorizon\s+(?:2020|Europe)\b/i,
-      /\bWellcome\s+(?:Trust|Foundation)\b/i,
-      /\b(?:UKRI|MRC|BBSRC|EPSRC)\b/i,
-      /\b(?:supported|funded)\s+in\s+part\s+by\s+(?:the\s+)?(?:NIH|NSF|government)\b/i,
-      /\bgovernment\s+funding\b/i,
-      /\b(?:NIH|NSF|DOE|FDA)\s+(?:award|grant)\b/i
-    ];
-
-    // Industry / corporate funding patterns
-    const industryNames = [
-      "Google", "Microsoft", "Meta", "Facebook", "Amazon", "Apple", "IBM",
-      "Pfizer", "Johnson\\s*&\\s*Johnson", "Merck", "Novartis", "Roche",
-      "AstraZeneca", "Bayer", "Sanofi", "GSK", "GlaxoSmithKline", "Eli\\s+Lilly",
-      "Bristol-Myers", "BMS", "AbbVie", "Amgen", "Gilead", "Moderna",
-      "OpenAI", "Anthropic", "NVIDIA", "Intel", "Qualcomm"
-    ];
-    const industryPattern = new RegExp(
-      "\\b(?:supported|funded|sponsored|grant from)\\s+(?:by\\s+)?(?:the\\s+)?(" +
-      industryNames.join("|") + ")\\b",
-      "i"
-    );
-    const industryOnly = new RegExp("\\b(" + industryNames.join("|") + ")\\b", "i");
-
-    // Generic funding phrases (type unknown unless we match gov/industry)
-    const genericPatterns = [
-      /\b(?:supported|funded)\s+by\s+.{5,80}/gi,
-      /\bsponsored\s+by\s+.{5,80}/gi,
-      /\bGrant\s*#?\s*[\w-]+/gi,
-      /\bGrant\s+[Nn]o\.?\s*[\w-]+/gi,
-      /\b(?:Acknowledgments?|Acknowledgements?)\s*[.:]\s*.{10,200}/gi,
-      /\b(?:Funding|Funder)s?\s*[.:]\s*.{10,200}/gi
-    ];
-
+    const govPatterns = _FUNDING_GOV_PATTERNS;
+    const industryPattern = _FUNDING_INDUSTRY_PATTERN;
+    const industryOnly = _FUNDING_INDUSTRY_ONLY;
+    const genericPatterns = _FUNDING_GENERIC_PATTERNS;
     let type = "unknown";
     let excerpt = "";
-
     for (const p of govPatterns) {
       const m = t.match(p);
       if (m) {
@@ -2041,9 +1890,7 @@
         }
       }
     }
-
     if (!excerpt) return null;
-
     const label =
       type === "government"
         ? "Government funding"
@@ -2052,7 +1899,6 @@
           : "Funding mentioned";
     return { label, type, excerpt };
   }
-
   function tryGetHref(el) {
     const href = el?.getAttribute?.("href") || "";
     if (!href) return null;
@@ -2062,7 +1908,6 @@
       return null;
     }
   }
-
   function isHttpUrl(url) {
     if (!url) return false;
     try {
@@ -2072,17 +1917,14 @@
       return false;
     }
   }
-
   function parseYear(s) {
     const m = String(s || "").match(/\b(19\d{2}|20\d{2})\b/);
     return m ? Number(m[1]) : null;
   }
-
   function findFlLinks(gsR) {
     const fl = gsR.querySelector(".gs_fl");
     const links = Array.from(fl?.querySelectorAll("a") || []);
     const out = { citedByUrl: null, versionsUrl: null, relatedUrl: null };
-
     for (const a of links) {
       const t = text(a);
       const u = tryGetHref(a);
@@ -2091,10 +1933,8 @@
       else if (/^All \d+ versions\b/i.test(t)) out.versionsUrl = u;
       else if (/^Related articles\b/i.test(t)) out.relatedUrl = u;
     }
-
     return out;
   }
-
   /**
    * Best PDF URL for this result: publisher PDF > arXiv/SSRN/author .pdf > null (then use title+pdf search).
    * Returns { url, label } or null.
@@ -2105,7 +1945,6 @@
     let anyPdf = null;
     let arxivAbs = null;
     let ssrnId = null;
-
     const unwrapScholarUrl = (href) => {
       if (!href) return "";
       const m = href.match(/[?&]q=([^&]+)/i);
@@ -2129,7 +1968,6 @@
         return "";
       }
     };
-
     for (const a of links) {
       const rawHref = (a.getAttribute("href") || "").trim();
       const href = normalizeHref(rawHref);
@@ -2138,7 +1976,6 @@
       const isPdfLink = /\.pdf(\?|#|$)/i.test(href);
       const isPdfLabel = /^\[?\s*PDF\s*\]?$/i.test(linkText);
       const inPdfBox = !!a.closest(".gs_or_ggsm, .gs_ggs");
-
       if (isPdfLabel || inPdfBox || (isPdfLink && a.closest(".gs_rt"))) {
         publisherPdf = href;
         break;
@@ -2149,10 +1986,8 @@
       const ssrnM = href.match(/ssrn\.com\/abstract=(\d+)/i) || href.match(/papers\.ssrn\.com\/sol3\/papers\.cfm\?abstract_id=(\d+)/i);
       if (ssrnM) ssrnId = ssrnId || ssrnM[1];
     }
-
     if (publisherPdf) return { url: publisherPdf, label: "Publisher PDF" };
     if (anyPdf) return { url: anyPdf, label: "PDF" };
-
     const doi = normalizeDoi(extractDOIFromResult(container));
     if (doi) {
       const unpay = getExternalSignalEntry(doi, "unpaywall")?.data || {};
@@ -2165,7 +2000,6 @@
     if (ssrnId) return { url: `https://papers.ssrn.com/sol3/Delivery.cfm?abstractid=${ssrnId}&type=2`, label: "SSRN" };
     return null;
   }
-
   const STOPWORDS = new Set(["the", "a", "an", "and", "or", "but", "of", "in", "on", "at", "to", "for", "with", "by", "from", "as", "is", "was", "are", "were", "been", "be", "have", "has", "had", "do", "does", "did", "this", "that", "these", "those", "it", "its"]);
   const TOPIC_TOKEN_STOPWORDS = new Set([
     ...STOPWORDS,
@@ -2174,7 +2008,6 @@
     "case", "cases", "effect", "effects", "method", "methods", "system", "systems",
     "data", "dataset", "datasets", "paper", "papers", "survey", "review"
   ]);
-
   function addTitleTokens(map, title) {
     if (!map || !title) return;
     const rawTokens = String(title).match(/[A-Za-z0-9]+/g);
@@ -2198,7 +2031,6 @@
       }
     }
   }
-
   function normalizeTitleForGrouping(title) {
     if (!title || typeof title !== "string") return "";
     const t = title
@@ -2211,14 +2043,12 @@
       .filter((w) => w.length > 0 && !STOPWORDS.has(w))
       .join(" ");
   }
-
   function extractDOIFromText(textValue) {
     if (!textValue) return null;
     DOI_REGEX.lastIndex = 0;
     const m = DOI_REGEX.exec(String(textValue));
     return m ? m[0] : null;
   }
-
   function buildMinimalBibTeX(item) {
     const keyBase = normalizeTitleForGrouping(item.title || "paper").split(" ").slice(0, 4).join("");
     const key = (keyBase || "paper") + String(Date.now()).slice(-4);
@@ -2231,7 +2061,6 @@
   note = {${note}}
 }`;
   }
-
   async function getBibTeXForQueueItem(item) {
     const doi = extractDOIFromText(item.link) || extractDOIFromText(item.title);
     if (doi) {
@@ -2244,13 +2073,11 @@
     }
     return buildMinimalBibTeX(item);
   }
-
   function csvEscape(value) {
     const s = String(value ?? "");
     if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
     return s;
   }
-
   /** Venue tier for version ordering: 3 = journal, 2 = conference, 1 = preprint, 0 = other. */
   function getVenueTier(venue) {
     const v = String(venue || "").toLowerCase();
@@ -2259,7 +2086,6 @@
     if (/\bconference\b|proceedings|workshop\b|symposium\b/.test(v)) return 2;
     return 0;
   }
-
   /** Venue type for reading load: "journal" | "conference" | "preprint" | "other". */
   function getVenueType(venue) {
     const tier = getVenueTier(venue);
@@ -2268,31 +2094,16 @@
     if (tier === 1) return "preprint";
     return "other";
   }
-
   /**
    * Reading load label: skim (≤5 pp or preprint), read (6–15 or conference), deep read (16+ or journal).
    * Uses stored page count from PDF metadata when available (after user clicks PDF).
    */
-  function computeReadingLoadLabel(paper, pageCount) {
-    if (pageCount != null && typeof pageCount === "number" && pageCount >= 1) {
-      if (pageCount <= 5) return "skim";
-      if (pageCount <= 15) return "read";
-      return "deep read";
-    }
-    const venueType = getVenueType(paper.venue);
-    if (venueType === "preprint") return "skim";
-    if (venueType === "conference") return "read";
-    if (venueType === "journal") return "deep read";
-    return "read";
-  }
-
   /** Sort key for "best" version by user preference (higher = show first). */
   function versionSortKey(tier, order) {
     if (order === "preprint-first") return tier === 1 ? 4 : tier === 2 ? 3 : tier === 3 ? 2 : 1;
     if (order === "conference-first") return tier === 2 ? 4 : tier === 3 ? 3 : tier === 1 ? 2 : 1;
     return tier; // journal-first: 3 > 2 > 1 > 0
   }
-
   /** DOM-only: show/hide result rows by state.filters (year range, venue, has PDF, min citations, author, artifacts, quality). */
   function applyResultFiltersToRows(rows, state) {
     const f = state.filters || {};
@@ -2348,7 +2159,6 @@
         (inflMax != null && !isNaN(inflMax)) ||
         affiliationKw.length > 0 ||
         funderKw.length > 0));
-
     if (!anyActive) {
       if (state._hadActiveFilters) {
         for (const r of rows) r.classList.remove("su-filtered-out");
@@ -2357,7 +2167,6 @@
       return;
     }
     state._hadActiveFilters = true;
-
     for (const r of rows) {
       if (r.style.display === "none") continue; // e.g. author-page filter
       let paper;
@@ -2576,16 +2385,13 @@
       r.classList.remove("su-filtered-out");
     }
   }
-
   function applyResultFilters(results, state) {
     applyResultFiltersToRows(results, state);
   }
-
   function applyVersionGrouping(results, state) {
     if (!results.length) return;
     const groupVersions = !!state.settings?.groupVersions;
     const order = state.settings?.versionOrder || "journal-first";
-
     const clearGrouping = () => {
       for (const r of results) {
         r.classList.remove("su-version-grouped-hidden");
@@ -2595,12 +2401,10 @@
         if (chev) chev.remove();
       }
     };
-
     if (!groupVersions) {
       clearGrouping();
       return;
     }
-
     const groups = new Map(); // normalizedTitle -> [{ el, paper, tier, sortKey }]
     for (const r of results) {
       if (r.style.display === "none") continue;
@@ -2626,9 +2430,7 @@
       if (!groups.has(norm)) groups.set(norm, []);
       groups.get(norm).push({ el: r, paper, tier, sortKey });
     }
-
     clearGrouping();
-
     for (const [, entries] of groups) {
       if (entries.length <= 1) continue;
       entries.sort((a, b) => b.sortKey - a.sortKey);
@@ -2669,7 +2471,6 @@
       });
     }
   }
-
   /** Get citation count from a search result (.gs_r) by parsing "Cited by N" in .gs_fl. */
   function getCitationCountFromResult(gsR) {
     const fl = gsR?.querySelector(".gs_fl");
@@ -2698,21 +2499,18 @@
     const num = parseInt(m[1].replace(/,/g, ""), 10);
     return isNaN(num) ? null : num;
   }
-
   function median(list) {
     if (!Array.isArray(list) || list.length === 0) return null;
     const sorted = list.slice().sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
   }
-
   function formatPct(value, { decimals = 0, fallback = "—" } = {}) {
     if (!Number.isFinite(value)) return fallback;
     const sign = value > 0 ? "+" : value < 0 ? "" : "";
     const rounded = decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString();
     return `${sign}${rounded}%`;
   }
-
   function computeCitationAcceleration(history) {
     if (!Array.isArray(history) || history.length < 3) return null;
     const sorted = history.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -2730,7 +2528,6 @@
     if (Math.abs(acceleration) < 0.05) return null;
     return { acceleration, rate1, rate2, months1: m1, months2: m2 };
   }
-
   function updateCitationSnapshotInMemory(state, clusterId, citations, date) {
     if (!state?.citationSnapshots || !clusterId) return;
     const entry = state.citationSnapshots[clusterId] && typeof state.citationSnapshots[clusterId] === "object"
@@ -2748,7 +2545,6 @@
     history = history.slice(-3);
     state.citationSnapshots[clusterId] = { citations: next.citations, date: next.date, history };
   }
-
   function computeHalfLifeYearFromYears(years) {
     if (!Array.isArray(years) || years.length === 0) return null;
     const sorted = years.map((y) => Number(y)).filter((y) => Number.isFinite(y)).sort((a, b) => a - b);
@@ -2756,7 +2552,6 @@
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
   }
-
   function computeHalfLifeFromCountsByYear(counts) {
     if (!Array.isArray(counts) || counts.length === 0) return null;
     const rows = counts
@@ -2773,7 +2568,6 @@
     }
     return rows[rows.length - 1].year;
   }
-
   function computeAccelerationFromCountsByYear(counts, windowSize = 3) {
     if (!Array.isArray(counts) || counts.length < 2) return null;
     const rows = counts
@@ -2800,7 +2594,6 @@
     if (!Number.isFinite(slope)) return null;
     return { acceleration: slope, years: n };
   }
-
   /**
    * Velocity = citations per year since publication.
    * Returns formatted string (e.g. "25/yr") or null if not computable.
@@ -2816,7 +2609,6 @@
     const display = velocity >= 10 ? Math.round(velocity) : velocity.toFixed(1);
     return `${display}/yr`;
   }
-
   function computeVelocityValue(citations, year) {
     if (citations == null || citations < 0) return null;
     const y = year != null ? parseYear(String(year)) : null;
@@ -2827,24 +2619,11 @@
     if (!Number.isFinite(velocity)) return null;
     return { velocity, yearsAgo };
   }
-
   function getVelocityBucket(yearsAgo) {
     if (yearsAgo <= 3) return "early";
     if (yearsAgo <= 7) return "mid";
     return "late";
   }
-
-  function getTrajectoryForVelocity(velocity, yearsAgo, bucketAverages) {
-    if (!velocity || !yearsAgo || !bucketAverages) return null;
-    const bucket = getVelocityBucket(yearsAgo);
-    const avg = bucketAverages[bucket];
-    if (!avg || !Number.isFinite(avg) || avg <= 0) return null;
-    const ratio = velocity / avg;
-    if (ratio >= 1.25) return { arrow: "↑", label: "accelerating" };
-    if (ratio <= 0.75) return { arrow: "↓", label: "decaying" };
-    return { arrow: "→", label: "stable" };
-  }
-
   function getAccelerationArrow(velocity, yearsAgo, bucketAverages) {
     if (!velocity || !yearsAgo || !bucketAverages) return null;
     const bucket = getVelocityBucket(yearsAgo);
@@ -2855,11 +2634,9 @@
     if (ratio <= 0.9) return { arrow: "↓", label: "decelerating", level: "down" };
     return null;
   }
-
   const SPARSE_LOCAL_COHORT_MIN = 5;
   const SPARSE_LOCAL_COHORT_MAX_SAMPLE_REQUESTS = 3;
   const LOCAL_COHORT_CACHE_SAMPLE_LIMIT = 24;
-
   function normalizeCohortSample(sample) {
     if (!sample || typeof sample !== "object") return null;
     const id = String(sample.id || "").trim();
@@ -2873,7 +2650,6 @@
       observedAt: Number(sample.observedAt) || Date.now()
     };
   }
-
   function buildCohortEntry(samples, minCohort, extra = {}) {
     const sampleMap = new Map();
     for (const rawSample of Array.isArray(samples) ? samples : []) {
@@ -2899,7 +2675,6 @@
       ...extra
     };
   }
-
   function mergeCohortEntries(primary, secondary, minCohort, extra = {}) {
     if (!primary && !secondary) return null;
     const samples = [
@@ -2913,7 +2688,6 @@
       ...extra
     });
   }
-
   function getLocalCohortKeyForPaper(paper) {
     if (!paper) return "";
     const year = paper?.year != null ? parseYear(String(paper.year)) : null;
@@ -2924,7 +2698,6 @@
     if (!venueNorm) return "";
     return `${venueNorm}|${year}`;
   }
-
   function buildLocalCohortExpected(results, isAuthorProfile, minCohort = 5) {
     const buckets = new Map();
     for (const r of results) {
@@ -2964,7 +2737,6 @@
     }
     return expected;
   }
-
   function getLocalExpectedForPaper(paper, state) {
     if (!paper || !state?.localCohortExpected) return null;
     const key = getLocalCohortKeyForPaper(paper);
@@ -2981,7 +2753,6 @@
     if (entry.n < minCohort) return { ...entry, insufficient: true };
     return entry;
   }
-
   function getSparseLocalCohortSampleUrl(isAuthorProfile) {
     try {
       const url = new URL(window.location.href);
@@ -3005,7 +2776,6 @@
       return null;
     }
   }
-
   async function fetchScholarHtml(url) {
     if (!url) return null;
     try {
@@ -3015,7 +2785,6 @@
       return null;
     }
   }
-
   function collectSparseLocalCohortSample(doc, targetKey, isAuthorProfile) {
     if (!doc || !targetKey) return null;
     const rows = Array.from(doc.querySelectorAll(isAuthorProfile ? ".gsc_a_tr" : ".gs_r"));
@@ -3043,7 +2812,6 @@
     }
     return samples.length ? buildCohortEntry(samples, SPARSE_LOCAL_COHORT_MIN, { sampled: true, sourceKind: "sampled" }) : null;
   }
-
   async function fetchSparseLocalCohortSamplePage(sampleUrl, state) {
     if (!sampleUrl || !state) return null;
     if (!state.localCohortSamplePageCache) state.localCohortSamplePageCache = new Map();
@@ -3058,7 +2826,6 @@
     state.localCohortSamplePageCache.set(sampleUrl, request);
     return request;
   }
-
   async function maybeExpandLocalCohortForPaper(paper, state, isAuthorProfile) {
     if (!paper || !state) return getLocalExpectedForPaper(paper, state);
     const key = getLocalCohortKeyForPaper(paper);
@@ -3090,7 +2857,6 @@
     await promise.catch(() => null);
     return getLocalExpectedForPaper(paper, state);
   }
-
   function mergeLocalCohortPersistentEntry(existing, next, minCohort) {
     const sampleMap = new Map();
     for (const sample of Array.isArray(existing?.samples) ? existing.samples : []) {
@@ -3116,7 +2882,6 @@
       updatedAt: merged.updatedAt || Date.now()
     };
   }
-
   function sameCohortSamples(a, b) {
     const left = Array.isArray(a) ? a : [];
     const right = Array.isArray(b) ? b : [];
@@ -3136,7 +2901,6 @@
     }
     return true;
   }
-
   function scheduleLocalCohortCacheSave(state) {
     if (localCohortCacheSaveTimer) return;
     localCohortCacheSaveTimer = setTimeout(() => {
@@ -3146,7 +2910,6 @@
       }
     }, 1500);
   }
-
   function persistLocalCohortObservations(state) {
     if (!state?.settings?.showEmergingScore || !state.localCohortExpected || !(state.localCohortExpected instanceof Map)) return;
     if (!state.localCohortPersistent || typeof state.localCohortPersistent !== "object") {
@@ -3173,12 +2936,10 @@
     state.localCohortPersistSignature = signature;
     if (changed) scheduleLocalCohortCacheSave(state);
   }
-
   const EMERGING_PREFETCH_MAX_ROWS = 3;
   const EMERGING_PREFETCH_MAX_OPENALEX = 2;
   const EMERGING_PREFETCH_IDLE_MIN_MS = 12;
   const EMERGING_PREFETCH_TIMEOUT_MS = 2500;
-
   function canSpendLatencyBudget(state, deadline) {
     if (document.hidden) return false;
     if (navigator.connection?.saveData) return false;
@@ -3188,7 +2949,6 @@
     }
     return true;
   }
-
   async function warmEmergingDataForPaper(paper, state, isAuthorProfile, allowOpenAlexPrefetch) {
     if (!paper || !state?.settings?.showEmergingScore) return;
     const dataSource = state.settings.emergingScoreDataSource || "hybrid";
@@ -3209,7 +2969,6 @@
       await fetchOpenAlexVenueYearStats(oaWork.hostVenueId, year, state);
     }
   }
-
   function scheduleEmergingPrefetch(rows, state, isAuthorProfile) {
     if (!state?.settings?.showEmergingScore || !Array.isArray(rows) || rows.length === 0) return;
     if (state.emergingPrefetchScheduled) return;
@@ -3253,10 +3012,8 @@
       setTimeout(() => { runner({ didTimeout: true, timeRemaining: () => EMERGING_PREFETCH_IDLE_MIN_MS }).catch(() => {}); }, 1200);
     }
   }
-
   const TRAJECTORY_EXPECTED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const TRAJECTORY_EXPECTED_SAMPLE_LIMIT = 200;
-
   function getTrajectoryExpectedEntry(state, key) {
     if (!state?.trajectoryVenueExpected || !key) return null;
     const entry = state.trajectoryVenueExpected[key];
@@ -3264,7 +3021,6 @@
     if (entry.updatedAt && Date.now() - entry.updatedAt > TRAJECTORY_EXPECTED_TTL_MS) return null;
     return entry;
   }
-
   function scheduleTrajectoryExpectedSave(state) {
     if (trajectoryVenueExpectedSaveTimer) return;
     trajectoryVenueExpectedSaveTimer = setTimeout(() => {
@@ -3274,7 +3030,6 @@
       }
     }, 1500);
   }
-
   function setTrajectoryExpectedEntry(state, key, entry) {
     if (!state || !key) return;
     if (!state.trajectoryVenueExpected || typeof state.trajectoryVenueExpected !== "object") {
@@ -3283,7 +3038,6 @@
     state.trajectoryVenueExpected[key] = entry;
     scheduleTrajectoryExpectedSave(state);
   }
-
   async function fetchOpenAlexVenueYearStats(venueId, year, state) {
     if (!venueId || !year) return null;
     const key = `${venueId}|${year}`;
@@ -3314,7 +3068,6 @@
     setTrajectoryExpectedEntry(state, key, entry);
     return entry;
   }
-
   async function fetchOpenAlexCitingYears(openalexWork) {
     const citedByApi = openalexWork?.citedByApi;
     if (!citedByApi) return null;
@@ -3340,7 +3093,6 @@
     setExternalSignalEntry(cacheKey, "openalex_cites", payload);
     return payload;
   }
-
   /**
    * Color for age-bias heatmap: bright blue (≤2 years) → muted gray (≥10 years).
    * Returns CSS hex color. year is numeric; yearsAgo = currentYear - year.
@@ -3355,7 +3107,6 @@
     const b = Math.round(brightBlue.b + t * (mutedGray.b - brightBlue.b));
     return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
   }
-
   function extractClusterIdFromUrl(u) {
     if (!u) return null;
     try {
@@ -3369,14 +3120,12 @@
       return null;
     }
   }
-
   /** Get the Scholar cite popup URL for a result (for lazy venue lookup). */
   function getCiteUrlForResult(container, paper) {
     const clusterId = paper?.clusterId || (container && extractClusterIdFromUrl(findFlLinks(container).citedByUrl)) || container?.getAttribute("data-cid") || null;
     if (!clusterId) return null;
     return `${window.location.origin}/scholar?q=info:${encodeURIComponent(clusterId)}:scholar.google.com/&output=cite&scirp=0&hl=en`;
   }
-
   /** Parse venue name from Scholar citation popup HTML (#gs_citt italics). */
   function parseVenueFromCiteHtml(html) {
     if (!html || typeof html !== "string") return null;
@@ -3395,7 +3144,6 @@
       return null;
     }
   }
-
   /** Escape BibTeX special characters (braces, backslash). */
   function escapeBibTeX(s) {
     return String(s || "")
@@ -3403,7 +3151,6 @@
       .replace(/[{}]/g, (c) => (c === "{" ? "\\{" : "\\}"))
       .trim();
   }
-
   /** Build a minimal BibTeX entry from paper when Scholar export is unavailable. */
   function buildMinimalBibTeX(paper) {
     const author = (paper.authorsVenue || "").split(/\s*[-–—]\s*/)[0].trim() || "Unknown";
@@ -3421,7 +3168,6 @@
     lines.push("}");
     return lines.join("\n");
   }
-
   function extractAuthorsList(authorsVenue) {
     const raw = String(authorsVenue || "").split(/\s*[-–—]\s*/)[0] || "";
     const cleaned = raw.replace(/\u2026/g, "").trim();
@@ -3432,7 +3178,6 @@
     }
     return parts.length ? parts : [cleaned];
   }
-
   function formatAuthorNameApa(name) {
     const clean = String(name || "").replace(/\s+/g, " ").trim();
     if (!clean) return "";
@@ -3443,7 +3188,6 @@
     const initials = parts.map((p) => p[0]?.toUpperCase() + ".").join(" ").trim();
     return initials ? `${last}, ${initials}` : last;
   }
-
   function formatAuthorsApa(list) {
     if (!list || !list.length) return "Unknown";
     const formatted = list.map(formatAuthorNameApa).filter(Boolean);
@@ -3451,7 +3195,6 @@
     if (formatted.length === 2) return `${formatted[0]} & ${formatted[1]}`;
     return `${formatted.slice(0, -1).join(", ")}, & ${formatted[formatted.length - 1]}`;
   }
-
   function formatAuthorNameMla(name, isFirst) {
     const clean = String(name || "").replace(/\s+/g, " ").trim();
     if (!clean) return "";
@@ -3463,7 +3206,6 @@
     const first = parts.join(" ");
     return `${last}, ${first}`.trim();
   }
-
   function formatAuthorsMla(list) {
     if (!list || !list.length) return "Unknown";
     const formatted = list.map((n, i) => formatAuthorNameMla(n, i === 0)).filter(Boolean);
@@ -3471,7 +3213,6 @@
     if (formatted.length === 2) return `${formatted[0]} and ${formatted[1]}`;
     return `${formatted[0]}, et al.`;
   }
-
   function formatInlineCitationText(paper) {
     if (!paper) return "";
     const title = (paper.title || "Untitled").trim();
@@ -3479,7 +3220,6 @@
     const year = yearMatch ? yearMatch[0] : "n.d.";
     const venue = (paper.venue || extractVenueFromAuthorsVenue(paper.authorsVenue) || "").trim();
     const authors = extractAuthorsList(paper.authorsVenue);
-
     const apaAuthors = formatAuthorsApa(authors);
     const apaParts = [
       `${apaAuthors} (${year}).`,
@@ -3487,7 +3227,6 @@
       venue ? `${venue}.` : ""
     ].filter(Boolean);
     const apa = apaParts.join(" ").replace(/\.\./g, ".");
-
     const mlaAuthors = formatAuthorsMla(authors);
     const mlaParts = [
       mlaAuthors ? `${mlaAuthors}.` : "",
@@ -3496,11 +3235,9 @@
       year ? `${year}.` : ""
     ].filter(Boolean);
     const mla = mlaParts.join(" ").replace(/\.\./g, ".");
-
     const bib = buildMinimalBibTeX(paper);
     return `APA: ${apa}\nMLA: ${mla}\nBibTeX:\n${bib}`.trim();
   }
-
   function attachInlineCitationTooltip(el, paper) {
     if (!el || !paper) return;
     const text = formatInlineCitationText(paper);
@@ -3508,7 +3245,6 @@
     attachFloatingTooltip(el, text);
     if (el.__suFloatingTooltip) el.__suFloatingTooltip.classList.add("su-cite-tooltip");
   }
-
   /** Fetch a URL via the background script (works for scholar.googleusercontent.com .bib URLs). */
   async function fetchBibViaBackground(url) {
     try {
@@ -3519,7 +3255,6 @@
     }
     return null;
   }
-
   /** Extract one full BibTeX entry (handles nested braces) from text starting at @. */
   function extractOneBibTeXEntry(text) {
     const start = text.search(/@\s*\w+\s*\{/);
@@ -3537,7 +3272,6 @@
     }
     return null;
   }
-
   /**
    * Get BibTeX for a result: try Crossref by DOI (full metadata), then Scholar link/cite page,
    * else minimal entry. Uses background script for .bib URLs; Crossref works on author pages when DOI is present.
@@ -3551,13 +3285,11 @@
         return href;
       }
     };
-
     let doi = container ? extractDOIFromResult(container) : null;
     if (!doi && paper.url) {
       const m = String(paper.url).match(/10\.\d{4,}\/[^\s"'<>?#]+/i);
       if (m) doi = m[0].toLowerCase().trim();
     }
-
     // 0) Crossref API by DOI (full BibTeX with pages, full names) – works on author page when DOI is present
     if (doi) {
       try {
@@ -3573,14 +3305,12 @@
         // fall through
       }
     }
-
     // Resolve cluster ID: from paper first, then from "Cited by" link in container (author profile rows use same cites= param)
     let clusterId = paper.clusterId;
     if (!clusterId && container) {
       const citeLink = container.querySelector('a[href*="cites="]');
       if (citeLink) clusterId = extractClusterIdFromUrl(tryGetHref(citeLink));
     }
-
     // 1) Look for existing BibTeX link in the result row (when user has "Show links to import into BibTeX")
     if (container) {
       const bibLink = container.querySelector('a[href*="scholar.bib"], a[href*="bibtex"]');
@@ -3603,7 +3333,6 @@
         }
       }
     }
-
     // 2) Fetch cite page and parse for BibTeX link or raw text
     if (clusterId) {
       const citeUrl = `https://scholar.google.com/scholar?q=info:${clusterId}:scholar.google.com/&output=cite`;
@@ -3612,7 +3341,6 @@
         if (!r.ok) throw new Error("Cite page failed");
         const html = await r.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
-
         const bibAnchor = doc.querySelector('a[href*="scholar.bib"]') ||
           Array.from(doc.querySelectorAll("a")).find((a) => /import into bibtex|bibtex/i.test(a.textContent || ""));
         const bibHref = bibAnchor?.getAttribute?.("href");
@@ -3630,7 +3358,6 @@
             // fall through
           }
         }
-
         const textarea = doc.querySelector("textarea");
         if (textarea) {
           const raw = (textarea.value || textarea.textContent || "").trim();
@@ -3649,7 +3376,6 @@
           const entry = extractOneBibTeXEntry(raw);
           if (entry) return entry;
         }
-
         // 3) Try direct .bib URL from cluster ID (Scholar sometimes injects the link via JS)
         const directBibUrl = `https://scholar.googleusercontent.com/scholar.bib?q=info:${clusterId}:scholar.google.com/&output=citation`;
         const body = await fetchBibViaBackground(directBibUrl);
@@ -3658,10 +3384,8 @@
         // fall through to fallback
       }
     }
-
     return buildMinimalBibTeX(paper);
   }
-
   function computeKey({ clusterId, url, title, authors, year }) {
     if (clusterId) return `cid:${clusterId}`;
     if (url) return `url:${url}`;
@@ -3676,26 +3400,21 @@
       .join("|");
     return `fp:${norm.slice(0, 200)}`;
   }
-
   function extractPaperFromResult(gsR, opts = {}) {
     const allowCrossResult = opts.allowCrossResult !== false;
     const deepScan = opts.deepScan !== false;
     const titleEl = gsR.querySelector(".gs_rt");
     const titleLink = titleEl?.querySelector("a");
-
     const title = text(titleEl).replace(/^\[[^\]]+\]\s*/g, "").trim();
     const url = tryGetHref(titleLink);
-
     // Try to find authors/venue - might be in .gs_a or other locations for multi-version papers
     // For multi-version papers, the structure can be different - try multiple strategies
     let authorsVenueEl = gsR.querySelector(".gs_a");
     let authorsVenue = "";
-    
     // Strategy 1: Try .gs_a directly in the result
     if (authorsVenueEl) {
       authorsVenue = text(authorsVenueEl);
     }
-    
     // Strategy 2: For multi-version papers, look in .gs_ri nested structure
     if (!authorsVenue) {
       const gsRi = gsR.querySelector(".gs_ri");
@@ -3706,7 +3425,6 @@
         }
       }
     }
-    
     // Strategy 3: If venue is truncated or missing, try to find it from other *versions of the same paper* only.
     // (Do not borrow from a different paper, or stitched rows would all get the first row's badge.)
     const flLinks = findFlLinks(gsR);
@@ -3740,7 +3458,6 @@
         }
       }
     }
-    
     // Strategy 4: Look for text patterns that suggest author/venue info
     if (deepScan && (!authorsVenue || authorsVenue.includes("…"))) {
       // Try to find text that looks like "Author - Journal, Year" or "Journal, Year"
@@ -3758,7 +3475,6 @@
         }
       }
     }
-    
     // Strategy 5: Extract from the entire result text if nothing else works
     if (deepScan && (!authorsVenue || authorsVenue.includes("…"))) {
       const fullText = text(gsR);
@@ -3774,21 +3490,15 @@
         }
       }
     }
-    
     const snippet = text(gsR.querySelector(".gs_rs"));
-
     const pdfLink = gsR.querySelector(".gs_or_ggsm a, .gs_ggs a");
     const pdfUrl = tryGetHref(pdfLink);
-
     const { citedByUrl, versionsUrl, relatedUrl } = flLinks;
     const clusterId =
       extractClusterIdFromUrl(citedByUrl) || gsR.getAttribute("data-cid") || null;
-
     const year = parseYear(authorsVenue);
     const venue = extractVenueFromAuthorsVenue(authorsVenue);
-
     const key = computeKey({ clusterId, url, title, authors: authorsVenue, year });
-
     return {
       key,
       title,
@@ -3806,33 +3516,26 @@
       _authorsVenueEl: authorsVenueEl
     };
   }
-
   function extractPaperFromResultFast(gsR) {
     return extractPaperFromResult(gsR, { allowCrossResult: false, deepScan: false });
   }
-
   function extractPaperFromAuthorProfile(gscTr) {
     // Author profile pages use .gsc_a_tr table rows
     const titleEl = gscTr.querySelector(".gsc_a_at");
     const titleLink = titleEl;
-
     const title = text(titleEl).trim();
     const url = tryGetHref(titleLink);
-
     // Author profile pages structure:
     // - Title is in .gsc_a_at (within td.gsc_a_t)
     // - Authors are in div.gs_gray (first one, within td.gsc_a_t)
     // - Venue/journal info is in div.gs_gray (second one, within td.gsc_a_t)
     // - Cited by is in td.gsc_a_c
     // - Year is in td.gsc_a_y
-    
     const titleCell = gscTr.querySelector(".gsc_a_t");
     const grayDivs = titleCell ? Array.from(titleCell.querySelectorAll("div.gs_gray")) : [];
-    
     let authorsVenue = "";
     let authors = "";
     let venueText = "";
-    
     if (grayDivs.length >= 1) {
       authors = text(grayDivs[0]).trim();
     }
@@ -3844,12 +3547,10 @@
       // Fallback: if only one div, try to extract from it
       authorsVenue = text(grayDivs[0]);
     }
-
     // Year is in .gsc_a_y
     const yearEl = gscTr.querySelector(".gsc_a_y");
     const yearText = text(yearEl);
     const year = parseYear(yearText || venueText || authorsVenue);
-
     // Extract venue - prefer the venueText if we found it separately
     let venue = "";
     if (venueText) {
@@ -3862,15 +3563,12 @@
     } else {
       venue = extractVenueFromAuthorsVenue(authorsVenue);
     }
-
     // Cited by link is in .gsc_a_c
     const citedByCell = gscTr.querySelector(".gsc_a_c");
     const citedByLink = citedByCell?.querySelector("a.gsc_a_ac");
     const citedByUrl = tryGetHref(citedByLink);
     const clusterId = extractClusterIdFromUrl(citedByUrl);
-
     const key = computeKey({ clusterId, url, title, authors: authorsVenue, year });
-
     return {
       key,
       title,
@@ -3888,28 +3586,22 @@
       _venueDiv: grayDivs.length >= 2 ? grayDivs[1] : null // Store venue div for badge insertion
     };
   }
-
   function normalizeAuthorForHide(s) {
     return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
   }
-
   function shouldHide(paper, settings, qIndex, state) {
     const titleReStr = String(settings.hideTitleRegex || "").trim();
     const authorsReStr = String(settings.hideAuthorsRegex || "").trim();
-
     let titleRe = null;
     let authorsRe = null;
-
     try {
       if (titleReStr) titleRe = new RegExp(titleReStr, "i");
     } catch {}
     try {
       if (authorsReStr) authorsRe = new RegExp(authorsReStr, "i");
     } catch {}
-
     if (titleRe && titleRe.test(paper.title || "")) return true;
     if (authorsRe && authorsRe.test(paper.authorsVenue || "")) return true;
-
     if (state?.hiddenPapers?.has(paper.key)) return true;
     const venueNorm = normalizeVenueName(paper.venue);
     if (venueNorm && state?.hiddenVenues?.has(venueNorm)) return true;
@@ -3919,10 +3611,8 @@
       const an = normalizeAuthorForHide(a);
       if (an && state?.hiddenAuthors?.has(an)) return true;
     }
-
     return false;
   }
-
   function highlightKeywords(container, state, isAuthorProfile = false) {
     const settings = state?.settings || {};
     const kws = state?.keywordHighlights || [];
@@ -3932,7 +3622,6 @@
     const targetEls = isAuthorProfile
       ? [container.querySelector(".gsc_a_at")].filter(Boolean)
       : [container.querySelector(".gs_rt"), container.querySelector(".gs_rs")].filter(Boolean);
-
     for (const el of targetEls) {
       if (!kws.length && !applyCue) {
         if (el.__suOrigHTMLRaw !== undefined && el.dataset.suHlKey) {
@@ -3941,9 +3630,7 @@
         }
         continue;
       }
-
       if (el.dataset.suHlKey === hlKey) continue;
-
       if (el.__suOrigHTMLRaw === undefined) el.__suOrigHTMLRaw = el.innerHTML;
       const isSnippet = el.classList && el.classList.contains("gs_rs");
       const hasDynamicSnippet = isSnippet && !!el.querySelector("[class*='gs_fma']");
@@ -3956,7 +3643,6 @@
       const baseHtml = isSnippet && applyCue
         ? applySnippetCueEmphasis(el.textContent || "")
         : el.__suOrigHTMLRaw;
-
       let next = baseHtml;
       if (regexes.length) {
         for (const re of regexes) {
@@ -3967,7 +3653,6 @@
       el.dataset.suHlKey = hlKey;
     }
   }
-
   function createButton(label, { danger = false, act } = {}) {
     const b = document.createElement("button");
     b.type = "button";
@@ -3976,7 +3661,6 @@
     if (act) b.dataset.act = act;
     return b;
   }
-
   function bindIdeaLineageButton(btn, container) {
     if (!btn || btn.dataset.suLineageBound === "1") return;
     btn.dataset.suLineageBound = "1";
@@ -3998,21 +3682,16 @@
       }
     });
   }
-
   function createBadgeTooltip(badge) {
     if (!badge.metadata) return null;
-    
     const tooltip = document.createElement("div");
     tooltip.className = "su-badge-tooltip";
-    
     const meta = badge.metadata;
     const parts = [];
-    
     // Add system name
     if (meta.system) {
       parts.push(`<strong>${meta.system}</strong>`);
     }
-    
     // Add rank/quartile information
     if (meta.rank) {
       parts.push(`Rank: <strong>${meta.rank}</strong>`);
@@ -4020,7 +3699,6 @@
     if (meta.quartile) {
       parts.push(`Quartile: <strong>${meta.quartile.toUpperCase()}</strong>`);
     }
-    
     // Add JCR-specific metrics
     if (badge.kind === "jcr" && meta.jcrData) {
       const jcr = meta.jcrData;
@@ -4040,7 +3718,6 @@
         parts.push(`Category: ${jcr.category}`);
       }
     }
-    
     // Add specific metric values if available
     if (meta.jif !== undefined && meta.jif !== null) {
       parts.push(`JIF: ${parseFloat(meta.jif).toFixed(3)}`);
@@ -4061,11 +3738,9 @@
       const val = Number(meta.impact);
       if (Number.isFinite(val)) parts.push(`Impact Factor: <strong>${val.toFixed(1)}</strong>`);
     }
-    
     tooltip.innerHTML = parts.join("<br>");
     return tooltip;
   }
-
   function buildMarkdownFromRow(row, isAuthorProfile) {
     const p = isAuthorProfile ? getCachedAuthorPaper(row) : extractPaperFromResult(row);
     const snippetText = getSnippetText(row);
@@ -4083,7 +3758,6 @@
     ].filter(Boolean);
     return lines.join("\n");
   }
-
   function ensureSearchAbstractToggle(container) {
     if (!container) return;
     const existingToggles = container.querySelectorAll(".su-abstract-toggle");
@@ -4095,33 +3769,27 @@
       existingPanels.forEach((el) => el.remove());
       existingWraps.forEach((el) => el.remove());
     }
-
     const fma = container.querySelector(".gs_fma");
     const raw = fma ? (fma.textContent || "").trim() : "";
     const hasFmaText = raw.length >= 40;
     if (hasFmaText) fma.classList.add("su-abstract-hidden");
-
     const snippetEl = container.querySelector(".gs_rs");
     const snippetText = snippetEl ? (snippetEl.textContent || "").trim() : "";
     const hasSnippetText = snippetText.length >= 40;
     if (!hasFmaText && hasSnippetText) snippetEl.classList.add("su-snippet-hidden");
-
     const wrap = document.createElement("div");
     wrap.className = "su-abstract-wrap su-abstract-wrap-panel";
-
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "su-abstract-toggle su-badge";
     toggle.setAttribute("aria-expanded", "false");
     toggle.textContent = "Abstract ▾";
-
     const panel = document.createElement("div");
     panel.className = "su-abstract-panel";
     if (hasFmaText) panel.textContent = raw.replace(/^Abstract\s*/i, "");
     else if (hasSnippetText) panel.textContent = snippetText;
     else panel.textContent = "";
     if (hasSnippetText && !hasFmaText) panel.dataset.suSnippetFallback = "1";
-
     toggle.addEventListener("click", async () => {
       const isOpen = container.classList.toggle("su-abstract-open");
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -4168,7 +3836,6 @@
         toggle.textContent = "Abstract ▴";
       }
     });
-
     const grid = getOrCreateSearchActionGrid(container);
     if (grid) {
       placeInSearchActionGrid(grid, toggle, "abstract");
@@ -4176,7 +3843,6 @@
       wrap.appendChild(toggle);
     }
     wrap.appendChild(panel);
-
     const quality = container.querySelector(".su-quality");
     if (quality) {
       quality.appendChild(wrap);
@@ -4199,7 +3865,6 @@
     }
     container.appendChild(wrap);
   }
-
   function getOrCreateSearchActionGrid(container) {
     if (!container) return null;
     const fl = container.querySelector(".gs_fl");
@@ -4219,7 +3884,6 @@
     }
     return grid;
   }
-
   const SEARCH_ACTION_GRID_SLOTS = {
     hide: "1 / 1",
     addqueue: "1 / 2",
@@ -4232,7 +3896,6 @@
     velocity: "3 / 3",
     remove: "4 / 1"
   };
-
   function placeInSearchActionGrid(grid, el, slotName) {
     if (!grid || !el || !slotName) return;
     const area = SEARCH_ACTION_GRID_SLOTS[slotName];
@@ -4243,7 +3906,6 @@
       grid.appendChild(el);
     }
   }
-
   function resolveScholarRedirectUrl(url) {
     try {
       const u = new URL(url);
@@ -4259,7 +3921,6 @@
       return url;
     }
   }
-
   function parseAbstractFromHtml(html) {
     if (!html || typeof html !== "string") return null;
     try {
@@ -4290,7 +3951,6 @@
       return null;
     }
   }
-
   function ensureAuthorAbstractToggle(container, state) {
     if (!container) return;
     const titleLink = container.querySelector(".gsc_a_at");
@@ -4310,23 +3970,19 @@
     if (existingToggle) existingToggle.remove();
     if (existingPanel) existingPanel.remove();
     container.querySelectorAll(".su-abstract-wrap").forEach((el) => el.remove());
-
     const wrap = document.createElement("div");
     wrap.className = "su-abstract-wrap su-abstract-wrap-panel";
-
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "su-abstract-toggle su-badge";
     toggle.setAttribute("aria-expanded", "false");
     toggle.textContent = "Abstract ▾";
-
     const panel = document.createElement("div");
     panel.className = "su-abstract-panel";
     panel.textContent = "";
     if (container.dataset.suAbstractText) {
       panel.textContent = container.dataset.suAbstractText;
     }
-
     toggle.addEventListener("click", async () => {
       const isOpen = container.classList.toggle("su-abstract-open");
       toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -4355,7 +4011,6 @@
         toggle.textContent = "Abstract ▴";
       }
     });
-
     const grid = getOrCreateAuthorBadgeGrid(container);
     if (grid) {
       placeInAuthorBadgeGrid(grid, toggle, "abstract");
@@ -4363,7 +4018,6 @@
       wrap.appendChild(toggle);
     }
     wrap.appendChild(panel);
-
     const quality = container.querySelector(".su-quality");
     if (quality) {
       quality.appendChild(wrap);
@@ -4376,7 +4030,6 @@
       }
     }
   }
-
   function renderQuality(container, paper, state, isAuthorProfile = false) {
     const venueKey = paper?.venue || "";
     let retracted = false;
@@ -4403,12 +4056,10 @@
       if (paper._authorsVenueEl && container.contains(paper._authorsVenueEl)) {
         info = paper._authorsVenueEl;
       }
-      
       // Strategy 2: Try .gs_a first (standard location)
       if (!info) {
         info = getCachedElement(container, ".gs_a");
       }
-      
       // Strategy 3: Try finding it in nested structures (for multi-version papers)
       if (!info) {
         const gsRi = getCachedElement(container, ".gs_ri");
@@ -4416,7 +4067,6 @@
           info = getCachedElement(gsRi, ".gs_a");
         }
       }
-      
       // Strategy 4: Try finding by looking for elements with author/venue-like patterns
       if (!info && paper.authorsVenue) {
         // Find element that contains the venue text we extracted
@@ -4437,7 +4087,6 @@
           }) || candidates[0];
         }
       }
-      
       // Strategy 5: Try finding by text pattern matching
       if (!info) {
         const candidates = Array.from(container.querySelectorAll("div, span")).filter(el => {
@@ -4455,13 +4104,11 @@
           }) || candidates[0];
         }
       }
-      
       // Strategy 6: Last resort - try finding any .gs_a in the container (might be deeply nested)
       if (!info) {
         info = getCachedElement(container, ".gs_a");
       }
     }
-    
     // If still no info element found, try to insert after snippet or other elements
     if (!info) {
       // Try common fallback locations - prefer elements that come after the title
@@ -4479,16 +4126,13 @@
         }
       }
     }
-
     // Remove ALL existing quality badges to prevent duplicates
     const existingBadges = getCachedElements(container, ".su-quality");
     existingBadges.forEach(badge => badge.remove());
-
     if (state.settings.showRetractionWatch && state.retractionBloom) {
       const doi = extractDOIFromResult(container);
       if (doi && bloomHasDoi(doi, state.retractionBloom)) retracted = true;
     }
-    
     // Get quality badges (only if enabled), using a per-epoch cache to avoid
     // recomputing the same venue's badges for every result on the page.
     let rawBadges = [];
@@ -4506,7 +4150,6 @@
       : rawBadges;
     const citeUrl = !isAuthorProfile && paper ? getCiteUrlForResult(container, paper) : null;
     const showLookupButton = state.settings.showQualityBadges && !badges.length && citeUrl;
-    
     if (retracted) {
       const root = document.createElement("div");
       root.className = "su-quality";
@@ -4556,11 +4199,9 @@
       }
       return true;
     }
-
     if (!badges.length && !showLookupButton) {
       return false;
     }
-    
     // Create new badge container
     const root = document.createElement("div");
     root.className = "su-quality";
@@ -4572,7 +4213,6 @@
     if (vhbMapRank) root.setAttribute("data-su-vhb-map", String(vhbMapRank));
     const vhbBadge = rawBadges.find((b) => b.kind === "vhb");
     if (vhbBadge?.text) root.setAttribute("data-su-vhb-badge", String(vhbBadge.text));
-
     // Short native tooltip for each badge kind (shown on hover)
     const badgeKindTitles = {
       quartile: "SCImago Journal Rank quartile: Q1 = top 25%, Q2 = next 25%, etc.",
@@ -4617,7 +4257,6 @@
         span.className = `su-badge su-${b.kind}${extraClass}`;
         span.textContent = b.text;
         span.title = badgeKindTitles[b.kind] || (b.metadata?.system ? `${b.text}: ${b.metadata.system}` : b.text);
-
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {
           const tooltip = createBadgeTooltip(b);
@@ -4625,7 +4264,6 @@
             span.appendChild(tooltip);
             span.style.position = "relative";
             span.style.cursor = "help";
-            
             span.addEventListener("mouseenter", (e) => {
               tooltip.style.display = "block";
               const rect = span.getBoundingClientRect();
@@ -4659,17 +4297,14 @@
                 }
               });
             });
-            
             span.addEventListener("mouseleave", () => {
               tooltip.style.display = "none";
             });
           }
         }
-        
         root.appendChild(span);
       }
     }
-
     if (showLookupButton) {
       const lookupBtn = document.createElement("button");
       lookupBtn.type = "button";
@@ -4700,7 +4335,6 @@
       });
       root.appendChild(lookupBtn);
     }
-
     // For author profile pages, insert after the .gsc_a_c element
     // For search results, insert after .gs_a or fallback element
     if (isAuthorProfile) {
@@ -4753,7 +4387,6 @@
         }
       }
     }
-
     // Final safety: ensure only one quality badge row per result
     const allBadges = container.querySelectorAll(".su-quality");
     if (allBadges.length > 1) {
@@ -4761,13 +4394,11 @@
     }
     return false;
   }
-
   function applyAuthorSort() {
     const tbody = document.getElementById("gsc_a_b");
     if (!tbody) return;
     const rows = Array.from(tbody.querySelectorAll("tr.gsc_a_tr"));
     if (rows.length === 0) return;
-
     if (window.suAuthorSortByVelocity) {
       if (!window.suAuthorRowsOriginalOrder) {
         window.suAuthorRowsOriginalOrder = rows.slice();
@@ -4790,7 +4421,6 @@
       }
     }
   }
-
   function renderVelocity(container, paper, isAuthorProfile) {
     if (isAuthorProfile && window.suState?.authorFeatureToggles?.velocityBadge === false) {
       const existing = getCachedElement(container, ".su-velocity");
@@ -4810,13 +4440,11 @@
     const accel = velocityData
       ? getAccelerationArrow(velocityData.velocity, velocityData.yearsAgo, window.suState?.velocityBucketAvg)
       : null;
-
     const authorGrid = isAuthorProfile ? getOrCreateAuthorBadgeGrid(container) : null;
     const anchor = isAuthorProfile
       ? (authorGrid || getCachedElement(container, ".gsc_a_c"))
       : getCachedElement(container, ".gs_fl");
     if (!anchor) return;
-
     const existing = getCachedElements(container, ".su-velocity");
     existing.forEach((el) => {
       const prev = el.previousSibling;
@@ -4854,7 +4482,6 @@
     anchor.appendChild(document.createTextNode(" "));
     anchor.appendChild(vel);
   }
-
   function renderCitationSpikeBadge(container, paper, state, citations, isAuthorProfile) {
     if (!state.settings.showCitationSpike || !paper?.clusterId || citations == null || citations < 0) return;
     const thresholdPct = Math.max(0, Number(state.settings.citationSpikeThresholdPct) || 50);
@@ -4894,7 +4521,6 @@
     setCitationSnapshot(paper.clusterId, citations).catch(() => {});
     updateCitationSnapshotInMemory(state, paper.clusterId, citations);
   }
-
   function getOrCreateQualityContainer(container, isAuthorProfile) {
     let root = container.querySelector(".su-quality");
     if (root) return root;
@@ -4925,7 +4551,6 @@
     container.appendChild(root);
     return root;
   }
-
   function getOrCreateAuthorBadgeGrid(container) {
     if (!container) return null;
     let grid = container.querySelector(".su-author-badge-grid");
@@ -4943,14 +4568,12 @@
     moveAuthorAbstractToggleToGrid(container, grid);
     return grid;
   }
-
   const AUTHOR_BADGE_GRID_SLOTS = {
     abstract: { column: "1", row: "1" },
     lineage: { column: "2", row: "1" },
     emerging: { column: "1", row: "2" },
     velocity: { column: "2", row: "2" }
   };
-
   function placeInAuthorBadgeGrid(grid, el, slotName) {
     if (!grid || !el) return;
     const slot = AUTHOR_BADGE_GRID_SLOTS[slotName];
@@ -4960,7 +4583,6 @@
     el.style.gridRow = slot.row;
     if (el.parentElement !== grid) grid.appendChild(el);
   }
-
   function sizeAuthorBadgeGrid(grid, row) {
     if (!grid || !row) return;
     const citedCell = row.querySelector(".gsc_a_c");
@@ -4974,28 +4596,24 @@
     grid.style.maxWidth = `${total}px`;
     grid.style.marginLeft = `-${citedWidth}px`;
   }
-
   function moveAuthorAbstractToggleToGrid(container, grid) {
     if (!container || !grid) return;
     const toggle = container.querySelector(".su-abstract-toggle");
     if (!toggle) return;
     placeInAuthorBadgeGrid(grid, toggle, "abstract");
   }
-
   function formatEmergingConfidenceLabel(kind) {
     if (kind === "sampled") return "Sampled";
     if (kind === "openalex") return "OpenAlex";
     if (kind === "mixed") return "Mixed";
     return "Local";
   }
-
   function getEmergingConfidenceKind(localEntry, useOpenAlexExpected, openalexExpected) {
     if ((useOpenAlexExpected || openalexExpected) && localEntry) return "mixed";
     if (useOpenAlexExpected || openalexExpected) return "openalex";
     if (localEntry?.sampled) return "sampled";
     return "local";
   }
-
   function buildEmergingBadgeTitle(data) {
     const confidence = formatEmergingConfidenceLabel(data.confidenceKind);
     const citations = Number.isFinite(data.citations) ? data.citations : "—";
@@ -5008,7 +4626,6 @@
       `Source: ${data.sourceLabel || "—"}.`
     ].join(" ");
   }
-
   function buildEmergingTooltipHtml(data) {
     const citations = Number.isFinite(data.citations) ? data.citations : null;
     const expectedCites = Number.isFinite(data.expectedCites) ? Math.round(data.expectedCites) : null;
@@ -5046,21 +4663,18 @@
     }
     return parts.join("<br>");
   }
-
   function getEmergingMetrics(citations, velocity, yearsAgo, expectedCites, expectedPerYear) {
     const relativePct = expectedCites != null && expectedCites > 0 ? ((citations - expectedCites) / expectedCites) * 100 : null;
     const momentumPct = expectedPerYear != null && expectedPerYear > 0 ? ((velocity / expectedPerYear) - 1) * 100 : null;
     const displayPct = Number.isFinite(relativePct) ? relativePct : (Number.isFinite(momentumPct) ? momentumPct : null);
     return { relativePct, momentumPct, displayPct, yearsAgo };
   }
-
   function formatLocalCohortSourceLabel(entry) {
     if (!entry) return "";
     const sampledNote = entry.sampled ? ", sampled" : "";
     const cachedNote = entry.persisted ? ", cached" : "";
     return `Local cohort (n=${entry.n}${entry.insufficient ? ", low confidence" : ""}${sampledNote}${cachedNote})`;
   }
-
   function renderEmergingScore(container, paper, state, isAuthorProfile) {
     if (!state?.settings?.showEmergingScore) return;
     container.querySelectorAll(".su-emerging-badge").forEach((el) => el.remove());
@@ -5072,7 +4686,6 @@
     if (!year || year < 1500) return;
     const vel = computeVelocityValue(citations, year);
     if (!vel) return;
-
     const dataSource = state.settings.emergingScoreDataSource || "hybrid";
     const allowLocal = dataSource !== "openalex";
     const allowOpenAlexExpected = dataSource !== "local";
@@ -5095,7 +4708,6 @@
     const badgeText = displayPct != null
       ? `Emerging ${localInsufficient ? "~" : ""}${formatPct(displayPct)}`
       : "Emerging —";
-
     const root = isAuthorProfile
       ? getOrCreateAuthorBadgeGrid(container)
       : getOrCreateSearchActionGrid(container) || getOrCreateQualityContainer(container, isAuthorProfile);
@@ -5108,11 +4720,9 @@
     label.className = "su-emerging-label";
     label.textContent = badgeText;
     badge.appendChild(label);
-
     const tooltip = document.createElement("div");
     tooltip.className = "su-badge-tooltip";
     badge.appendChild(tooltip);
-
     const accel = computeCitationAcceleration(state.citationSnapshots?.[paper.clusterId]?.history);
     const accelText = accel
       ? `${accel.acceleration >= 0 ? "+" : ""}${accel.acceleration.toFixed(2)} cites/yr²`
@@ -5123,7 +4733,6 @@
         ? "OpenAlex (pending)"
         : "OpenAlex disabled";
     const initialConfidenceKind = getEmergingConfidenceKind(localEntry, false, null);
-
     tooltip.innerHTML = buildEmergingTooltipHtml({
       citations,
       expectedCites,
@@ -5147,7 +4756,6 @@
       sourceLabel
     });
     badge.dataset.suConfidence = initialConfidenceKind;
-
     const positionTooltip = () => {
       tooltip.style.display = "block";
       tooltip.style.position = "fixed";
@@ -5176,7 +4784,6 @@
       if (placeBelow) tooltip.classList.add("su-tooltip-below");
       else tooltip.classList.remove("su-tooltip-below");
     };
-
     const updateTooltipFromOpenAlex = async () => {
       if (badge.dataset.suEmergingLoaded === "1") return;
       badge.dataset.suEmergingLoaded = "1";
@@ -5259,7 +4866,6 @@
       });
       badge.dataset.suConfidence = nextConfidenceKind;
     };
-
     badge.addEventListener("mouseenter", () => {
       positionTooltip();
       updateTooltipFromOpenAlex().catch(() => {});
@@ -5267,7 +4873,6 @@
     badge.addEventListener("mouseleave", () => {
       tooltip.style.display = "none";
     });
-
     if (isAuthorProfile && root.classList.contains("su-author-badge-grid")) {
       placeInAuthorBadgeGrid(root, badge, "emerging");
     } else if (!isAuthorProfile && root.classList.contains("su-search-action-grid")) {
@@ -5275,7 +4880,6 @@
     } else {
       root.appendChild(badge);
     }
-
     if (paper?.clusterId && state.citationSnapshots) {
       const snap = state.citationSnapshots[paper.clusterId];
       const lastDate = snap?.date ? new Date(snap.date) : null;
@@ -5286,7 +4890,6 @@
       }
     }
   }
-
   /**
    * Authorship heatmap: First Author = bold underline (primary); Last Author = dotted border (PI).
    * Preserves existing author links; wraps first/last in styled spans so names stay clickable.
@@ -5309,7 +4912,6 @@
     }
     if (!authorEl) return;
     if (authorEl.querySelector(".su-author-first")) return; // already applied
-
     // Preserve clickable author links: wrap each link's content in a styled span instead of replacing DOM
     const authorLinks = authorEl.querySelectorAll('a[href*="citations"]');
     if (authorLinks.length > 0) {
@@ -5325,14 +4927,12 @@
       });
       return;
     }
-
     const fullText = text(authorEl);
     const dashSplit = fullText.split(/\s*[-–—]\s*/);
     const authorsPart = (dashSplit[0] || "").trim();
     const rest = dashSplit.slice(1).join(" - ").trim();
     const authors = authorsPart.split(/\s*,\s*|\s+and\s+/i).map((s) => s.trim()).filter(Boolean);
     if (authors.length === 0) return;
-
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < authors.length; i++) {
       const span = document.createElement("span");
@@ -5349,7 +4949,6 @@
     authorEl.textContent = "";
     authorEl.appendChild(fragment);
   }
-
   /**
    * Skimmability heat: green = PDF + abstract + citations; yellow = missing abstract or venue; red = no PDF, no citations, odd venue.
    */
@@ -5366,7 +4965,6 @@
     if (!hasPdf && !hasCitations && oddVenue) return "red";
     return "yellow";
   }
-
   function renderSkimmabilityStrip(container, paper, state, isAuthorProfile) {
     const existing = container.querySelector(".su-skimmability-strip");
     if (existing) existing.remove();
@@ -5388,18 +4986,14 @@
     }
     container.insertBefore(strip, container.firstChild);
   }
-
   function renderArtifactBadges(container, state) {
     const existing = container.querySelector(".su-artifact-badge");
     if (existing) existing.remove();
     if (!state.settings.showArtifactBadge) return;
-
     const titleEl = container.querySelector(".gs_rt") || container.querySelector(".gsc_a_at");
     if (!titleEl) return;
-
     const { code } = detectArtifacts(container);
     if (!code) return;
-
     const wrap = document.createElement("span");
     wrap.className = "su-artifact-badge";
     wrap.setAttribute("aria-label", "Has code/link");
@@ -5407,7 +5001,6 @@
     wrap.title = "Code/repository (e.g. GitHub) detected";
     titleEl.appendChild(wrap);
   }
-
   function renderExternalSignalBadges(container, state, isAuthorProfile, opts = {}) {
     const existing = container.querySelectorAll(".su-external");
     existing.forEach((el) => el.remove());
@@ -5419,7 +5012,6 @@
     const doiKey = doi || null;
     const arxivKey = arxivId ? makeExternalKey("arxiv", arxivId) : null;
     const epmcKey = doiKey || (pmid ? makeExternalKey("pmid", pmid) : (pmcid ? makeExternalKey("pmcid", pmcid) : null));
-
     const crossrefEntry = doiKey ? getExternalSignalEntry(doiKey, "crossref") : null;
     const ocEntry = doiKey ? getExternalSignalEntry(doiKey, "opencitations") : null;
     const dcEntry = doiKey ? getExternalSignalEntry(doiKey, "datacite") : null;
@@ -5441,7 +5033,6 @@
       const pmidForNcbi = pmid || epmcEntry?.data?.pmid;
       if (epmcKey && pmidForNcbi && !ncbiEntry) enqueueExternalSignalFetch(epmcKey, "ncbi", fetchNcbiSignal, { pmid: pmidForNcbi });
     }
-
     const crossref = crossrefEntry?.data || {};
     const openCites = ocEntry?.data || {};
     const datacite = dcEntry?.data || {};
@@ -5450,7 +5041,6 @@
     const epmc = epmcEntry?.data || {};
     const ncbi = ncbiEntry?.data || {};
     const s2 = s2Entry?.data || {};
-
     const badges = [];
     if (unpay.isOa) {
       const status = unpay.oaStatus ? ` (${String(unpay.oaStatus).toUpperCase()})` : "";
@@ -5488,9 +5078,7 @@
       const tip = [fields, infl].filter(Boolean).join(" · ") || "Semantic Scholar";
       badges.push({ text: "S2", cls: "su-external-s2", title: tip });
     }
-
     if (!badges.length) return;
-
     const root = document.createElement("div");
     root.className = "su-external";
     for (const b of badges) {
@@ -5507,7 +5095,6 @@
       }
       root.appendChild(span);
     }
-
     const qualityRow = container.querySelector(".su-quality");
     if (qualityRow) {
       qualityRow.insertAdjacentElement("afterend", root);
@@ -5526,7 +5113,6 @@
       container.appendChild(root);
     }
   }
-
   /**
    * Contribution Signal Score (CSS): composite 0–100 estimate of intellectual contribution.
    * Formula: CSS = 40%·V + 40%·W + 20%·N (reference entropy E omitted—no data).
@@ -5556,20 +5142,16 @@
       formula: `CSS = 0.4×V + 0.4×W + 0.2×N (E omitted)`
     };
   }
-
   function renderCSSBadge(container, paper, state, isAuthorProfile) {
     const existing = container.querySelector(".su-css-badge");
     if (existing) existing.remove();
     if (!state.settings.showCSS) return;
-
     const css = computeCSS(container, paper, state, isAuthorProfile);
     if (!css) return;
-
     const anchor = isAuthorProfile
       ? container.querySelector(".gsc_a_c")
       : container.querySelector(".gs_fl");
     if (!anchor) return;
-
     const badge = document.createElement("span");
     badge.className = "su-css-badge";
     badge.setAttribute("aria-label", `Contribution Signal Score: ${css.score}`);
@@ -5592,14 +5174,6 @@
     anchor.appendChild(document.createTextNode(" "));
     anchor.appendChild(badge);
   }
-
-  function renderReadingLoadBadge(container, paper, state, isAuthorProfile) {
-    const existing = container.querySelector(".su-reading-load-badge");
-    if (existing) existing.remove();
-    // Feature disabled (removed per request)
-    return;
-  }
-
   function getCurrentSearchQuery() {
     try {
       const u = new URL(window.location.href);
@@ -5609,7 +5183,6 @@
     const input = document.querySelector('#gs_hdr_ts_in, input[name="q"]');
     return (input?.value ?? "").trim();
   }
-
   async function ensureReadingQueueSidebar() {
     const queue = await getReadingQueue();
     let root = document.getElementById("su-reading-queue-sidebar");
@@ -5619,13 +5192,11 @@
       root.className = "su-reading-queue-sidebar";
       document.body.appendChild(root);
     }
-
     if (queue.length === 0) {
       root.classList.remove("su-reading-queue-visible");
       root.innerHTML = "";
       return;
     }
-
     root.classList.add("su-reading-queue-visible");
     const heading = document.createElement("div");
     heading.className = "su-reading-queue-heading";
@@ -5660,28 +5231,23 @@
       await clearReadingQueue();
       await ensureReadingQueueSidebar();
     });
-
     const actions = document.createElement("div");
     actions.className = "su-reading-queue-actions";
-
     const copyAllBibBtn = document.createElement("button");
     copyAllBibBtn.type = "button";
     copyAllBibBtn.className = "su-reading-queue-action";
     copyAllBibBtn.textContent = "Copy All BibTeX";
     copyAllBibBtn.title = "Copy BibTeX for all queued papers into the clipboard";
-
     const exportCsvBtn = document.createElement("button");
     exportCsvBtn.type = "button";
     exportCsvBtn.className = "su-reading-queue-action";
     exportCsvBtn.textContent = "Export CSV";
     exportCsvBtn.title = "Export the queue as a CSV spreadsheet";
-
     const openAllBtn = document.createElement("button");
     openAllBtn.type = "button";
     openAllBtn.className = "su-reading-queue-action";
     openAllBtn.textContent = "Open All";
     openAllBtn.title = "Open all queued papers in new tabs";
-
     copyAllBibBtn.addEventListener("click", async () => {
       if (queue.length === 0) return;
       const prev = copyAllBibBtn.textContent;
@@ -5704,7 +5270,6 @@
         copyAllBibBtn.disabled = false;
       }, 1500);
     });
-
     exportCsvBtn.addEventListener("click", async () => {
       if (queue.length === 0) return;
       const rows = [
@@ -5725,7 +5290,6 @@
       a.remove();
       URL.revokeObjectURL(url);
     });
-
     openAllBtn.addEventListener("click", () => {
       if (queue.length === 0) return;
       if (queue.length > 10) {
@@ -5736,30 +5300,25 @@
         if (item.link) window.open(item.link, "_blank", "noopener");
       }
     });
-
     actions.appendChild(copyAllBibBtn);
     actions.appendChild(exportCsvBtn);
     actions.appendChild(openAllBtn);
-
     root.innerHTML = "";
     root.appendChild(heading);
     root.appendChild(list);
     root.appendChild(clearBtn);
     root.appendChild(actions);
   }
-
   function renderRetractionBadge(container, state) {
     const existing = container.querySelector(".su-retraction-badge");
     if (existing) existing.remove();
     const existingLink = container.querySelector(".su-retraction-badge-link");
     if (existingLink) existingLink.remove();
     if (!state.settings.showRetractionWatch) return;
-
     const doi = extractDOIFromResult(container);
     const gsRi = container.querySelector(".gs_ri");
     const insertTarget = gsRi || container.querySelector(".gs_rs")?.parentElement || container;
     if (!insertTarget) return;
-
     const tooltip = document.createElement("span");
     tooltip.className = "su-retraction-tooltip";
     tooltip.innerHTML = [
@@ -5770,7 +5329,6 @@
       " · ",
       '<a href="https://retractionwatch.com/contact/" target="_blank" rel="noopener">Report false positive</a>'
     ].join("<br>");
-
     let badge;
     if (doi) {
       badge = document.createElement("a");
@@ -5792,19 +5350,15 @@
       badge.textContent = "Update/retraction in Crossref";
     }
     badge.appendChild(tooltip);
-
     badge.addEventListener("mouseenter", () => { tooltip.classList.add("su-retraction-tooltip-visible"); });
     badge.addEventListener("mouseleave", () => { tooltip.classList.remove("su-retraction-tooltip-visible"); });
-
     const nodeToInsert = badge;
-
     if (gsRi) {
       gsRi.insertAdjacentElement("afterbegin", badge);
     } else {
       insertTarget.insertAdjacentElement("afterbegin", badge);
     }
   }
-
   // --- Quality index session cache helpers ---
   // Serializes Maps/Sets to plain arrays so they can be stored in chrome.storage.session.
   function serializeQualityIndex(qIndex) {
@@ -5825,7 +5379,6 @@
       h5:        [...qIndex.h5.entries()]
     };
   }
-
   function deserializeQualityIndex(s) {
     return {
       ft50:      new Set(s.ft50      || []),
@@ -5845,7 +5398,6 @@
     };
   }
   // --- End quality index session cache helpers ---
-
   async function refreshState(state) {
     // Batch all storage reads into a single call
     const [storageData, persistentLocalCohort] = await Promise.all([
@@ -5863,7 +5415,6 @@
       }),
       getLocalCohortCache()
     ]);
-    
     const saved = storageData.savedPapers || {};
     const settings = { ...DEFAULT_SETTINGS, ...(storageData.settings || {}) };
     const quartiles = {
@@ -5881,7 +5432,6 @@
       storageData.trajectoryVenueExpected && typeof storageData.trajectoryVenueExpected === "object"
         ? storageData.trajectoryVenueExpected
         : {};
-
     state.saved = saved;
     state.settings = settings;
     state.quartilesIndex = quartiles.index;
@@ -5892,7 +5442,6 @@
     state.localCohortPersistent = persistentLocalCohort && typeof persistentLocalCohort === "object"
       ? persistentLocalCohort
       : {};
-
     // Hash uses only in-memory data so cache can be checked before any file I/O.
     // VHB/Impact index sizes are omitted; settings changes (rank filters) act as
     // a sufficient proxy for detecting when those files' effective contents change.
@@ -5910,18 +5459,15 @@
       jcrIndexKeys: Object.keys(jcr.index || {}).length,
       qualityIndexVersion: QUALITY_INDEX_VERSION
     });
-    
     // Only recompile the quality index when settings changed.
     // L1: in-memory cache (survives re-renders within a page).
     // L2: chrome.storage.session (survives page navigations within a browser session).
     const SESSION_QINDEX_KEY = "suQualityIndexCache";
     let qIndexResolved = false;
-
     if (state.qIndexCache && state.qIndexCache.settingsHash === settingsHash) {
       state.qIndex = state.qIndexCache.qIndex;
       qIndexResolved = true;
     }
-
     if (!qIndexResolved && chrome.storage?.session?.get) {
       try {
         const sessData = await chrome.storage.session.get({ [SESSION_QINDEX_KEY]: null });
@@ -5933,7 +5479,6 @@
         }
       } catch (_) {}
     }
-
     if (!qIndexResolved && settings.showQualityBadges) {
       // On cache miss, load all data sources in parallel.
       // (All four loaders cache at window level, so repeated calls within a session are instant.)
@@ -5989,13 +5534,11 @@
     state.renderEpoch = (state.renderEpoch || 0) + 1;
     state.venueQualityCache = new Map();
   }
-
   function applyTheme(theme) {
     const resolved = theme === "dark" ? "dark" : theme === "light" ? "light" : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     if (document.body) document.body.setAttribute("data-su-theme", resolved);
     if (document.documentElement) document.documentElement.setAttribute("data-su-theme", resolved);
   }
-
   function applyBadgePalette(palette) {
     const value = ["soft", "bold", "colorblind", "mono", "material", "fluent", "nord", "solarized", "monoAccent", "highContrast", "inverted", "warm"].includes(palette)
       ? palette
@@ -6003,7 +5546,6 @@
     if (document.body) document.body.setAttribute("data-su-badge-palette", value);
     if (document.documentElement) document.documentElement.setAttribute("data-su-badge-palette", value);
   }
-
   async function ensureResultUI(container, state, isAuthorProfile = false, opts = {}) {
     const inViewport = opts.inViewport !== false;
     const renderEpoch = String(state.renderEpoch || 0);
@@ -6011,14 +5553,11 @@
     let fastPaper = isAuthorProfile
       ? getCachedAuthorPaper(container)
       : getCachedPaperFast(container);
-
     const fastSig = `${fastPaper.key}::${(fastPaper.snippet || "").slice(0, 120)}`;
-
     // Skip heavy work if we've already rendered this row for the current settings epoch.
     if (!isDirty && container.dataset.suFastKey === fastSig && container.dataset.suRenderEpoch === renderEpoch) {
       return;
     }
-
     let paper = fastPaper;
     if (!isAuthorProfile) {
       const needsDeepScan = !paper.authorsVenue || paper.authorsVenue.includes("…") || paper.authorsVenue.length < 20;
@@ -6026,7 +5565,6 @@
         paper = getCachedPaperFull(container);
       }
     }
-    
     // For multi-version papers, use the best venue from cache if available
     if (!isAuthorProfile && state.venueCache && paper.clusterId) {
       const cachedVenue = state.venueCache.get(paper.clusterId);
@@ -6035,33 +5573,27 @@
         paper = { ...paper, venue: cachedVenue };
       }
     }
-
     // Hide/unhide based on current settings.
     if (shouldHide(paper, state.settings, state.qIndex, state)) container.classList.add("su-hidden");
     else container.classList.remove("su-hidden");
-
     // Skip heavy re-render if this row's content hasn't changed (reduces latency on DOM churn).
     if (!isDirty && container.dataset.suFastKey === fastSig && container.dataset.suRenderEpoch === renderEpoch) return;
     container.dataset.suProcessed = paper.key;
     container.dataset.suFastKey = fastSig;
     container.dataset.suRenderEpoch = renderEpoch;
     delete container.dataset.suDirty;
-
     container.classList.remove("su-new-since-visit");
     const newBadge = getCachedElement(container, ".su-new-badge");
     if (newBadge) newBadge.remove();
-
     highlightKeywords(container, state, isAuthorProfile);
     if (!isAuthorProfile) {
       const fma = container.querySelector(".gs_fma");
       if (fma) container.classList.add("su-has-fma");
       else container.classList.remove("su-has-fma");
     }
-
     const isSaved = !!state.saved[paper.key];
     if (isSaved && state.settings.highlightSaved) container.classList.add("su-saved");
     else container.classList.remove("su-saved");
-
     if (!isAuthorProfile) {
       getOrCreateSearchActionGrid(container);
     }
@@ -6089,7 +5621,6 @@
       }
     }
     renderAuthorshipHeatmap(container, state, isAuthorProfile);
-
     // Citation spike and age-bias heatmap are cosmetic and non-blocking. When the
     // result is off-screen, defer them to idle time so they don't compete with the
     // critical render path (badges, buttons, keyword highlights).
@@ -6110,7 +5641,6 @@
         container.style.removeProperty("--su-age-color");
       }
     };
-
     if (inViewport) {
       applyCitationAndAge();
     } else if (typeof requestIdleCallback === "function") {
@@ -6118,7 +5648,6 @@
     } else {
       setTimeout(applyCitationAndAge, 500);
     }
-
     if (!isRetracted && !isAuthorProfile && state.settings.showRetractionWatch && !state.retractionBloom) {
       const doi = extractDOIFromResult(container);
       if (doi && inViewport && container.dataset.suRetractChecked !== "1") {
@@ -6135,7 +5664,6 @@
         }
       }
     }
-
     // Inline citation tooltip (APA/MLA/BibTeX) on hover.
     const titleLink = isAuthorProfile
       ? getCachedElement(container, ".gsc_a_at")
@@ -6153,15 +5681,12 @@
     }
     if (!citeTarget) citeTarget = titleLink;
     if (citeTarget) attachInlineCitationTooltip(citeTarget, paper);
-
     // Buttons (create once, update state each pass).
     if (!fl) return;
-
     let bar = getCachedElement(container, ".su-btnbar");
     if (!bar) {
       bar = document.createElement("span");
       bar.className = "su-btnbar";
-
       const removeBtn = createButton("Remove", { danger: true, act: "remove" });
       removeBtn.title = "Remove this paper from your saved list. Only visible if you have saved papers.";
       if (!isAuthorProfile) {
@@ -6198,11 +5723,9 @@
       if (!isAuthorProfile) {
         getOrCreateSearchActionGrid(container);
       }
-
       bar.addEventListener("click", async (e) => {
         const btn = e.target?.closest?.("button[data-act]");
         if (!btn) return;
-
         const act = btn.dataset.act;
         if (act === "remove") {
           const p = isAuthorProfile
@@ -6338,7 +5861,6 @@
         }
       });
     }
-
     const authorGrid = isAuthorProfile ? getOrCreateAuthorBadgeGrid(container) : null;
     let lineageBtn = container.querySelector(".su-lineage-badge, .su-btn[data-act='idealineage']");
     if (!lineageBtn) {
@@ -6357,18 +5879,15 @@
       lineageBtn.classList.remove("su-lineage-badge");
       bar.appendChild(lineageBtn);
     }
-
     const removeBtn = bar.querySelector('button[data-act="remove"]');
     if (removeBtn) removeBtn.style.display = isSaved ? "" : "none";
   }
-
   function scanResults() {
     // Check if we're on an author profile page
     const isAuthorProfile =
       !!document.querySelector("#gsc_prf_in, #gsc_prf") ||
       /^\/citations\b/.test(window.location.pathname) ||
       (document.querySelector(".gsc_a_tr") !== null && document.querySelector("#gsc_prf_in") !== null);
-    
     if (isAuthorProfile) {
       return {
         results: Array.from(document.querySelectorAll(".gsc_a_tr")),
@@ -6384,7 +5903,6 @@
       };
     }
   }
-
   function extractAuthorName() {
     // Try to find the author name from the profile page
     const nameEl = document.querySelector("#gsc_prf_in");
@@ -6398,50 +5916,41 @@
     }
     return null;
   }
-
   function isScholarHostname(hostname) {
     const h = String(hostname || "").toLowerCase();
     return h === "scholar.google.com" || h.startsWith("scholar.google.");
   }
-
   function generateAuthorNameVariations(fullName) {
     // Generate variations like "BM Ampel", "B Ampel", "Benjamin M. Ampel", etc.
     const baseName = stripNameCredentials(fullName);
     const baseNoSuffix = stripTrailingSuffixTokens(baseName);
     const variations = new Set([fullName, baseName]);
     if (baseNoSuffix && baseNoSuffix !== baseName) variations.add(baseNoSuffix);
-    
     // Split name into parts
     const parts = baseName.split(/\s+/).filter(p => p.length > 0);
     if (parts.length >= 2) {
       const lastName = parts[parts.length - 1];
       const firstNames = parts.slice(0, -1);
-      
       // Full name
       variations.add(fullName);
-      
       // Last name only
       variations.add(lastName);
-      
       // First initial + Last name
       if (firstNames.length > 0) {
         const firstInitial = firstNames[0][0];
         variations.add(`${firstInitial} ${lastName}`);
         variations.add(`${firstInitial}${lastName}`);
       }
-      
       // All initials + Last name
       if (firstNames.length > 0) {
         const initials = firstNames.map(n => n[0]).join("");
         variations.add(`${initials} ${lastName}`);
         variations.add(`${initials}${lastName}`);
       }
-      
       // First name + Last name (if middle names present)
       if (firstNames.length >= 1) {
         variations.add(`${firstNames[0]} ${lastName}`);
       }
-      
       // Common abbreviations
       if (firstNames.some(n => n.toLowerCase() === "benjamin")) {
         variations.add(`B ${lastName}`);
@@ -6450,15 +5959,12 @@
         variations.add(`BM${lastName}`);
       }
     }
-    
     return Array.from(variations).filter(v => v.length > 0);
   }
-
   function highlightAuthorName(container, authorVariations) {
     const authorDivs = container.querySelectorAll("div.gs_gray");
     for (const authorDiv of authorDivs) {
       if (authorDiv.dataset.suAuthorHighlighted === "true") continue;
-
       const authorSpans = authorDiv.querySelectorAll(".su-author");
       if (authorSpans.length > 0) {
         // Authorship heatmap already wrapped names in .su-author spans; add highlight to the profile owner
@@ -6471,7 +5977,6 @@
         authorDiv.dataset.suAuthorHighlighted = "true";
         continue;
       }
-
       const authorText = authorDiv.textContent || "";
       const authorNames = parseAuthors(authorText);
       if (authorNames.some((name) => isAuthorVariation(name, authorVariations))) {
@@ -6499,25 +6004,20 @@
       }
     }
   }
-
   async function loadAllPublications() {
     // Find the "Show more" button
     const showMoreBtn = document.getElementById("gsc_bpf_more");
     if (!showMoreBtn || showMoreBtn.disabled) {
       return false; // No more to load or button doesn't exist
     }
-    
     // Click the button
     showMoreBtn.click();
-    
     // Wait for new publications to load
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     // Check if button is still enabled (more to load)
     const stillMore = document.getElementById("gsc_bpf_more") && !document.getElementById("gsc_bpf_more").disabled;
     return stillMore;
   }
-
   async function loadAllPublicationsRecursively(opts = {}) {
     const cfg = typeof opts === "number" ? { maxAttempts: opts } : (opts || {});
     const maxAttempts = Number.isFinite(cfg.maxAttempts) ? cfg.maxAttempts : 50;
@@ -6539,7 +6039,6 @@
     }
     return { status: "partial", reason: "maxAttempts", count: scanResults().results.length };
   }
-
   function extractCitationCount(gscTr) {
     // Citation count is in .gsc_a_c > a.gsc_a_ac
     const citedByCell = gscTr.querySelector(".gsc_a_c");
@@ -6552,11 +6051,9 @@
     }
     return 0;
   }
-
   function parseAuthors(authorsText) {
     // Parse author list like "B Ampel, S Samtani, H Chen" or "BM Ampel, S Samtani, H Zhu, H Chen, JF Nunamaker Jr"
     if (!authorsText) return [];
-    
     // Split by comma and clean up
     return authorsText
       .split(",")
@@ -6564,7 +6061,6 @@
       .filter(a => a.length > 0 && !isCredentialOnly(a))
       .filter(a => !isEllipsisAuthor(a));
   }
-
   function isEllipsisAuthor(name) {
     const cleaned = String(name || "").replace(/\s+/g, "").replace(/\.+/g, ".").trim();
     if (!cleaned) return true;
@@ -6572,7 +6068,6 @@
     if (cleaned === "…" || cleaned === "…." || cleaned === "…") return true;
     return false;
   }
-
   const SU_AUTHOR_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
   const SU_AUTHOR_PREFIXES = new Set([
     "dr", "prof", "professor", "mr", "mrs", "ms", "miss", "sir", "dame"
@@ -6585,19 +6080,16 @@
     "rn", "lcsw", "lmft", "lpc", "np", "pa",
     "facp", "facc", "facs", "frcpc", "frcs", "frs"
   ]);
-
   function stripDiacritics(value) {
     return String(value || "")
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "");
   }
-
   function normalizeNameToken(token) {
     return stripDiacritics(token)
       .replace(/[^a-z0-9]/gi, "")
       .toLowerCase();
   }
-
   function isCredentialToken(token) {
     const t = normalizeNameToken(token);
     if (!t) return false;
@@ -6606,12 +6098,10 @@
     if (t === "peng" && SU_AUTHOR_CREDENTIALS.has("p.eng")) return true;
     return false;
   }
-
   function isCredentialOnly(name) {
     const tokens = String(name || "").split(/\s+/).map(normalizeNameToken).filter(Boolean);
     return tokens.length > 0 && tokens.every((t) => SU_AUTHOR_CREDENTIALS.has(t));
   }
-
   function stripNameCredentials(name) {
     if (!name) return "";
     const base = stripLeadingTitles(String(name).replace(/\*+$/, "").trim());
@@ -6635,7 +6125,6 @@
     const joined = kept.length ? `${primary}, ${kept.join(", ")}` : primary;
     return stripTrailingCredentialsNoComma(joined);
   }
-
   function stripTrailingSuffixTokens(name) {
     const tokens = String(name || "").trim().split(/\s+/).filter(Boolean);
     while (tokens.length > 1) {
@@ -6648,7 +6137,6 @@
     }
     return tokens.join(" ");
   }
-
   function stripLeadingTitles(name) {
     const tokens = String(name || "").trim().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) return "";
@@ -6676,7 +6164,6 @@
     }
     return tokens.join(" ");
   }
-
   function runAuthorNameTests() {
     const cases = [
       {
@@ -6735,7 +6222,6 @@
         last: "ozel"
       }
     ];
-
     const failures = [];
     cases.forEach((t) => {
       const stripped = stripNameCredentials(t.input);
@@ -6747,14 +6233,12 @@
         failures.push(`extractLastName("${t.input}") => "${last}" (expected "${t.last}")`);
       }
     });
-
     if (failures.length) {
       console.warn("[ScholarUtilityBelt] Author name tests failed:", failures);
     } else {
       console.log("[ScholarUtilityBelt] Author name tests passed.");
     }
   }
-
   // Optional dev harness: run in console with `window.__SU_RUN_NAME_TESTS = true; location.reload();`
   if (window.__SU_RUN_NAME_TESTS === true) {
     try {
@@ -6763,7 +6247,6 @@
       console.warn("[ScholarUtilityBelt] Author name tests crashed:", err);
     }
   }
-
   function normalizeAuthorName(name) {
     // Normalize author name for comparison (handle variations like "B Ampel" vs "BM Ampel" vs "Benjamin M. Ampel")
     // Also handle cases like "CH Yang" vs "Chi-Heng Yang"
@@ -6772,7 +6255,6 @@
     const noSuffix = stripTrailingSuffixTokens(cleaned);
     return stripDiacritics(noSuffix.replace(/\*+$/, "")).toLowerCase().trim();
   }
-
   function paperHasCoauthor(paper, normalizedCoauthor) {
     if (!normalizedCoauthor) return true;
     const authorsRaw = String(paper?.authorsVenue || "");
@@ -6780,7 +6262,6 @@
     const authors = parseAuthors(authorsPart);
     return authors.some((a) => normalizeAuthorName(a) === normalizedCoauthor);
   }
-
   function extractLastName(name) {
     // Extract last name (last word) from a name
     // Strip "*" markers that might be attached to the last name
@@ -6788,35 +6269,28 @@
     const parts = cleaned.split(/\s+/).filter(Boolean);
     return parts.length > 0 ? stripDiacritics(parts[parts.length - 1]).toLowerCase() : "";
   }
-
   function extractInitials(name) {
     // Extract initials from a name (e.g., "CH Yang" -> "ch", "Chi-Heng Yang" -> "ch")
     const cleaned = stripTrailingSuffixTokens(stripNameCredentials(name)).trim();
     const parts = cleaned.split(/\s+/);
     if (parts.length === 0) return "";
-    
     // Get all parts except the last (which is usually the last name)
     const nameParts = parts.slice(0, -1);
     return nameParts.map(p => p[0]?.toLowerCase() || "").join("");
   }
-
   function isAuthorVariation(name, authorVariations) {
     if (!authorVariations || authorVariations.length === 0) return false;
-    
     const normalized = normalizeAuthorName(name);
     const nameLastName = extractLastName(name);
     const nameInitials = extractInitials(name);
-    
     // Check exact match first
     if (authorVariations.some(v => normalizeAuthorName(v) === normalized)) {
       return true;
     }
-    
     // Check if last names match and initials match
     for (const variation of authorVariations) {
       const varLastName = extractLastName(variation);
       const varInitials = extractInitials(variation);
-      
       // If last names match
       if (nameLastName && varLastName && nameLastName === varLastName) {
         // Check if initials match (e.g., "CH Yang" matches "Chi-Heng Yang" if both have "CH" initials)
@@ -6844,10 +6318,8 @@
         }
       }
     }
-    
     return false;
   }
-
   function computeAuthorStats(results, state, authorPositionFilter) {
     const positionFilter = authorPositionFilter || "all";
     if (positionFilter !== "all") {
@@ -6887,28 +6359,23 @@
       __eigenfactorSum: 0, // Eigenfactor-style: sum of citations * venue weight (1 + log(1+h5))
       __mssiImpact: 0 // MSSI: authorship-weighted citation sum (w = position weight / N_authors)
     };
-    
     const currentYear = new Date().getFullYear();
     const papers = [];
     const authorVariations = state.authorVariations || [];
     const wantsCoauthorInsights = state?.authorFeatureToggles?.coauthors !== false;
     const topicTokenCounts = new Map();
-    
     for (const result of results) {
       // Extract paper info
       const paper = getCachedAuthorPaper(result);
       if (!paper) continue;
       addTitleTokens(topicTokenCounts, paper.title);
-      
       stats.totalPublications++;
-      
       // Extract citation count
       const citations = getCachedAuthorCitationCount(result);
       stats.totalCitations += citations;
       if (citations > stats.mostCited) {
         stats.mostCited = citations;
       }
-      
       // Parse authors
       const authors = parseAuthors(paper.authorsVenue.split(" - ")[0] || paper.authorsVenue);
       const coAuthorSet = new Set();
@@ -6925,7 +6392,6 @@
         coAuthorSet.add(normalized);
         coAuthors.push({ name: a, normalized, index: i });
       }
-      
       // Check if author is first author (position 0) OR has "*" marker (corresponding author)
       const isFirstAuthor = authors.length > 0 && (
         isAuthorVariation(authors[0], authorVariations) ||
@@ -6939,7 +6405,6 @@
       if (isLastAuthor) {
         stats.lastAuthor++;
       }
-      
       // Track co-authors
       const isSolo = coAuthors.length === 0;
       if (isSolo) {
@@ -6997,30 +6462,25 @@
           }
         });
       }
-
       if (wantsCoauthorInsights && coAuthors.length > 0) {
         if (!stats.__coauthorPaperSets) stats.__coauthorPaperSets = [];
         stats.__coauthorPaperSets.push(coAuthors.map((c) => c.normalized));
       }
-      
       // Track years
       if (paper.year) {
         stats.years.push(paper.year);
-        
         // Recent activity
         const yearsAgo = currentYear - paper.year;
         if (yearsAgo <= 1) stats.recentActivity.last1Year++;
         if (yearsAgo <= 3) stats.recentActivity.last3Years++;
         if (yearsAgo <= 5) stats.recentActivity.last5Years++;
       }
-
       // Track role by year for authorship drift
       if (paper.year) {
         const role = isSolo ? "solo" : (isFirstAuthor ? "first" : (isLastAuthor ? "last" : "middle"));
         if (!stats.__roleByYear) stats.__roleByYear = [];
         stats.__roleByYear.push({ year: paper.year, role });
       }
-      
       // Track venues
       if (paper.venue) {
         const venueDisplay = normalizeProceedingsVenue(paper.venue);
@@ -7037,10 +6497,8 @@
         } else {
           stats.venues.set(venueKey, { count: 1, display: venueDisplay });
         }
-        
         // Get badges for this venue
         const badges = qualityBadgesForVenue(paper.venue, state.qIndex);
-        
         // Count quality badges
         for (const badge of badges) {
           if (badge.kind === "quartile") {
@@ -7070,7 +6528,6 @@
           }
         }
       }
-      
       papers.push({
         title: paper.title || "",
         year: paper.year != null ? Number(paper.year) : null,
@@ -7110,7 +6567,6 @@
       const posWeight = isSolo ? 1 : (isFirstAuthor ? 0.4 : (isLastAuthor ? 0.35 : 0.25));
       stats.__mssiImpact += (citations || 0) * (posWeight / N);
     }
-
     if (topicTokenCounts.size) {
       const tokens = Array.from(topicTokenCounts.entries())
         .map(([token, meta]) => ({ token, display: meta.display || token, count: meta.count }))
@@ -7119,12 +6575,10 @@
     } else {
       stats.topTitleTokens = [];
     }
-
     // Middle-author count: not solo, not first, not last
     if (stats.totalPublications > 0) {
       stats.middleAuthor = Math.max(0, stats.totalPublications - stats.soloAuthored - stats.firstAuthor - stats.lastAuthor);
     }
-
     // Authorship drift: compare early vs late role distribution
     if (stats.__roleByYear && stats.__roleByYear.length >= 6) {
       try {
@@ -7185,7 +6639,6 @@
       }
       delete stats.__roleByYear;
     }
-    
     // Calculate averages
     if (stats.totalPublications > 0) {
       stats.avgCitations = Math.round((stats.totalCitations / stats.totalPublications) * 10) / 10;
@@ -7199,16 +6652,13 @@
       stats.flpIndex = null;
       stats.firstAuthorPct = null;
     }
-    
     // Get top venues (top 3)
     const topVenues = Array.from(stats.venues.entries())
       .sort((a, b) => (b[1]?.count || 0) - (a[1]?.count || 0))
       .slice(0, 3)
       .map(([venue, meta]) => ({ venue: meta?.display || venue, count: meta?.count || 0, key: venue }));
-    
     stats.topVenues = topVenues;
     stats.venueDiversity = stats.venues.size;
-    
     // Build full co-author stats list (sorted later in render)
     const coAuthorStats = Array.from(stats.coAuthors.values()).map(coAuthor => {
       let bestName = coAuthor.name;
@@ -7256,10 +6706,8 @@
         lastYear: coAuthor.lastYear ?? null
       };
     });
-
     stats.coAuthorStats = coAuthorStats;
     stats.uniqueCoAuthors = stats.coAuthors.size;
-    
     // Get year range
     if (stats.years.length > 0) {
       stats.years.sort((a, b) => a - b);
@@ -7279,7 +6727,6 @@
     } else {
       stats.yearSeries = [];
     }
-
     // h-index: largest h such that h papers have >= h citations each
     const sortedCitations = (stats.__citations || []).slice().sort((a, b) => b - a);
     let hIndex = 0;
@@ -7288,7 +6735,6 @@
       else break;
     }
     stats.hIndex = hIndex;
-
     // Citation distribution bands
     const citationBands = [
       { label: "0–9", min: 0, max: 9, count: 0 },
@@ -7303,7 +6749,6 @@
       if (band) band.count += 1;
     }
     stats.citationBands = citationBands;
-
     // Top cited year (sum of citations by publication year)
     const ycLocal = stats.__yearCitations || [];
     if (ycLocal.length > 0) {
@@ -7325,7 +6770,6 @@
     } else {
       stats.topCitedYear = null;
     }
-
     // Venue diversity (Shannon entropy, normalized 0–1)
     const venueCounts = Array.from(stats.venues.values()).map((v) => Number(v.count) || 0);
     const venueTotal = venueCounts.reduce((a, b) => a + b, 0);
@@ -7340,7 +6784,6 @@
     } else {
       stats.venueEntropy = venueCounts.length === 1 ? 0 : null;
     }
-
     // g-index: largest g such that top g papers have ≥ g² citations (cumulative sum)
     let gIndex = 0;
     let cumSum = 0;
@@ -7349,19 +6792,16 @@
       if (cumSum >= g * g) gIndex = g;
     }
     stats.gIndex = gIndex > 0 ? gIndex : null;
-
     const yearsSinceFirst = stats.firstYear != null ? Math.max(1, currentYear - stats.firstYear) : 1;
     stats.yearsSinceFirst = yearsSinceFirst;
     stats.careerAge = stats.firstYear != null ? currentYear - stats.firstYear : null;
     stats.mIndex = yearsSinceFirst >= 1 ? Math.round((hIndex / yearsSinceFirst) * 100) / 100 : null;
-
     // Average team size: mean authors per paper
     const authorCounts = stats.__authorCounts || [];
     stats.avgTeamSize = authorCounts.length > 0
       ? Math.round((authorCounts.reduce((a, b) => a + b, 0) / authorCounts.length) * 10) / 10
       : null;
     delete stats.__authorCounts;
-
     // Gini coefficient over citation counts (0 = equal, 1 = maximally unequal)
     const n = sortedCitations.length;
     const totalCite = sortedCitations.reduce((a, b) => a + b, 0);
@@ -7374,7 +6814,6 @@
     } else {
       stats.citationGini = null;
     }
-
     // e-index: excess citations beyond h-core. e = √(Σ_{i=1..h} (c_i - h))
     if (hIndex >= 1 && sortedCitations.length >= hIndex) {
       let excessSum = 0;
@@ -7383,7 +6822,6 @@
     } else {
       stats.eIndex = null;
     }
-
     // h-core share: citations in top h papers / total citations
     if (hIndex >= 1 && totalCite > 0 && sortedCitations.length >= hIndex) {
       let hCoreCite = 0;
@@ -7392,7 +6830,6 @@
     } else {
       stats.hCoreShare = null;
     }
-
     // Median citations per paper
     if (n >= 1) {
       const sorted = sortedCitations.slice().sort((a, b) => a - b);
@@ -7403,7 +6840,6 @@
     }
     // Mean citations per paper (avgCitations is set later; set here for dropdown)
     stats.meanCitations = n >= 1 && totalCite >= 0 ? Math.round((totalCite / n) * 10) / 10 : null;
-
     // Consistency index: coefficient of variation σ/μ
     if (n >= 2 && totalCite > 0) {
       const mean = totalCite / n;
@@ -7415,7 +6851,6 @@
     } else {
       stats.consistencyIndex = null;
     }
-
     // Citation half-life: median publication year weighted by citations (year at 50% of cumulative citations)
     const yc = stats.__yearCitations || [];
     if (yc.length > 0) {
@@ -7435,7 +6870,6 @@
       stats.citationHalfLifeYear = null;
     }
     delete stats.__yearCitations;
-
     // Time to impact: median estimated years to reach 10 citations (linear assumption)
     if (yc.length > 0) {
       const estYears = [];
@@ -7459,9 +6893,7 @@
     } else {
       stats.timeToTenMedian = null;
     }
-
     delete stats.__citations;
-
     // L-index: L = ln(Σ c_i/(a_i*y_i)) + 1 (independent of number of publications; typically 0–9.9)
     const lSum = stats.__lSum;
     delete stats.__lSum;
@@ -7471,12 +6903,10 @@
     } else {
       stats.lIndex = null;
     }
-
     // Eigenfactor-style score (West et al.): additive venue-weighted citation sum
     const efSum = stats.__eigenfactorSum;
     delete stats.__eigenfactorSum;
     stats.eigenfactorStyle = efSum != null && efSum > 0 ? Math.round(efSum * 100) / 100 : null;
-
     // MSSI: composite = α·log(1+I/50) + β·log(1+V/5) + γ·log(1+L/10), scaled by 10. I = authorship-weighted citation sum, V = career velocity, L = longevity (years).
     const mssiI = stats.__mssiImpact || 0;
     delete stats.__mssiImpact;
@@ -7484,12 +6914,243 @@
     const mssiL = yearsSinceFirst || 1;
     const mssiRaw = Math.log(1 + mssiI / 50) + Math.log(1 + mssiV / 5) + Math.log(1 + mssiL / 10);
     stats.mssi = mssiRaw > 0 ? Math.round(mssiRaw * 10 * 100) / 100 : null;
-
     stats.papers = papers;
-    
+    stats.pIndex = null; // computed asynchronously via computePIndex()
+    stats.owpiIndex = null; // authorship-weighted p-index (Abbas 2011)
+    stats.fwci = null; // field-weighted citation impact
+    stats.pIndexStatus = "idle";
+
+    // h5-index: h-index over publications from the last 5 years only
+    {
+      const cutoff = currentYear - 5;
+      const recentCites = papers
+        .filter((p) => Number(p.year) >= cutoff)
+        .map((p) => Number(p.citations) || 0)
+        .sort((a, b) => b - a);
+      let h5 = 0;
+      for (let i = 0; i < recentCites.length; i++) {
+        if (recentCites[i] >= i + 1) h5 = i + 1; else break;
+      }
+      stats.h5Index = h5 > 0 ? h5 : null;
+    }
+
+    // Publication acceleration: pubs/yr in recent third vs earlier two-thirds of career
+    {
+      const yrs = papers.map((p) => Number(p.year)).filter((y) => Number.isFinite(y)).sort((a, b) => a - b);
+      if (yrs.length >= 6 && yrs[yrs.length - 1] > yrs[0]) {
+        const span = yrs[yrs.length - 1] - yrs[0] + 1;
+        const splitYear = yrs[yrs.length - 1] - Math.max(2, Math.floor(span / 3)) + 1;
+        const recentN = yrs.filter((y) => y >= splitYear).length;
+        const earlierN = yrs.length - recentN;
+        const recentSpan = yrs[yrs.length - 1] - splitYear + 1;
+        const earlierSpan = Math.max(1, splitYear - yrs[0]);
+        stats.pubAccel = {
+          recent: Math.round((recentN / recentSpan) * 10) / 10,
+          earlier: Math.round((earlierN / earlierSpan) * 10) / 10
+        };
+      } else {
+        stats.pubAccel = null;
+      }
+    }
+
+    // Topic drift: dominant title tokens in early vs recent career halves
+    {
+      const dated = papers.filter((p) => Number.isFinite(Number(p.year)) && p.title);
+      if (dated.length >= 8) {
+        dated.sort((a, b) => Number(a.year) - Number(b.year));
+        const half = Math.floor(dated.length / 2);
+        const tokenize = (list) => {
+          const m = new Map();
+          for (const p of list) addTitleTokens(m, p.title);
+          return Array.from(m.entries())
+            .map(([t, meta]) => ({ token: t, display: meta.display || t, count: meta.count }))
+            .sort((a, b) => b.count - a.count);
+        };
+        const early = tokenize(dated.slice(0, half));
+        const recent = tokenize(dated.slice(half));
+        const earlySet = new Set(early.slice(0, 8).map((t) => t.token));
+        const recentSet = new Set(recent.slice(0, 8).map((t) => t.token));
+        stats.topicDrift = {
+          early: early.filter((t) => !recentSet.has(t.token)).slice(0, 3).map((t) => t.display),
+          recent: recent.filter((t) => !earlySet.has(t.token)).slice(0, 3).map((t) => t.display)
+        };
+      } else {
+        stats.topicDrift = null;
+      }
+    }
     return stats;
   }
-
+  /**
+   * p-index (Pham, Wu & Wang, 2024, Journal of Consumer Research).
+   * Average citation percentile rank of a researcher's articles relative
+   * to other articles published the same year by the same journal.
+   * PRj = (articles in journal+year with fewer citations) / (total articles).
+   * PI = mean(PRj) across all articles.
+   *
+   * Computed asynchronously via OpenAlex API. Updates stats in-place and
+   * re-renders the author panel when done.
+   */
+  /**
+   * Abbas (2011) authorship weight: first author gets most credit.
+   * w = 2(k - j + 1) / (k(k+1)), where k = total authors, j = position (1-indexed).
+   */
+  function abbasWeight(position, totalAuthors) {
+    const k = totalAuthors;
+    const j = position;
+    if (k <= 0 || k === 1) return 1;
+    return (2 * (k - j + 1)) / (k * (k + 1));
+  }
+  /**
+   * Compute p-index (PI), authorship-weighted p-index (OWPI), and FWCI.
+   * Uses OpenAlex group_by=cited_by_count for efficient venue-year distributions.
+   *
+   * p-index: Pham, Wu & Wang (2024, JCR) — avg citation percentile rank.
+   * OWPI: Abbas (2011) weighting by author position.
+   * FWCI: Field-Weighted Citation Impact — avg percentile / 50 (1.0 = world avg).
+   */
+  async function computePIndex(stats) {
+    if (!stats || stats.pIndexStatus === "loading" || stats.pIndexStatus === "done") return;
+    const papers = Array.isArray(stats.papers) ? stats.papers : [];
+    if (papers.length < 5) {
+      stats.pIndex = null;
+      stats.owpiIndex = null;
+      stats.fwci = null;
+      stats.pIndexStatus = "done";
+      return;
+    }
+    stats.pIndexStatus = "loading";
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // Cache venue-year citation distributions (group_by optimization)
+    const distCache = new Map();
+    async function getVenueYearDist(venueId, year) {
+      const key = `${venueId}|${year}`;
+      if (distCache.has(key)) return distCache.get(key);
+      try {
+        const shortId = String(venueId).replace("https://openalex.org/", "");
+        const url = formatOpenAlexUrl(
+          `https://api.openalex.org/works?filter=primary_location.source.id:${shortId},publication_year:${year}&group_by=cited_by_count&per_page=200`
+        );
+        const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+        if (!data?.group_by?.length) { distCache.set(key, null); return null; }
+        const freq = new Map();
+        let maxCit = 0;
+        for (const g of data.group_by) {
+          const cit = parseInt(g.key, 10);
+          if (!isNaN(cit)) { freq.set(cit, g.count); if (cit > maxCit) maxCit = cit; }
+        }
+        const dist = { totalPapers: data.meta?.count || 0, freq, maxCit };
+        distCache.set(key, dist);
+        await sleep(120);
+        return dist;
+      } catch {
+        distCache.set(key, null);
+        return null;
+      }
+    }
+    function percentileFromDist(citations, dist) {
+      if (!dist || dist.totalPapers < 5) return null;
+      let below = 0, equal = 0;
+      for (const [cit, count] of dist.freq) {
+        if (cit < citations) below += count;
+        else if (cit === citations) equal += count;
+      }
+      // Handle papers beyond the group_by range
+      const covered = Array.from(dist.freq.values()).reduce((a, b) => a + b, 0);
+      const uncovered = dist.totalPapers - covered;
+      if (uncovered > 0 && citations > dist.maxCit) {
+        below += covered;
+        equal = Math.max(1, uncovered);
+      }
+      return ((below + 0.5 * equal) / dist.totalPapers) * 100;
+    }
+    const ranked = [];
+    const fwciPercentiles = [];
+    const oaCounts = {};
+    let oaTotal = 0;
+    let apiCalls = 0;
+    const authorName = (window.suState?.authorVariations?.[0] || "").trim();
+    for (const paper of papers) {
+      if (apiCalls >= 40) break;
+      const year = Number(paper.year) || null;
+      if (!year || !paper.title) continue;
+      let oaWork = null;
+      try {
+        oaWork = await fetchOpenAlexWorkForPaper(paper, authorName);
+        apiCalls++;
+      } catch { continue; }
+      if (!oaWork) continue;
+      // FWCI: use OpenAlex's built-in cited_by_percentile_year if available
+      const oaPercentile = oaWork.citedByPercentileYear;
+      if (oaPercentile != null && Number.isFinite(oaPercentile)) {
+        fwciPercentiles.push(oaPercentile);
+      }
+      // Open Access rollup
+      if (oaWork.oaStatus) {
+        oaCounts[oaWork.oaStatus] = (oaCounts[oaWork.oaStatus] || 0) + 1;
+        oaTotal++;
+      }
+      // p-index: need venue ID for journal-year distribution
+      if (!oaWork.hostVenueId) continue;
+      const dist = await getVenueYearDist(oaWork.hostVenueId, year);
+      const oaCites = Number(oaWork.citedByCount) || Number(paper.citations) || 0;
+      const prj = percentileFromDist(oaCites, dist);
+      if (prj == null) continue;
+      // Determine author position for OWPI
+      const authors = oaWork.authors || [];
+      let position = 1;
+      const totalAuthors = Math.max(1, authors.length || Number(paper.authorsCount) || 1);
+      if (authors.length > 1) {
+        const variations = window.suState?.authorVariations || [];
+        for (let i = 0; i < authors.length; i++) {
+          const aName = normalizeAuthorName(authors[i]?.name || "");
+          if (variations.some((v) => normalizeAuthorName(v) === aName)) {
+            position = i + 1;
+            break;
+          }
+        }
+      }
+      ranked.push({ prj, weight: abbasWeight(position, totalAuthors) });
+    }
+    // PI = mean(PRj)
+    if (ranked.length >= 3) {
+      const sum = ranked.reduce((a, r) => a + r.prj, 0);
+      stats.pIndex = Math.round((sum / ranked.length) * 10) / 10;
+      stats.pIndexArticles = ranked.length;
+      // OWPI = weighted mean(PRj * w) / sum(w)
+      const wSum = ranked.reduce((a, r) => a + r.prj * r.weight, 0);
+      const wTotal = ranked.reduce((a, r) => a + r.weight, 0);
+      stats.owpiIndex = wTotal > 0 ? Math.round((wSum / wTotal) * 10) / 10 : null;
+    } else {
+      stats.pIndex = null;
+      stats.owpiIndex = null;
+    }
+    // FWCI = mean(percentile) / 50. 1.0 = world average.
+    if (fwciPercentiles.length >= 3) {
+      const fSum = fwciPercentiles.reduce((a, b) => a + b, 0);
+      stats.fwci = Math.round((fSum / fwciPercentiles.length / 50) * 100) / 100;
+      stats.fwciArticles = fwciPercentiles.length;
+      // Median FWCI: robust to a single blockbuster paper
+      const sortedP = fwciPercentiles.slice().sort((a, b) => a - b);
+      const mid = Math.floor(sortedP.length / 2);
+      const medP = sortedP.length % 2 ? sortedP[mid] : (sortedP[mid - 1] + sortedP[mid]) / 2;
+      stats.fwciMedian = Math.round((medP / 50) * 100) / 100;
+      // Top-10% share: fraction of papers in the top decile of their field-year
+      const top10 = fwciPercentiles.filter((p) => p >= 90).length;
+      stats.top10Share = Math.round((top10 / fwciPercentiles.length) * 100);
+    } else {
+      stats.fwci = null;
+      stats.fwciMedian = null;
+      stats.top10Share = null;
+    }
+    // Open Access breakdown (gold / green / hybrid / bronze / closed)
+    if (oaTotal >= 3) {
+      const open = (oaCounts.gold || 0) + (oaCounts.green || 0) + (oaCounts.hybrid || 0) + (oaCounts.bronze || 0) + (oaCounts.diamond || 0);
+      stats.oaBreakdown = { counts: oaCounts, total: oaTotal, openPct: Math.round((open / oaTotal) * 100) };
+    } else {
+      stats.oaBreakdown = null;
+    }
+    stats.pIndexStatus = "done";
+  }
   function computePoPMetrics(stats) {
     const papers = Array.isArray(stats?.papers) ? stats.papers : [];
     if (!papers.length) return null;
@@ -7500,7 +7161,6 @@
     const totalCites = citations.reduce((a, b) => a + b, 0);
     const totalAuthors = authorCounts.reduce((a, b) => a + b, 0);
     const yearsSinceFirst = Math.max(1, stats?.yearsSinceFirst || (stats?.lastYear && stats?.firstYear ? (stats.lastYear - stats.firstYear + 1) : 1));
-
     const roundTo = (v, d = 2) => (v == null || !Number.isFinite(v)) ? null : Math.round(v * (10 ** d)) / (10 ** d);
     const mean = (list) => list.length ? list.reduce((a, b) => a + b, 0) / list.length : null;
     const median = (list) => {
@@ -7533,7 +7193,6 @@
       }
       return h;
     };
-
     const citesPerYear = totalCites / yearsSinceFirst;
     const citesPerPaperMean = mean(citations);
     const citesPerPaperMedian = median(citations);
@@ -7543,15 +7202,12 @@
     const authorsPerPaperMean = mean(authorCounts);
     const authorsPerPaperMedian = median(authorCounts);
     const authorsPerPaperMode = mode(authorCounts);
-
     const hIndex = stats?.hIndex ?? hIndexFromScores(citations);
     const gIndex = stats?.gIndex ?? null;
     const eIndex = stats?.eIndex ?? null;
-
     const normCitations = citations.map((c, i) => c / (authorCounts[i] || 1));
     const hINorm = hIndexFromScores(normCitations);
     const hIAnnual = yearsSinceFirst ? hINorm / yearsSinceFirst : null;
-
     let avgAuthorsHCore = null;
     if (hIndex > 0) {
       const sorted = papers.slice().sort((a, b) => (b.citations || 0) - (a.citations || 0)).slice(0, hIndex);
@@ -7561,7 +7217,6 @@
       }
     }
     const hAIndex = avgAuthorsHCore ? (hIndex / avgAuthorsHCore) : null;
-
     let awcr = 0;
     for (const p of papers) {
       const year = Number(p.year) || null;
@@ -7570,7 +7225,6 @@
     }
     const awIndex = awcr > 0 ? Math.sqrt(awcr) : null;
     const awcrpA = totalAuthors ? (awcr / totalAuthors) : null;
-
     const acc = {
       c1: citations.filter((c) => c >= 1).length,
       c2: citations.filter((c) => c >= 2).length,
@@ -7578,7 +7232,6 @@
       c10: citations.filter((c) => c >= 10).length,
       c20: citations.filter((c) => c >= 20).length
     };
-
     const contemporaryScores = papers.map((p) => {
       const year = Number(p.year) || null;
       const age = year ? Math.max(1, currentYear - year + 1) : 1;
@@ -7586,7 +7239,6 @@
       return (4 / age) * cite;
     });
     const hContemporary = hIndexFromScores(contemporaryScores);
-
     return {
       totalPubs,
       totalCites,
@@ -7613,7 +7265,6 @@
       hContemporary
     };
   }
-
   function getPoPMetricsCached(stats) {
     if (!stats) return null;
     const authorId = new URL(window.location.href).searchParams.get("user") || "author";
@@ -7630,7 +7281,6 @@
     stats.popMetrics = data;
     return data;
   }
-
   /** Returns Δh over last 12 months from cached snapshots; saves current h for future. */
   async function getAuthorHIndexGrowth(profileUrl, currentH) {
     if (!profileUrl || typeof currentH !== "number") return null;
@@ -7648,18 +7298,6 @@
     if (!oldSnapshot || oldSnapshot.hIndex == null) return null;
     return currentH - oldSnapshot.hIndex;
   }
-
-  function countPublicationBadges(results, state) {
-    const stats = computeAuthorStats(results, state, window.suAuthorPositionFilter);
-    // Return the quality counts for backward compatibility
-    return {
-      q1: stats.qualityCounts.q1,
-      a: stats.qualityCounts.a,
-      utd24: stats.qualityCounts.utd24,
-      ft50: stats.qualityCounts.ft50
-    };
-  }
-
   function getAuthorStatTooltipHtml(statId, stats) {
     const years = stats?.yearsSinceFirst != null ? stats.yearsSinceFirst : "n";
     const tips = {
@@ -7738,6 +7376,36 @@
         description: "First‑author leadership publication index.",
         good: "Higher = more first‑author leadership given output volume."
       },
+      pIndex: {
+        formula: "PI = mean(PR<sub>j</sub>), where PR<sub>j</sub> = articles in same journal+year with fewer citations / total articles in journal+year.",
+        description: "Average citation percentile rank relative to same-journal, same-year cohort. Measures propensity for thought leadership (Pham, Wu & Wang, 2024, JCR).",
+        good: "PI &gt; 60% = strong thought leader; PI &gt; 70% = exceptional. Orthogonal to h-index and productivity."
+      },
+      owpiIndex: {
+        formula: "OWPI = Σ(PR<sub>j</sub> × <i>w<sub>j</sub></i>) / Σ<i>w<sub>j</sub></i>, where <i>w</i> = 2(<i>k</i>−<i>j</i>+1) / <i>k</i>(<i>k</i>+1). Abbas (2011).",
+        description: "Authorship-weighted p-index. First authors get more credit than last/middle authors.",
+        good: "OWPI &gt; PI = stronger when leading. OWPI &lt; PI = impact driven by collaborations."
+      },
+      fwci: {
+        formula: "FWCI = mean(percentile<sub>year</sub>) / 50. Via OpenAlex cited_by_percentile_year.",
+        description: "Field-Weighted Citation Impact. 1.0 = world average for same field and year. Comparable across disciplines.",
+        good: "FWCI &gt; 1.0 = above world average; &gt; 2.0 = strong; &gt; 3.0 = exceptional. Median shown alongside is robust to one blockbuster paper."
+      },
+      h5Index: {
+        formula: "<i>h</i>5 = h-index computed over publications from the last 5 years only.",
+        description: "Recent-impact variant of the h-index. Ignores older work.",
+        good: "Compare with h-index: h5 ≈ h suggests impact is current, not legacy."
+      },
+      top10Share: {
+        formula: "Share of papers with citation percentile ≥ 90 in their field-year (OpenAlex).",
+        description: "Fraction of output in the top decile of comparable papers.",
+        good: "World baseline is 10%. &gt; 20% = strong; &gt; 30% = exceptional."
+      },
+      oaShare: {
+        formula: "Open-access publications / OpenAlex-indexed publications.",
+        description: "Share of output that is openly accessible (gold, green, hybrid, or bronze).",
+        good: "Higher = broader accessibility. Many funders now require OA."
+      },
       hIndexGrowth: {
         formula: "Δ<i>h</i> = current <i>h</i> − <i>h</i> from ~12 months ago.",
         description: "Change in <i>h</i>-index over the last year.",
@@ -7748,26 +7416,143 @@
     if (!t) return "";
     return `${t.formula}<br>${t.description}<br>${t.good}`;
   }
+  /**
+   * Auto-generated research narrative (ScholarFolio-style, but sourced from
+   * our richer stats — including journal-quality counts). Pure template
+   * prose from already-computed stats; no API calls, no LLM.
+   */
+  function generateResearchNarrative(stats) {
+    if (!stats || !stats.totalPublications) return "";
+    const currentYear = new Date().getFullYear();
+    const name = (window.suState?.authorVariations?.[0] || getScholarAuthorName() || "This researcher").trim();
+    const lastName = name.split(/\s+/).pop() || name;
+    const paras = [];
+    const s = (n) => (n === 1 ? "" : "s");
+
+    // 1. Career overview + topics
+    {
+      const bits = [];
+      if (stats.firstYear) {
+        bits.push(`${escapeHtml(lastName)}'s publication record spans ${Math.max(1, currentYear - stats.firstYear)} years, from ${stats.firstYear} to ${stats.lastYear || currentYear}.`);
+      }
+      const topics = (stats.topTitleTokens || []).slice(0, 4).map((t) => t.display || t.token).filter(Boolean);
+      if (topics.length >= 2) {
+        bits.push(`Based on publication titles, the work centers on ${escapeHtml(topics.slice(0, -1).join(", "))} and ${escapeHtml(topics[topics.length - 1])}.`);
+      }
+      bits.push(`In total, ${escapeHtml(lastName)} has published ${stats.totalPublications} work${s(stats.totalPublications)} accumulating ${stats.totalCitations.toLocaleString()} citations (h-index ${stats.hIndex || 0}${stats.h5Index ? `, h5 ${stats.h5Index}` : ""}).`);
+      if (stats.mostCitedPaper?.title) {
+        bits.push(`The most cited work, “${escapeHtml(stats.mostCitedPaper.title)},” has received ${Number(stats.mostCitedPaper.citations).toLocaleString()} citations.`);
+      }
+      paras.push(bits.join(" "));
+    }
+
+    // 2. Trajectory: acceleration + topic drift
+    {
+      const bits = [];
+      if (stats.pubAccel && stats.pubAccel.recent !== stats.pubAccel.earlier) {
+        const dir = stats.pubAccel.recent > stats.pubAccel.earlier ? "accelerating" : "slowing";
+        bits.push(`Publication output has been ${dir}, averaging ${stats.pubAccel.recent} publications per year recently versus ${stats.pubAccel.earlier} earlier in the career.`);
+      }
+      if (stats.topicDrift && (stats.topicDrift.early.length || stats.topicDrift.recent.length)) {
+        const e = stats.topicDrift.early.join(", ");
+        const r = stats.topicDrift.recent.join(", ");
+        if (e && r) bits.push(`Earlier work emphasized ${escapeHtml(e)}, while recent publications have shifted toward ${escapeHtml(r)}.`);
+      }
+      if (stats.citationHalfLifeYear != null) {
+        bits.push(`The citation half-life is ${stats.citationHalfLifeYear} year${s(stats.citationHalfLifeYear)}.`);
+      }
+      const ageNorm = stats.careerAge >= 1 ? Math.round((stats.totalCitations / stats.careerAge) * 10) / 10 : null;
+      if (ageNorm != null && ageNorm > 0) {
+        bits.push(`Age-normalized, that is roughly ${ageNorm} citations per career year.`);
+      }
+      if (bits.length) paras.push(bits.join(" "));
+    }
+
+    // 3. Venue quality — our differentiator over ScholarFolio
+    {
+      const bits = [];
+      const qc = stats.qualityCounts || {};
+      const qualParts = [];
+      if (qc.ft50) qualParts.push(`${qc.ft50} in FT50 journals`);
+      if (qc.utd24) qualParts.push(`${qc.utd24} in UTD24 journals`);
+      if (qc.a) qualParts.push(`${qc.a} in ABDC A/A* outlets`);
+      if (qc.q1) qualParts.push(`${qc.q1} in Q1 journals`);
+      if (qualParts.length) {
+        bits.push(`The record includes ${qualParts.slice(0, 3).join(", ")}.`);
+      }
+      const venueEntries = Array.from((stats.venues || new Map()).values())
+        .sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 2)
+        .filter((v) => (v.count || 0) >= 2);
+      if (venueEntries.length) {
+        bits.push(`Frequent outlets include ${venueEntries.map((v) => `${escapeHtml(v.display)} (${v.count})`).join(" and ")}.`);
+      }
+      if (bits.length) paras.push(bits.join(" "));
+    }
+
+    // 4. Collaboration
+    {
+      const bits = [];
+      if (stats.totalPublications >= 5 && stats.coAuthored != null) {
+        const coPct = Math.round((stats.coAuthored / stats.totalPublications) * 100);
+        bits.push(`${coPct}% of publications are co-authored${stats.avgTeamSize ? `, averaging ${stats.avgTeamSize} authors per paper` : ""}${stats.uniqueCoAuthors ? ` across ${stats.uniqueCoAuthors} unique co-author${s(stats.uniqueCoAuthors)}` : ""}.`);
+      }
+      const topCo = Array.from((stats.coAuthors || new Map()).values())
+        .sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 3)
+        .filter((c) => (c.count || 0) >= 2);
+      if (topCo.length) {
+        bits.push(`The most frequent collaborator${s(topCo.length)}: ${topCo.map((c) => `${escapeHtml(c.name)} (${c.count})`).join(", ")}.`);
+      }
+      if (stats.citationGini != null) {
+        const desc = stats.citationGini >= 0.7 ? "highly concentrated" : stats.citationGini >= 0.5 ? "moderately concentrated" : "evenly spread";
+        bits.push(`Citations are ${desc} across the portfolio (Gini ${stats.citationGini}).`);
+      }
+      if (bits.length) paras.push(bits.join(" "));
+    }
+
+    // 5. Field-normalized impact + OA (available after async computePIndex)
+    {
+      const bits = [];
+      if (stats.fwci != null) {
+        bits.push(`The mean Field-Weighted Citation Impact is ${stats.fwci}${stats.fwciMedian != null ? ` (median ${stats.fwciMedian})` : ""}, relative to a world average of 1.00.`);
+      }
+      if (stats.top10Share != null) {
+        bits.push(`${stats.top10Share}% of classified publications rank among the top 10% most-cited in their field and year (world baseline: 10%).`);
+      }
+      if (stats.pIndex != null) {
+        bits.push(`The p-index of ${stats.pIndex}% indicates the papers ${stats.pIndex > 55 ? "consistently outperform" : stats.pIndex >= 45 ? "perform in line with" : "trail"} same-journal, same-year peers in citations.`);
+      }
+      if (stats.oaBreakdown) {
+        const c = stats.oaBreakdown.counts;
+        const detail = ["gold", "green", "hybrid", "bronze"].filter((k) => c[k]).map((k) => `${c[k]} ${k}`).join(", ");
+        bits.push(`${stats.oaBreakdown.openPct}% of indexed publications are openly accessible${detail ? ` (${detail})` : ""}.`);
+      }
+      if (bits.length) paras.push(bits.join(" "));
+    }
+
+    return paras.map((p) => `<p class="su-narrative-para">${p}</p>`).join("");
+  }
 
   async function renderAuthorStatsWithGrowth(fullStats) {
     const growth = await getAuthorHIndexGrowth(window.location.href, fullStats.hIndex);
     if (growth != null) fullStats.hIndexGrowth = growth;
     renderAuthorStats(fullStats);
+    // Async p-index computation (Pham, Wu & Wang 2024)
+    if (fullStats.pIndexStatus === "idle" && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
+      computePIndex(fullStats).then(() => {
+        renderAuthorStats(fullStats);
+      }).catch(() => {});
+    }
   }
-
   function renderAuthorStats(stats, isLoading = false) {
     // Find or create the stats container
     let statsContainer = document.getElementById("su-author-stats");
-    
     if (!statsContainer) {
       // Find where to insert it - after the last .gsc_prf_il or after #gsc_prf_inw
       const profileInfo = document.querySelector("#gsc_prf_i");
       if (!profileInfo) return;
-      
       statsContainer = document.createElement("div");
       statsContainer.id = "su-author-stats";
       statsContainer.className = "su-author-stats";
-      
       // Insert after the last .gsc_prf_il or after #gsc_prf_inw
       const lastInfoLine = profileInfo.querySelector(".gsc_prf_il:last-of-type");
       if (lastInfoLine) {
@@ -7885,6 +7670,16 @@
           e.stopPropagation();
           e.preventDefault();
           openPoPOverlay();
+          return;
+        }
+        const narrativeToggle = e.target.closest("[data-narrative-toggle]");
+        if (narrativeToggle) {
+          e.stopPropagation();
+          e.preventDefault();
+          window.suNarrativeOpen = !window.suNarrativeOpen;
+          const panel = document.getElementById("su-narrative");
+          if (panel) panel.classList.toggle("su-narrative-hidden", !window.suNarrativeOpen);
+          narrativeToggle.textContent = window.suNarrativeOpen ? "Hide narrative" : "Narrative";
           return;
         }
         const compareBtn = e.target.closest(".su-compare-authors-btn");
@@ -8281,7 +8076,6 @@
           document.getElementById("su-metrics-floating-tooltip")?.classList.remove("su-metrics-floating-tooltip-visible");
         }
       }, true);
-
       // Co-author hover tooltip (table)
       statsContainer.addEventListener("mouseenter", (e) => {
         const row = e.target.closest?.(".su-coauthor-row");
@@ -8325,7 +8119,6 @@
         if (e.relatedTarget?.closest?.("#su-coauthor-tooltip")) return;
         document.getElementById("su-coauthor-tooltip")?.classList.remove("su-coauthor-tooltip-visible");
       }, true);
-
       // Venue chip hover scroll
       statsContainer.addEventListener("mouseenter", (e) => {
         const chip = e.target.closest(".su-top-venue-chip");
@@ -8347,19 +8140,16 @@
         textEl.style.transform = "translateX(0px)";
       }, true);
     }
-
     if (isLoading) {
       statsContainer.style.display = "block";
       statsContainer.innerHTML = '<span class="su-stat-loading">Loading publications...</span>';
       return;
     }
-
     if (!stats || !stats.qualityCounts) return;
     window.suFullAuthorStats = stats;
     if (!isLoading) {
       ensureSelfCitationEstimate();
     }
-
     try {
     // Build stats HTML with badge-style boxes
     const parts = [];
@@ -8369,7 +8159,6 @@
     const settings = window.suState?.settings || {};
     const showResearchIntel = settings.showResearchIntel !== false && featureToggles.researchIntel !== false;
     const show = (key) => vis[key] !== false;
-
     const groups = [];
     const partialParts = [];
     if (window.suState?.authorStatsPartial) {
@@ -8389,46 +8178,44 @@
       if (show("filterQ1") && (qc.q1 || 0) > 0) {
         const isActive = activeFilter === "q1";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-quartile ${isActive ? 'su-filter-active' : ''}" data-filter="q1" style="cursor: pointer;" title="Click to filter by Q1 papers"><span class="su-stat-label">Q1:</span> <strong>${qc.q1}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-quartile ${isActive ? 'su-filter-active' : ''}" data-filter="q1" title="Click to filter by Q1 papers"><span class="su-stat-label">Q1:</span> <strong>${qc.q1}</strong></span>`);
       }
       if (show("filterAbdc") && (qc.a || 0) > 0) {
         const isActive = activeFilter === "a";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-abdc ${isActive ? 'su-filter-active' : ''}" data-filter="a" style="cursor: pointer;" title="Click to filter by A-ranked papers"><span class="su-stat-label">ABDC:</span> <strong>${qc.a}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-abdc ${isActive ? 'su-filter-active' : ''}" data-filter="a" title="Click to filter by A-ranked papers"><span class="su-stat-label">ABDC:</span> <strong>${qc.a}</strong></span>`);
       }
       if (show("filterVhb") && (qc.vhb || 0) > 0) {
         const isActive = activeFilter === "vhb";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-vhb ${isActive ? 'su-filter-active' : ''}" data-filter="vhb" style="cursor: pointer;" title="Click to filter by VHB-ranked papers"><span class="su-stat-label">VHB:</span> <strong>${qc.vhb}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-vhb ${isActive ? 'su-filter-active' : ''}" data-filter="vhb" title="Click to filter by VHB-ranked papers"><span class="su-stat-label">VHB:</span> <strong>${qc.vhb}</strong></span>`);
       }
       if (show("filterFt50") && (qc.ft50 || 0) > 0) {
         const isActive = activeFilter === "ft50";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-ft50 ${isActive ? 'su-filter-active' : ''}" data-filter="ft50" style="cursor: pointer;" title="Click to filter by FT50 papers"><span class="su-stat-label">FT50:</span> <strong>${qc.ft50}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-ft50 ${isActive ? 'su-filter-active' : ''}" data-filter="ft50" title="Click to filter by FT50 papers"><span class="su-stat-label">FT50:</span> <strong>${qc.ft50}</strong></span>`);
       }
       if (show("filterUtd24") && (qc.utd24 || 0) > 0) {
         const isActive = activeFilter === "utd24";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-utd24 ${isActive ? 'su-filter-active' : ''}" data-filter="utd24" style="cursor: pointer;" title="Click to filter by UTD24 papers"><span class="su-stat-label">UTD24:</span> <strong>${qc.utd24}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-utd24 ${isActive ? 'su-filter-active' : ''}" data-filter="utd24" title="Click to filter by UTD24 papers"><span class="su-stat-label">UTD24:</span> <strong>${qc.utd24}</strong></span>`);
       }
       if (show("filterAbs4star") && (qc.abs4star || 0) > 0) {
         const isActive = activeFilter === "abs4star";
         filterBadgeCount += 1;
-        filterParts.push(`<span class="su-stat-badge su-badge su-abs4star ${isActive ? 'su-filter-active' : ''}" data-filter="abs4star" style="cursor: pointer;" title="Click to filter by ABS 4* papers"><span class="su-stat-label">ABS 4*:</span> <strong>${qc.abs4star}</strong></span>`);
+        filterParts.push(`<span class="su-stat-badge su-badge su-abs4star ${isActive ? 'su-filter-active' : ''}" data-filter="abs4star" title="Click to filter by ABS 4* papers"><span class="su-stat-label">ABS 4*:</span> <strong>${qc.abs4star}</strong></span>`);
       }
       if (activeFilter && show("filterClear")) {
         filterParts.push(`<span class="su-stat-badge su-badge" style="cursor: pointer; opacity: 0.7;" data-filter="clear" title="Click to clear filter">Clear filter</span>`);
       }
       if (filterParts.length) groups.push(filterParts);
     }
-
     const sortParts = [];
     if (show("sortToggle") && (window.suState?.authorFeatureToggles?.velocityBadge !== false)) {
       const sortByVelocity = !!window.suAuthorSortByVelocity;
-      sortParts.push(`<span id="su-sort-toggle" class="su-stat-badge su-badge" data-sort-toggle="1" style="cursor: pointer;" title="Toggle sort by citations per year">${sortByVelocity ? "Sort: citations/yr ✓" : "Sort by citations/yr"}</span>`);
+      sortParts.push(`<span id="su-sort-toggle" class="su-stat-badge su-badge" data-sort-toggle="1" title="Toggle sort by citations per year">${sortByVelocity ? "Sort: citations/yr ✓" : "Sort by citations/yr"}</span>`);
     }
     if (sortParts.length) groups.push(sortParts);
-
     const viewParts = [];
     if (show("positionFilters")) {
       const posFilter = window.suAuthorPositionFilter || "all";
@@ -8443,11 +8230,10 @@
       viewParts.push('<span class="su-stat-item"><span class="su-stat-label">View:</span></span>');
       for (const opt of posOptions) {
         const active = posFilter === opt.value ? " su-filter-active" : "";
-        viewParts.push(`<span class="su-stat-badge su-badge su-position-filter${active}" data-position-filter="${opt.value}" style="cursor: pointer;" title="Show stats for ${opt.label}">${opt.label}</span>`);
+        viewParts.push(`<span class="su-stat-badge su-badge su-position-filter${active}" data-position-filter="${opt.value}" title="Show stats for ${opt.label}">${opt.label}</span>`);
       }
     }
     if (viewParts.length) groups.push(viewParts);
-
     const statsParts = [];
     if (show("papers") && (stats.totalPublications || 0) > 0) {
       statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Papers:</span> <strong>${stats.totalPublications}</strong></span>`);
@@ -8470,93 +8256,130 @@
     const metricsItems = [];
     if ((stats.hIndex || 0) > 0) {
       const tip = getAuthorStatTooltipHtml("hindex", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="hindex"><span class="su-stat-label">h-index:</span> <strong>${stats.hIndex}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="hindex"><span class="su-stat-label">h-index:</span> <strong>${stats.hIndex}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.mIndex != null && stats.mIndex > 0) {
       const mDisplay = stats.mIndex >= 10 ? Math.round(stats.mIndex) : (stats.mIndex % 1 === 0 ? stats.mIndex : stats.mIndex.toFixed(2));
       const tip = getAuthorStatTooltipHtml("mindex", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="mindex"><span class="su-stat-label">m-index:</span> <strong>${mDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="mindex"><span class="su-stat-label">m-index:</span> <strong>${mDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.lIndex != null && stats.lIndex >= 0) {
       const lDisplay = stats.lIndex >= 10 ? Math.round(stats.lIndex) : (stats.lIndex % 1 === 0 ? stats.lIndex : stats.lIndex.toFixed(2));
       const tip = getAuthorStatTooltipHtml("lindex", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="lindex"><span class="su-stat-label">L-index:</span> <strong>${lDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="lindex"><span class="su-stat-label">L-index:</span> <strong>${lDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.eigenfactorStyle != null && stats.eigenfactorStyle > 0) {
       const efDisplay = stats.eigenfactorStyle >= 1000 ? Math.round(stats.eigenfactorStyle) : (stats.eigenfactorStyle % 1 === 0 ? stats.eigenfactorStyle : stats.eigenfactorStyle.toFixed(2));
       const tip = getAuthorStatTooltipHtml("eigenfactor", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="eigenfactor"><span class="su-stat-label">EF-style:</span> <strong>${efDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="eigenfactor"><span class="su-stat-label">EF-style:</span> <strong>${efDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.gIndex != null && stats.gIndex > 0) {
       const tip = getAuthorStatTooltipHtml("gindex", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="gindex"><span class="su-stat-label">g-index:</span> <strong>${stats.gIndex}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="gindex"><span class="su-stat-label">g-index:</span> <strong>${stats.gIndex}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.careerAge != null && stats.careerAge >= 0) {
       const tip = getAuthorStatTooltipHtml("careerAge", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="careerAge"><span class="su-stat-label">Career age:</span> <strong>${stats.careerAge}</strong> yr<span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="careerAge"><span class="su-stat-label">Career age:</span> <strong>${stats.careerAge}</strong> yr<span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.avgTeamSize != null && stats.avgTeamSize > 0) {
       const tip = getAuthorStatTooltipHtml("avgTeamSize", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="avgTeamSize"><span class="su-stat-label">Avg team size:</span> <strong>${stats.avgTeamSize}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="avgTeamSize"><span class="su-stat-label">Avg team size:</span> <strong>${stats.avgTeamSize}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.citationGini != null && stats.citationGini >= 0) {
       const tip = getAuthorStatTooltipHtml("gini", stats);
       const giniDisplay = stats.citationGini % 1 === 0 ? stats.citationGini : stats.citationGini.toFixed(2);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="gini"><span class="su-stat-label">Citation Gini:</span> <strong>${giniDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="gini"><span class="su-stat-label">Citation Gini:</span> <strong>${giniDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.citationHalfLifeYear != null) {
       const tip = getAuthorStatTooltipHtml("citationHalfLife", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="citationHalfLife"><span class="su-stat-label">Citation half-life:</span> <strong>${stats.citationHalfLifeYear}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="citationHalfLife"><span class="su-stat-label">Citation half-life:</span> <strong>${stats.citationHalfLifeYear}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.eIndex != null && stats.eIndex > 0) {
       const tip = getAuthorStatTooltipHtml("eindex", stats);
       const eDisplay = stats.eIndex >= 10 ? Math.round(stats.eIndex) : (stats.eIndex % 1 === 0 ? stats.eIndex : stats.eIndex.toFixed(2));
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="eindex"><span class="su-stat-label">e-index:</span> <strong>${eDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="eindex"><span class="su-stat-label">e-index:</span> <strong>${eDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.hCoreShare != null && stats.hCoreShare >= 0) {
       const tip = getAuthorStatTooltipHtml("hCoreShare", stats);
       const pct = Math.round(stats.hCoreShare * 1000) / 10;
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="hCoreShare"><span class="su-stat-label">h-core share:</span> <strong>${pct}%</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="hCoreShare"><span class="su-stat-label">h-core share:</span> <strong>${pct}%</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     const selfCiteState = window.__suSelfCiteState || { key: null, loading: false, data: null };
     const selfData = selfCiteState.data;
     if (selfCiteState.loading) {
       const tip = "Estimating self-citation rate using OpenAlex for the top cited works.";
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>…</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>…</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
       metricsItems.push(`<span class="su-stat-item"><button type="button" class="su-metrics-mini-btn" data-selfcite-refresh="1">Refresh self-cite</button></span>`);
     } else if (selfData && selfData.status === "success") {
       const pct = Math.round(selfData.rate * 1000) / 10;
       const tip = `Definition: a self-citation is when a citing work shares any author with the cited work.<br><br>Method: match the author to OpenAlex, take the top ${selfData.sampleWorks} most-cited works, then compute self-citations among citing works.<br><br>Data source: ${selfData.source}.`;
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>${pct}%</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>${pct}%</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
       metricsItems.push(`<span class="su-stat-item"><button type="button" class="su-metrics-mini-btn" data-selfcite-refresh="1">Refresh self-cite</button></span>`);
     } else if (selfData && selfData.status === "error") {
       const tip = escapeHtml(selfData.message || "Unavailable");
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>—</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="selfcite"><span class="su-stat-label">Self-cite (est.):</span> <strong>—</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
       metricsItems.push(`<span class="su-stat-item"><button type="button" class="su-metrics-mini-btn" data-selfcite-refresh="1">Retry self-cite</button></span>`);
     }
     if (stats.medianCitations != null && stats.medianCitations >= 0) {
       const tip = getAuthorStatTooltipHtml("medianCitations", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="medianCitations"><span class="su-stat-label">Median cites/paper:</span> <strong>${stats.medianCitations}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="medianCitations"><span class="su-stat-label">Median cites/paper:</span> <strong>${stats.medianCitations}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.meanCitations != null && stats.meanCitations >= 0) {
       const tip = getAuthorStatTooltipHtml("meanCitations", stats);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="meanCitations"><span class="su-stat-label">Mean cites/paper:</span> <strong>${stats.meanCitations}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="meanCitations"><span class="su-stat-label">Mean cites/paper:</span> <strong>${stats.meanCitations}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.consistencyIndex != null && stats.consistencyIndex >= 0) {
       const tip = getAuthorStatTooltipHtml("consistencyIndex", stats);
       const cvDisplay = stats.consistencyIndex % 1 === 0 ? stats.consistencyIndex : stats.consistencyIndex.toFixed(2);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="consistencyIndex"><span class="su-stat-label">Consistency (CV):</span> <strong>${cvDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="consistencyIndex"><span class="su-stat-label">Consistency (CV):</span> <strong>${cvDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     if (stats.flpIndex != null && stats.flpIndex >= 0) {
       const fPct = stats.firstAuthorPct != null ? stats.firstAuthorPct : 0;
       const tip = `FLP = N × (F%)²<br>N = ${stats.totalPublications || 0}<br>F% = ${fPct.toFixed(2)}`;
       const flpDisplay = stats.flpIndex % 1 === 0 ? stats.flpIndex : stats.flpIndex.toFixed(2);
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="flpIndex"><span class="su-stat-label">FLP Index:</span> <strong>${flpDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="flpIndex"><span class="su-stat-label">FLP Index:</span> <strong>${flpDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+    }
+    {
+      const loading = stats.pIndexStatus === "loading";
+      const done = stats.pIndexStatus === "done";
+      const fmtPct = (v) => v == null ? "—" : (v % 1 === 0 ? v + "%" : v.toFixed(1) + "%");
+      // p-index (PI)
+      const pTip = getAuthorStatTooltipHtml("pIndex", stats);
+      if (done && stats.pIndex != null) {
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${fmtPct(stats.pIndex)}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
+      } else {
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${loading ? "…" : "—"}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
+      }
+      // OWPI (authorship-weighted p-index)
+      if (done && stats.owpiIndex != null) {
+        const owTip = getAuthorStatTooltipHtml("owpiIndex", stats);
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="owpiIndex"><span class="su-stat-label">OWPI:</span> <strong>${fmtPct(stats.owpiIndex)}</strong><span class="su-author-stat-tooltip">${owTip}</span></span>`);
+      }
+      // FWCI (mean + median)
+      if (done && stats.fwci != null) {
+        const fTip = getAuthorStatTooltipHtml("fwci", stats);
+        const med = stats.fwciMedian != null ? ` / ${stats.fwciMedian.toFixed(2)} med` : "";
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="fwci"><span class="su-stat-label">FWCI:</span> <strong>${stats.fwci.toFixed(2)}${med}</strong><span class="su-author-stat-tooltip">${fTip}</span></span>`);
+      }
+      // Top-10% papers share
+      if (done && stats.top10Share != null) {
+        const tTip = getAuthorStatTooltipHtml("top10Share", stats);
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="top10Share"><span class="su-stat-label">Top-10% papers:</span> <strong>${stats.top10Share}%</strong><span class="su-author-stat-tooltip">${tTip}</span></span>`);
+      }
+      // Open access share
+      if (done && stats.oaBreakdown) {
+        const oTip = getAuthorStatTooltipHtml("oaShare", stats);
+        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="oaShare"><span class="su-stat-label">Open access:</span> <strong>${stats.oaBreakdown.openPct}%</strong><span class="su-author-stat-tooltip">${oTip}</span></span>`);
+      }
+    }
+    if (stats.h5Index != null) {
+      const h5Tip = getAuthorStatTooltipHtml("h5Index", stats);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="h5Index"><span class="su-stat-label">h5 (5 yr):</span> <strong>${stats.h5Index}</strong><span class="su-author-stat-tooltip">${h5Tip}</span></span>`);
     }
     if (stats.hIndexGrowth != null) {
       const tip = getAuthorStatTooltipHtml("hIndexGrowth", stats);
       const sign = stats.hIndexGrowth >= 0 ? "+" : "";
-      metricsItems.push(`<span class="su-stat-item su-stat-item-with-tooltip su-metrics-row" data-stat-tooltip="hIndexGrowth"><span class="su-stat-label">Δh (12 mo):</span> <strong>${sign}${stats.hIndexGrowth}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="hIndexGrowth"><span class="su-stat-label">Δh (12 mo):</span> <strong>${sign}${stats.hIndexGrowth}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
     const metricsDropdownHtml =
       metricsItems.length > 0
@@ -8608,12 +8431,10 @@
           </div>
         </div>
       </span>`;
-
     // Co-author stats
     if (show("coauthors") && (stats.uniqueCoAuthors || 0) > 0) {
       statsParts.push(`<span class="su-stat-item"><span class="su-stat-label">Co-authors:</span> <strong>${stats.uniqueCoAuthors}</strong></span>`);
     }
-
     // Collaboration shape: % solo / % first / % middle / % last
     if (show("collabShape") && (stats.totalPublications || 0) > 0) {
       const total = stats.totalPublications || 1;
@@ -8630,7 +8451,6 @@
         </span>
       `);
     }
-
     if (show("drift") && stats.authorshipDrift) {
       statsParts.push(`
         <span class="su-stat-item su-stat-item-with-tooltip" data-stat-tooltip="1">
@@ -8646,7 +8466,6 @@
         </span>
       `);
     }
-
     if (statsParts.length) groups.push(statsParts);
     const hasFilterBadges = filterBadgeCount > 0;
     for (const group of groups) {
@@ -8654,7 +8473,6 @@
       if (parts.length > 0) parts.push('<span class="su-stat-separator">|</span>');
       parts.push(...group);
     }
-
     // Close the stats row and add co-author table
     if (parts.length > 0) {
       statsContainer.style.display = "block";
@@ -8692,7 +8510,6 @@
             return `<span class="su-topic-tag${isActive ? " su-topic-tag-active" : ""}" data-topic-filter="1" data-topic-token="${escapeHtml(token)}" style="opacity:${opacity.toFixed(2)}" title="${title}">${display}</span>`;
           }).join("")}${activeTopicList.length ? `<span class="su-topic-tag su-topic-tag-clear" data-topic-clear="1" title="Clear topic filters">Clear</span>` : ""}</div>`
         : "";
-
       const topVenues = Array.isArray(stats.topVenues) ? stats.topVenues.slice(0, 3) : [];
       const activeVenue = String(window.suAuthorVenueFilter || "").trim().toLowerCase();
       const topVenueHtml = topVenues.length
@@ -8709,7 +8526,6 @@
       const popReportBtn = showResearchIntel
         ? `<button type="button" class="su-compare-authors-btn" data-pop-report="1">PoP report</button>`
         : "";
-
       const activeCoauthor = String(window.suAuthorCoauthorFilter || "").trim();
       const coauthorInsights = window.suState?.authorFeatureToggles?.coauthors !== false;
       const coauthorQuery = coauthorInsights ? String(window.suCoauthorQuery || "") : "";
@@ -8746,7 +8562,6 @@
               <th class="su-coauthor-metric" data-coauthor-sort="count" data-coauthor-label="Co-Papers">Co-Papers${sortArrow("count")}</th>
               <th class="su-coauthor-metric" data-coauthor-sort="citations" data-coauthor-label="Co-Cites">Co-Cites${sortArrow("citations")}</th>
               <th class="su-coauthor-metric" data-coauthor-sort="hIndex" data-coauthor-label="Co-h">Co-h${sortArrow("hIndex")}</th>
-              
             </tr>
           </thead>
           <tbody>
@@ -8760,7 +8575,6 @@
                 <td class="su-coauthor-count"><strong>${Number(coAuthor?.count) || 0}</strong></td>
                 <td class="su-coauthor-cites"><strong>${Number(coAuthor?.citations) || 0}</strong></td>
                 <td class="su-coauthor-h"><strong>${Number(coAuthor?.hIndex) || 0}</strong></td>
-                
               </tr>
             `;
             }).join("")}
@@ -8768,12 +8582,20 @@
         </table>
         </div>
       ` : "";
-
+      const narrativeHtml = generateResearchNarrative(stats);
+      const narrativeOpen = !!window.suNarrativeOpen;
+      const narrativeBlock = narrativeHtml
+        ? `<div id="su-narrative" class="su-narrative${narrativeOpen ? "" : " su-narrative-hidden"}">${narrativeHtml}<div class="su-narrative-note">Auto-generated from profile data${stats.pIndexStatus !== "done" ? " · field-normalized metrics still loading…" : ""}. Copy freely.</div></div>`
+        : "";
+      const narrativeBtn = narrativeHtml
+        ? `<button type="button" class="su-compare-authors-btn" data-narrative-toggle="1">${narrativeOpen ? "Hide narrative" : "Narrative"}</button>`
+        : "";
       statsContainer.innerHTML = `
         ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers. If it doesn’t respond, try clicking again.</div>' : ''}
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
-        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${popReportBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
+        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
+        ${narrativeBlock}
       `;
       window.suLastCoauthorsHtml = coauthorsHtml || "";
       // Restore open settings panel immediately — operates on statsContainer, not right panel
@@ -8814,7 +8636,6 @@
         setTimeout(_renderSidebar, 50);
       }
       // Self-citation estimate handled via metrics dropdown.
-      
     } else {
       statsContainer.style.display = "none";
     }
@@ -8822,7 +8643,6 @@
       statsContainer.style.display = "none";
     }
   }
-
   function enhanceCitedByChart() {
     const container = document.getElementById("gsc_rsb_cit");
     if (!container) return;
@@ -8933,7 +8753,6 @@
     });
     adjustCitedByScroll(container);
   }
-
   function resetCitedByChart() {
     const container = document.getElementById("gsc_rsb_cit");
     if (!container) return;
@@ -8979,7 +8798,6 @@
     const histBody = histWrap?.querySelector(".gsc_md_hist_b");
     if (histBody) histBody.style.minWidth = "";
   }
-
   function resetCitedByStats() {
     const container = document.getElementById("gsc_rsb_cit");
     if (!container) return;
@@ -8994,7 +8812,6 @@
     });
     table.classList.remove("su-citedby-table-enhanced");
   }
-
   function applyAuthorFeatureToggles(state) {
     const toggles = state?.authorFeatureToggles || DEFAULT_AUTHOR_FEATURE_TOGGLES;
     if (toggles.citedBy !== false) {
@@ -9006,7 +8823,6 @@
     }
     updateCoauthorTable(window.suFullAuthorStats);
   }
-
   function enhanceCitedByStats() {
     const container = document.getElementById("gsc_rsb_cit");
     if (!container) return;
@@ -9019,7 +8835,6 @@
     const sinceLabel = sinceLabelRaw?.trim() || "Since";
     const rows = Array.from(table.querySelectorAll("tbody tr"));
     if (!rows.length) return;
-
     const toNumber = (val) => {
       const n = parseInt(String(val || "").replace(/[^0-9]/g, ""), 10);
       return Number.isFinite(n) ? n : null;
@@ -9029,7 +8844,6 @@
       const rounded = n >= 10 ? Math.round(n) : Math.round(n * 10) / 10;
       return `${rounded}%`;
     };
-
     const existingDeltaHeader = table.querySelector('thead th[data-su-delta="1"]');
     if (!existingDeltaHeader) {
       const deltaTh = document.createElement("th");
@@ -9039,7 +8853,6 @@
       deltaTh.textContent = "Δ%";
       table.querySelector("thead tr")?.appendChild(deltaTh);
     }
-
     rows.forEach((row) => {
       const labelCell = row.querySelector(".gsc_rsb_sc1");
       if (labelCell) {
@@ -9059,7 +8872,6 @@
       deltaTd.textContent = fmtPct(ratio);
       row.appendChild(deltaTd);
     });
-
     const cards = container.querySelector("#su-citedby-cards");
     if (cards) cards.remove();
     table.classList.remove("su-citedby-hidden");
@@ -9067,7 +8879,6 @@
     table.classList.add("su-citedby-table-enhanced");
     container.classList.add("su-citedby-enhanced");
   }
-
   function adjustCitedByScroll(container) {
     const histWrap = container.querySelector(".gsc_md_hist_w");
     const histBody = histWrap?.querySelector(".gsc_md_hist_b");
@@ -9088,7 +8899,6 @@
       histBody.style.minWidth = "";
     }
   }
-
   function ensureCitedByColorMenu(container, activeScheme) {
     if (!container) return;
     const existing = container.querySelector(".su-citedby-color-menu");
@@ -9126,7 +8936,6 @@
       }
     }
   }
-
   function ensureCitedByChartObserver() {
     if (window.__suCitedByObserver) return;
     const container = document.getElementById("gsc_rsb_cit");
@@ -9137,7 +8946,6 @@
     observer.observe(container, { childList: true, subtree: true });
     window.__suCitedByObserver = observer;
   }
-
   function updateCoauthorTable(stats) {
     if (!stats) return;
     const panel = document.getElementById("su-right-panel");
@@ -9152,7 +8960,6 @@
     const coStats = query
       ? coStatsRaw.filter((c) => String(c?.name || "").toLowerCase().includes(query))
       : coStatsRaw.slice();
-
     const coSort = window.suCoauthorSort || { key: "count", dir: "desc" };
     if (!insightsOn && (coSort.key === "score" || coSort.key === "recent")) {
       coSort.key = "count";
@@ -9161,7 +8968,6 @@
     window.suCoauthorSort = coSort;
     const sortKey = coSort.key || "count";
     const sortDir = coSort.dir === "asc" ? "asc" : "desc";
-
     const currentYear = new Date().getFullYear();
     const scoreRawByKey = new Map();
     let maxScoreRaw = 1;
@@ -9177,13 +8983,11 @@
         if (raw > maxScoreRaw) maxScoreRaw = raw;
       }
     }
-
     const getScore = (c) => {
       if (!insightsOn) return 0;
       const raw = scoreRawByKey.get(c.key) || 0;
       return Math.round((raw / maxScoreRaw) * 100);
     };
-
     const sortedCo = coStats.slice().sort((a, b) => {
       if (sortKey === "name") {
         const cmp = String(a?.name || "").localeCompare(String(b?.name || ""));
@@ -9206,13 +9010,11 @@
       if (va === vb) return String(a?.name || "").localeCompare(String(b?.name || ""));
       return sortDir === "asc" ? va - vb : vb - va;
     });
-
     const displayLimit = insightsOn && query ? 20 : 10;
     const topCoAuthors = sortedCo.slice(0, displayLimit);
     const activeCoauthor = String(window.suAuthorCoauthorFilter || "").trim();
     const sharedCache = stats.__sharedCoauthorsCache || new Map();
     stats.__sharedCoauthorsCache = sharedCache;
-
     const getMentorshipBadge = (coAuthor) => {
       const count = Number(coAuthor?.positionDeltaCount) || 0;
       const sum = Number(coAuthor?.positionDeltaSum) || 0;
@@ -9226,7 +9028,6 @@
       }
       return { label: "Collaborator", cls: "su-coauthor-type-collab", avg };
     };
-
     const getShared = (key, limit = 2) => {
       if (!insightsOn) return [];
       const cacheKey = `${key}|${limit}`;
@@ -9250,7 +9051,6 @@
       sharedCache.set(cacheKey, sorted);
       return sorted;
     };
-
     const getCoauthorLinkMap = () => {
       const map = new Map();
       const items = document.querySelectorAll(".gsc_rsb_a_desc a");
@@ -9278,7 +9078,6 @@
     };
     const coauthorLinks = getCoauthorLinkMap();
     const coauthorAffiliations = getCoauthorAffiliationMap();
-
     tbody.innerHTML = topCoAuthors.map((coAuthor, idx) => {
       const coKey = coAuthor.key || normalizeAuthorName(String(coAuthor?.name ?? ""));
       const isActive = activeCoauthor && coKey === activeCoauthor;
@@ -9293,7 +9092,6 @@
       const metaText = `Score ${score} · Last ${lastYear || "—"} · ${sharedLabel}`;
       const metaLine = metaText;
       const metaHtml = insightsOn ? `<div class="su-coauthor-meta-line ${recent ? "su-coauthor-recent" : ""}" title="${escapeHtml(metaLine)}">${escapeHtml(metaText)}</div>` : "";
-
       const roleCounts = coAuthor?.roleCounts || { solo: 0, first: 0, middle: 0, last: 0 };
       const roleLine = `Co-author roles: first ${Number(roleCounts.first) || 0}, middle ${Number(roleCounts.middle) || 0}, last ${Number(roleCounts.last) || 0}, solo ${Number(roleCounts.solo) || 0}`;
       const avgDelta = relationBadge.avg;
@@ -9343,13 +9141,11 @@
       }
       const tooltipRaw = tooltipLines.join("\n");
       const tooltipAttr = escapeHtml(tooltipRaw).replace(/\n/g, "&#10;");
-
       const link = coauthorLinks.get(coKey);
       const safeName = escapeHtml(String(coAuthor?.name ?? ""));
       const nameHtml = link
         ? `<a class="su-coauthor-link" href="${escapeHtml(link)}" target="_blank" rel="noopener" title="${tooltipAttr}">${safeName}</a>`
         : safeName;
-
       return `
               <tr class="su-coauthor-row" data-coauthor-tooltip="${tooltipAttr}">
                 <td class="su-coauthor-rank">${idx + 1}.</td>
@@ -9363,7 +9159,6 @@
               </tr>
       `;
     }).join("");
-
     table.querySelectorAll("th[data-coauthor-sort]").forEach((th) => {
       const label = th.dataset.coauthorLabel || String(th.textContent || "").replace(/[▲▼]/g, "").trim();
       th.dataset.coauthorLabel = label;
@@ -9371,20 +9166,17 @@
       const arrow = key && key === sortKey ? (sortDir === "asc" ? " ▲" : " ▼") : "";
       th.textContent = `${label}${arrow}`;
     });
-
     if (insightsOn) {
       panel.querySelectorAll(".su-coauthor-sort-chip").forEach((btn) => {
         const key = String(btn.dataset.coauthorSort || "");
         btn.classList.toggle("su-coauthor-sort-active", key === sortKey);
       });
-
       const searchInput = panel.querySelector("#su-coauthor-search");
       if (searchInput && searchInput.value !== String(window.suCoauthorQuery || "")) {
         searchInput.value = String(window.suCoauthorQuery || "");
       }
     }
   }
-
   function renderRightPanel(stats, coauthorsHtml) {
     const sidebar = document.querySelector(".gsc_rsb") || document.getElementById("gsc_rsb");
     if (!sidebar) return;
@@ -9394,11 +9186,9 @@
       container.id = "su-right-panel";
       container.className = "su-right-panel";
     }
-
-    const citedBox = document.getElementById("gsc_rsb_cit") || sidebar.querySelector("#gsc_rsb_cit") || sidebar.querySelector("#gsc_rsb_st")?.closest(".gsc_rsb_s");
+    const citedBox = document.getElementById("gsc_rsb_cit") || sidebar.querySelector("#gsc_rsb_st")?.closest(".gsc_rsb_s");
     const publicAccessBox = document.getElementById("gsc_rsb_mnd") || Array.from(sidebar.querySelectorAll(".gsc_rsb_s,div,section,table"))
       .find((el) => /public access/i.test(el.textContent || "")) || null;
-
     if (!container.parentElement) {
       if (citedBox) {
         citedBox.insertAdjacentElement("afterend", container);
@@ -9409,7 +9199,6 @@
     if (publicAccessBox) {
       publicAccessBox.remove();
     }
-
     const featureToggles = window.suState?.authorFeatureToggles || DEFAULT_AUTHOR_FEATURE_TOGGLES;
     const showVenues = featureToggles.venues !== false;
     const showBands = featureToggles.citationBands !== false;
@@ -9429,7 +9218,6 @@
           }).join("")}${activeVenue ? `<span class="su-top-venue-chip su-top-venue-chip-clear" data-venue-filter="" title="Clear venue filter"><span class="su-top-venue-text">Clear</span></span>` : ""}</div>
         </div>`
       : "";
-
     const bands = Array.isArray(stats.citationBands) ? stats.citationBands : [];
     const maxBand = bands.length ? Math.max(...bands.map((b) => b.count || 0)) : 1;
     const activeBand = window.suAuthorCitationBand || null;
@@ -9447,7 +9235,6 @@
           }).join("")}</div>
         </div>`
       : "";
-
     const graphState = window.suGraphState || null;
     const graphNodeCount = graphState?.nodes ? graphState.nodes.size : 0;
     const graphEdgeCount = graphState?.edges ? graphState.edges.length : 0;
@@ -9458,12 +9245,11 @@
             <div class="su-graph-card-meta">${graphNodeCount ? `${graphNodeCount} nodes · ${graphEdgeCount} edges` : "Build a local citation map from your top papers."}</div>
             <div class="su-graph-card-actions">
               <button type="button" class="su-graph-btn" data-graph-open="1" title="Open the interactive citation map">Open map</button>
-              <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-build="1" data-graph-build-count="10" title="Build a map from the 10 most-cited papers on this page">Build top 10</button>
+              <button type="button" class="${CLS_BTN_SEC}" data-graph-build="1" data-graph-build-count="10" title="Build a map from the 10 most-cited papers on this page">Build top 10</button>
             </div>
           </div>
         </div>`
       : "";
-
     const authorName = (window.suState?.authorVariations?.[0] || extractAuthorName() || "").trim();
     const authorVariations = window.suState?.authorVariations || (authorName ? generateAuthorNameVariations(authorName) : []);
     ensureGenealogyMatchAsync(authorName, authorVariations);
@@ -9475,7 +9261,7 @@
           <div class="su-right-title">Academic lineage</div>
           <div class="su-lineage-card-body">
             <div class="su-lineage-card-name">${escapeHtml(genealogyMatch.matchName || authorName)}</div>
-            <div class="su-lineage-card-meta">${escapeHtml(genealogyLabel)} · advisor/student lineage.</div>
+            <div class="su-lineage-card-meta">Advisor–student genealogy</div>
             <button type="button" class="su-graph-btn" data-lineage-open="1">View lineage</button>
           </div>
         </div>`
@@ -9488,10 +9274,8 @@
       ${bandsHtml}
     `;
   }
-
   const GRAPH_MAX_NODES = 90;
   const GRAPH_MAX_EDGES = 200;
-
   function hashString(str) {
     let h = 0;
     const s = String(str || "");
@@ -9501,7 +9285,6 @@
     }
     return (h >>> 0).toString(36);
   }
-
   async function mapWithConcurrency(items, limit, fn) {
     const results = [];
     const queue = Array.isArray(items) ? items.slice() : [];
@@ -9524,7 +9307,6 @@
       next();
     });
   }
-
   function createGraphState(authorId, authorName) {
     return {
       authorId,
@@ -9551,7 +9333,6 @@
       lastMonitorCheck: null
     };
   }
-
   function serializeGraphState(graph) {
     if (!graph) return null;
     const nodes = Array.from(graph.nodes.values()).map((n) => {
@@ -9569,7 +9350,6 @@
       annotations: graph.annotations || {}
     };
   }
-
   function deserializeGraphState(raw, authorId, authorName) {
     const graph = createGraphState(authorId, authorName);
     if (!raw || typeof raw !== "object") return graph;
@@ -9594,7 +9374,6 @@
     graph.annotations = raw.annotations && typeof raw.annotations === "object" ? raw.annotations : {};
     return graph;
   }
-
   function getGraphTransform(graph, mode) {
     if (!graph.viewTransforms) graph.viewTransforms = {};
     const key = mode || "papers";
@@ -9604,7 +9383,6 @@
     graph.viewTransforms[key] = next;
     return next;
   }
-
   function setGraphTransform(graph, mode, t) {
     if (!graph.viewTransforms) graph.viewTransforms = {};
     const key = mode || "papers";
@@ -9614,7 +9392,6 @@
       scale: Number(t?.scale) || 1
     };
   }
-
   async function ensureGraphStateForAuthor(authorId, authorName) {
     if (window.suGraphState && window.suGraphState.authorId === authorId) return window.suGraphState;
     const stored = await getAuthorGraphState(authorId);
@@ -9630,7 +9407,6 @@
     window.suGraphState = graph;
     return graph;
   }
-
   function graphAddNode(graph, node) {
     if (!graph || !node || !node.id) return null;
     const existing = graph.nodes.get(node.id);
@@ -9642,7 +9418,6 @@
     graph.nodes.set(node.id, node);
     return node;
   }
-
   function graphAddEdge(graph, source, target, type) {
     if (!graph || !source || !target || source === target) return;
     if (graph.edges.length >= GRAPH_MAX_EDGES) return;
@@ -9651,7 +9426,6 @@
     graph.edgeKeys.add(key);
     graph.edges.push({ source, target, type: type || "link" });
   }
-
   function nodeFromOpenAlex(work, isSeed) {
     const id = work?.openalexId || normalizeOpenAlexId(work?.id || "");
     if (!id) return null;
@@ -9673,7 +9447,6 @@
       isSeed: !!isSeed
     };
   }
-
   function nodeFromPaperFallback(paper, isSeed) {
     const title = paper?.title || "Untitled";
     const year = Number(paper?.year) || null;
@@ -9695,7 +9468,6 @@
       isSeed: !!isSeed
     };
   }
-
   async function resolveNodeWork(node, authorName) {
     if (!node || node._resolved) return node?._resolved || null;
     let work = null;
@@ -9710,7 +9482,6 @@
     node._resolved = work || null;
     return work;
   }
-
   function getSeedPapersFromAuthorPage(limit = 10) {
     const rows = Array.from(document.querySelectorAll(".gsc_a_tr"));
     const items = rows.map((tr) => {
@@ -9721,7 +9492,6 @@
     items.sort((a, b) => b.citations - a.citations);
     return items.slice(0, Math.max(3, limit)).map((p) => p.paper);
   }
-
   async function hydrateGraphNodes(graph, ids) {
     if (!graph || !ids || !ids.length) return;
     const unique = Array.from(new Set(ids));
@@ -9733,7 +9503,6 @@
       return node;
     });
   }
-
   function computeGraphConcepts(graph) {
     if (!graph) return;
     const counts = new Map();
@@ -9754,7 +9523,6 @@
     graph.conceptColors = new Map();
     graph.concepts.forEach((c, idx) => graph.conceptColors.set(c.name, palette[idx % palette.length]));
   }
-
   function buildAuthorGraph(graph) {
     if (!graph) return null;
     const counts = new Map();
@@ -9799,7 +9567,6 @@
     });
     return authorGraph;
   }
-
   function computeForceLayout(nodes, edges, width, height, opts = {}) {
     const list = Array.isArray(nodes) ? nodes : Array.from(nodes.values());
     const existingLayout = opts.existingLayout instanceof Map ? opts.existingLayout : null;
@@ -9866,7 +9633,6 @@
     }
     return pos;
   }
-
   function updateGraphTransformLayer(graph, mode) {
     const svg = document.getElementById("su-graph-canvas");
     if (!svg || !graph) return;
@@ -9875,7 +9641,6 @@
     const transform = getGraphTransform(graph, mode);
     layer.setAttribute("transform", `translate(${transform.x.toFixed(1)} ${transform.y.toFixed(1)}) scale(${transform.scale.toFixed(3)})`);
   }
-
   function buildSimilarityEdges(graph, nodesOverride) {
     if (!graph) return [];
     const nodes = Array.isArray(nodesOverride)
@@ -9921,7 +9686,6 @@
     edges.sort((a, b) => b.weight - a.weight);
     return edges.slice(0, GRAPH_MAX_EDGES);
   }
-
   async function ensureSimilarityData(graph) {
     if (!graph) return;
     const nodes = Array.from(graph.nodes.values()).filter((n) => n.type === "paper");
@@ -9940,7 +9704,6 @@
       n._citingIds = citing.map((cw) => cw.openalexId || normalizeOpenAlexId(cw.id || "")).filter(Boolean);
     });
   }
-
   function renderGraphCanvas(graph, mode) {
     const svg = document.getElementById("su-graph-canvas");
     if (!svg || !graph) return;
@@ -10021,7 +9784,6 @@
     }).join("");
     svg.innerHTML = `<g id="su-graph-layer" transform="translate(${transform.x.toFixed(1)} ${transform.y.toFixed(1)}) scale(${transform.scale.toFixed(3)})">${edgeHtml}${nodeHtml}${labelHtml}</g>`;
   }
-
   function renderGraphSidebar(graph) {
     const side = document.getElementById("su-graph-side");
     if (!side || !graph) return;
@@ -10040,7 +9802,7 @@
         <div class="su-graph-side-title">New papers</div>
         <div class="su-graph-side-meta">Papers published since your last check.</div>
         <div class="su-graph-alert-actions">
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-alerts-read="1">Mark all read</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-alerts-read="1">Mark all read</button>
         </div>
         <div class="su-graph-alert-list">
           ${alerts.length ? alerts.map((a) => `
@@ -10110,7 +9872,7 @@
               <div class="su-graph-collection-meta">${new Date(c.createdAt || Date.now()).toLocaleDateString()}</div>
               <div class="su-graph-collection-actions">
                 <button type="button" class="su-graph-btn" data-graph-load="${escapeHtml(c.id)}">Load</button>
-                <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-delete="${escapeHtml(c.id)}">Delete</button>
+                <button type="button" class="${CLS_BTN_SEC}" data-graph-delete="${escapeHtml(c.id)}">Delete</button>
               </div>
             </div>
           `).join("") || '<div class="su-graph-empty">No saved collections yet.</div>'}
@@ -10157,7 +9919,6 @@
       </div>
     `;
   }
-
   function renderGraphOverlay(graph) {
     const overlay = ensureGraphOverlay();
     const status = overlay.querySelector("#su-graph-status");
@@ -10195,7 +9956,6 @@
     }
     renderGraphSidebar(graph);
   }
-
   function updateGraphSelection(graph, mode) {
     const svg = document.getElementById("su-graph-canvas");
     if (!svg || !graph) return;
@@ -10210,7 +9970,6 @@
     }
     graph.__lastSelectedId = graph.selectedId || null;
   }
-
   async function loadGraphNodeContext(node, graph) {
     if (!node || node._contextLoading) return;
     node._contextLoading = true;
@@ -10225,7 +9984,6 @@
     node._contextLoading = false;
     renderGraphOverlay(graph);
   }
-
   function ensureGraphOverlay() {
     let overlay = document.getElementById("su-graph-overlay");
     if (overlay) return overlay;
@@ -10240,17 +9998,17 @@
             <div class="su-graph-title">Citation Atlas</div>
             <div class="su-graph-subtitle">Local map from OpenAlex + OpenCitations</div>
           </div>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-close="1">Close</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-close="1">Close</button>
         </div>
         <div class="su-graph-controls">
           <label class="su-graph-label-text">Seed count</label>
           <input id="su-graph-seed-count" class="su-graph-input su-graph-input-small" type="number" min="3" max="50" value="10" />
           <button type="button" class="su-graph-btn" data-graph-build="1" title="Build a map from the top papers on this page">Build</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-expand="refs" title="Add references cited by the selected paper">Expand refs</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-expand="cites" title="Add papers that cite the selected paper">Expand cites</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-expand="related" title="Add OpenAlex related works for the selected paper">Expand related</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-expand="refs" title="Add references cited by the selected paper">Expand refs</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-expand="cites" title="Add papers that cite the selected paper">Expand cites</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-expand="related" title="Add OpenAlex related works for the selected paper">Expand related</button>
           <label class="su-graph-monitor-toggle"><input type="checkbox" data-graph-monitor="1" /> Monitor new papers</label>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-check="1" title="Check for new papers now">Check now</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-graph-check="1" title="Check for new papers now">Check now</button>
           <span id="su-graph-status" class="su-graph-status"></span>
         </div>
         <div class="su-graph-help">
@@ -10273,10 +10031,10 @@
         </div>
         <div class="su-graph-footer">
           <div class="su-graph-export">
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-export="csv">CSV</button>
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-export="bib">BibTeX</button>
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-export="ris">RIS</button>
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-graph-export="png">PNG</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-graph-export="csv">CSV</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-graph-export="bib">BibTeX</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-graph-export="ris">RIS</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-graph-export="png">PNG</button>
           </div>
         </div>
       </div>
@@ -10481,7 +10239,6 @@
     }
     return overlay;
   }
-
   async function openGraphOverlay() {
     const scholarId = new URL(window.location.href).searchParams.get("user") || "author";
     const authorName = getScholarAuthorName();
@@ -10498,12 +10255,10 @@
     overlay.classList.add("su-visible");
     renderGraphOverlay(graph);
   }
-
   function closeGraphOverlay() {
     const overlay = document.getElementById("su-graph-overlay");
     if (overlay) overlay.classList.remove("su-visible");
   }
-
   async function buildGraphFromSeeds(count) {
     const scholarId = new URL(window.location.href).searchParams.get("user") || "author";
     const authorName = getScholarAuthorName();
@@ -10545,7 +10300,6 @@
     await syncGraphMonitorSeeds(graph);
     renderGraphOverlay(graph);
   }
-
   async function expandGraph(kind) {
     const graph = window.suGraphState;
     if (!graph) return;
@@ -10555,7 +10309,6 @@
     if (kind === "cites") await expandGraphCitations(graph, targetId);
     if (kind === "related") await expandGraphRelated(graph, targetId);
   }
-
   async function expandGraphReferences(graph, nodeId) {
     const node = graph.nodes.get(nodeId);
     if (!node || node.refsLoaded) return;
@@ -10584,7 +10337,6 @@
     await setAuthorGraphState(graph.authorId, serializeGraphState(graph));
     renderGraphOverlay(graph);
   }
-
   async function expandGraphRelated(graph, nodeId) {
     const node = graph.nodes.get(nodeId);
     if (!node || node.relatedLoaded) return;
@@ -10613,7 +10365,6 @@
     await setAuthorGraphState(graph.authorId, serializeGraphState(graph));
     renderGraphOverlay(graph);
   }
-
   async function fetchOpenAlexCitingWorks(work, limit = 20) {
     if (!work) return [];
     if (work.citedByApi) {
@@ -10630,7 +10381,6 @@
     }
     return [];
   }
-
   async function expandGraphCitations(graph, nodeId) {
     const node = graph.nodes.get(nodeId);
     if (!node || node.citesLoaded) return;
@@ -10664,7 +10414,6 @@
     await setAuthorGraphState(graph.authorId, serializeGraphState(graph));
     renderGraphOverlay(graph);
   }
-
   async function computeGraphRecommendations(graph) {
     if (!graph) return;
     const candidates = new Map();
@@ -10701,7 +10450,6 @@
       work
     }));
   }
-
   async function addRecommendationToGraph(id) {
     const graph = window.suGraphState;
     if (!graph || !id) return;
@@ -10714,7 +10462,6 @@
     await setAuthorGraphState(graph.authorId, serializeGraphState(graph));
     renderGraphOverlay(graph);
   }
-
   async function syncGraphMonitorSeeds(graph) {
     if (!graph || !graph.authorId) return;
     const alerts = (await getAuthorGraphAlerts(graph.authorId)) || {};
@@ -10728,7 +10475,6 @@
     graph.unreadCount = alerts.unreadCount;
     graph.lastMonitorCheck = alerts.lastCheck || null;
   }
-
   async function saveGraphCollection() {
     const graph = window.suGraphState;
     if (!graph) return;
@@ -10746,7 +10492,6 @@
     renderGraphSidebar(graph);
     if (nameInput) nameInput.value = "";
   }
-
   async function loadGraphCollection(id) {
     const graph = window.suGraphState;
     if (!graph) return;
@@ -10759,7 +10504,6 @@
     await syncGraphMonitorSeeds(loaded);
     renderGraphOverlay(loaded);
   }
-
   async function deleteGraphCollection(id) {
     const graph = window.suGraphState;
     if (!graph) return;
@@ -10767,7 +10511,6 @@
     await setAuthorGraphCollections(graph.authorId, graph.collections);
     renderGraphSidebar(graph);
   }
-
   function downloadBlob(filename, mime, content) {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -10779,7 +10522,6 @@
     a.remove();
     URL.revokeObjectURL(url);
   }
-
   function exportGraph(kind) {
     const graph = window.suGraphState;
     if (!graph) return;
@@ -10847,7 +10589,6 @@
       img.src = `data:image/svg+xml;base64,${svg64}`;
     }
   }
-
   async function ensureReviewState() {
     if (window.suReviewState) return window.suReviewState;
     const projects = await getReviewProjects();
@@ -10874,13 +10615,11 @@
     window.suReviewState = { projects, activeId, tab: "overview" };
     return window.suReviewState;
   }
-
   function getActiveReviewProject() {
     const state = window.suReviewState;
     if (!state) return null;
     return state.projects?.[state.activeId] || null;
   }
-
   async function saveReviewProject(project) {
     if (!project || !project.id) return;
     const state = await ensureReviewState();
@@ -10889,7 +10628,6 @@
     state.projects[project.id] = project;
     await setReviewProjects(state.projects);
   }
-
   function extractReviewPaperFromResult(row, isAuthorProfile) {
     const paper = isAuthorProfile ? getCachedAuthorPaper(row) : extractPaperFromResult(row);
     if (!paper || !paper.title) return null;
@@ -10913,14 +10651,12 @@
       abstract: (snippetText || "").trim()
     };
   }
-
   function paperFingerprint(p) {
     const doi = normalizeDoi(p?.doi || "");
     if (doi) return `doi:${doi}`;
     const titleKey = normalizeTitleForMatch(p?.title || "");
     return titleKey ? `title:${titleKey}` : `key:${p?.id || ""}`;
   }
-
   function addPapersToProject(project, papers) {
     if (!project || !Array.isArray(papers)) return { added: 0, duplicates: 0 };
     let added = 0;
@@ -10946,7 +10682,6 @@
     project.dedupeCount = (project.dedupeCount || 0) + duplicates;
     return { added, duplicates };
   }
-
   function getActiveReviewer(project) {
     normalizeReviewProject(project);
     const reviewers = project.reviewers || [];
@@ -10958,7 +10693,6 @@
     }
     return active;
   }
-
   function normalizeDecisionEntry(decision) {
     if (!decision || typeof decision !== "object") return { status: "unscreened", reason: "", votes: [] };
     decision.status = decision.status || "unscreened";
@@ -10967,12 +10701,6 @@
     decision.votes = Array.isArray(decision.votes) ? decision.votes : [];
     return decision;
   }
-
-  function getDecisionVotes(project, id) {
-    const decision = normalizeDecisionEntry(project.decisions?.[id]);
-    return Array.isArray(decision.votes) ? decision.votes : [];
-  }
-
   function getConsensusStatus(votes) {
     if (!Array.isArray(votes) || votes.length === 0) return "unscreened";
     const counts = { include: 0, exclude: 0, maybe: 0 };
@@ -10986,7 +10714,6 @@
     if (entries[1][1] === entries[0][1]) return "conflict";
     return entries[0][0];
   }
-
   function getDecisionStatus(project, id, opts = {}) {
     const decision = normalizeDecisionEntry(project.decisions?.[id]);
     const reviewerId = opts.reviewerId;
@@ -11001,13 +10728,11 @@
     }
     return decision.status || "unscreened";
   }
-
   function getReviewerVote(decision, reviewerId) {
     if (!decision || !reviewerId) return null;
     const votes = Array.isArray(decision.votes) ? decision.votes : [];
     return votes.find((v) => v.reviewerId === reviewerId) || null;
   }
-
   function upsertReviewerVote(project, id, reviewerId, nextStatus, nextReason) {
     if (!project || !id || !reviewerId) return;
     project.decisions = project.decisions || {};
@@ -11034,7 +10759,6 @@
     decision.status = getConsensusStatus(votes);
     project.decisions[id] = decision;
   }
-
   function computeReviewStats(project) {
     const ids = Object.keys(project.papers || {});
     let included = 0;
@@ -11060,7 +10784,6 @@
       duplicates: project.dedupeCount || 0
     };
   }
-
   function computeReviewerStats(project) {
     const reviewers = Array.isArray(project.reviewers) ? project.reviewers : [];
     const stats = {};
@@ -11081,7 +10804,6 @@
     }
     return Object.entries(stats).map(([id, s]) => ({ id, ...s }));
   }
-
   function getConflictPapers(project) {
     const out = [];
     const papers = project.papers || {};
@@ -11095,7 +10817,6 @@
     }
     return out;
   }
-
   function buildTermWeights(project) {
     const papers = project.papers || {};
     const pos = new Map();
@@ -11118,7 +10839,6 @@
     });
     return weights;
   }
-
   function scorePaperForActiveLearning(paper, weights) {
     if (!paper) return 0;
     if (!weights || weights.size === 0) return 0;
@@ -11131,7 +10851,6 @@
     tokens.forEach((t) => { score += weights.get(t) || 0; });
     return Math.round(score * 10) / 10;
   }
-
   function normalizeExtractionField(field, idx) {
     if (!field) return { key: `field_${idx}`, label: `Field ${idx + 1}`, type: "text", options: [] };
     if (typeof field === "string") {
@@ -11146,12 +10865,10 @@
       options: Array.isArray(field.options) ? field.options : []
     };
   }
-
   function getExtractionFields(project) {
     const fields = Array.isArray(project.extractionFields) ? project.extractionFields : [];
     return fields.map((f, idx) => normalizeExtractionField(f, idx));
   }
-
   function renderPrismaDiagram(stats) {
     const total = stats.total;
     const dupes = stats.duplicates;
@@ -11175,7 +10892,6 @@
       </svg>
     `;
   }
-
   function exportReviewDecisionsCsv(project) {
     if (!project) return;
     const rows = [["Title", "Year", "Decision", "Consensus", "Reviewer", "Reason", "Tags", "URL"]];
@@ -11201,7 +10917,6 @@
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
     downloadBlob(`${project.name}-decisions.csv`.replace(/\s+/g, "-").toLowerCase(), "text/csv;charset=utf-8", csv);
   }
-
   function exportReviewExtractionCsv(project) {
     if (!project) return;
     const fields = getExtractionFields(project);
@@ -11220,7 +10935,6 @@
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
     downloadBlob(`${project.name}-extraction.csv`.replace(/\s+/g, "-").toLowerCase(), "text/csv;charset=utf-8", csv);
   }
-
   function exportReviewQualityCsv(project) {
     if (!project) return;
     const checklist = Array.isArray(project.qualityChecklist) ? project.qualityChecklist : [];
@@ -11242,7 +10956,6 @@
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
     downloadBlob(`${project.name}-quality.csv`.replace(/\s+/g, "-").toLowerCase(), "text/csv;charset=utf-8", csv);
   }
-
   function exportReviewBibTeX(project) {
     if (!project) return;
     const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
@@ -11254,7 +10967,6 @@
     }).join("\\n\\n");
     downloadBlob(`${project.name}-included.bib`.replace(/\\s+/g, "-").toLowerCase(), "text/plain;charset=utf-8", entries || "");
   }
-
   function exportReviewReport(project, stats) {
     if (!project) return;
     const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
@@ -11275,13 +10987,11 @@
     ];
     downloadBlob(`${project.name}-report.md`.replace(/\\s+/g, "-").toLowerCase(), "text/markdown;charset=utf-8", lines.join("\\n"));
   }
-
   function exportPrismaSvg(stats, name) {
     const svg = renderPrismaDiagram(stats);
     const filename = `${(name || "review")}-prisma.svg`.replace(/\\s+/g, "-").toLowerCase();
     downloadBlob(filename, "image/svg+xml;charset=utf-8", svg);
   }
-
   async function checkReviewUpdates(project) {
     if (!project) return;
     const lastCheck = project.lastUpdateCheck ? new Date(project.lastUpdateCheck) : new Date(0);
@@ -11308,7 +11018,6 @@
     project.updates = [...newUpdates.filter((u) => !existingIds.has(u.id)), ...existing].slice(0, 50);
     project.lastUpdateCheck = new Date().toISOString();
   }
-
   function renderReviewOverlay(project) {
     const overlay = ensureReviewOverlay();
     const content = overlay.querySelector("#su-review-content");
@@ -11343,7 +11052,6 @@
       c: String(overlay.querySelector("#su-review-filter-c")?.value || "").toLowerCase().trim(),
       o: String(overlay.querySelector("#su-review-filter-o")?.value || "").toLowerCase().trim()
     };
-
     if (tab === "overview") {
       const screened = stats.total - stats.unscreened;
       const pct = stats.total ? Math.round((screened / stats.total) * 100) : 0;
@@ -11411,7 +11119,6 @@
       `;
       return;
     }
-
     if (tab === "screening") {
       const ids = Object.keys(project.papers || {});
       let rows = ids.map((id) => {
@@ -11475,7 +11182,7 @@
         </div>
         <div class="su-review-actions">
           <button type="button" class="su-graph-btn" data-review-autoscreen="1">Auto-screen suggestions</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-decisions="1">Export decisions CSV</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-decisions="1">Export decisions CSV</button>
         </div>
         <div class="su-review-table">
           ${limited.map((r) => {
@@ -11517,7 +11224,7 @@
                     </div>
                     <div class="su-review-tag-input-row">
                       <input class="su-review-input su-review-tag-input" placeholder="Add tag" data-review-tag-input value="" />
-                      <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-add-tag="1">Add tag</button>
+                      <button type="button" class="${CLS_BTN_SEC}" data-review-add-tag="1">Add tag</button>
                     </div>
                   </div>
                   <label>Notes <textarea class="su-review-input su-review-notes" data-review-notes>${escapeHtml(project.notes[r.id] || "")}</textarea></label>
@@ -11584,7 +11291,6 @@
       if (conflictCheck) conflictCheck.addEventListener("change", () => renderReviewOverlay(project));
       return;
     }
-
     if (tab === "dedupe") {
       const duplicates = Array.isArray(project.duplicates) ? project.duplicates : [];
       content.innerHTML = `
@@ -11597,7 +11303,7 @@
               <div class="su-review-duplicate-title">${escapeHtml(d.paper?.title || "Untitled")}</div>
               <div class="su-review-duplicate-meta">Matches ${escapeHtml(d.fingerprint || "")}</div>
               <div class="su-review-duplicate-actions">
-                <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-add-duplicate="${idx}">Add anyway</button>
+                <button type="button" class="${CLS_BTN_SEC}" data-review-add-duplicate="${idx}">Add anyway</button>
                 <button type="button" class="su-graph-btn" data-review-dismiss-duplicate="${idx}">Dismiss</button>
               </div>
             </div>
@@ -11606,7 +11312,6 @@
       `;
       return;
     }
-
     if (tab === "extraction") {
       const fields = getExtractionFields(project);
       const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
@@ -11620,7 +11325,7 @@
           </select>
           <input id="su-review-field-options" class="su-review-input" placeholder="Options (comma-separated)" />
           <button type="button" class="su-graph-btn" data-review-add-field="1">Add field</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-extraction="1">Export extraction CSV</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-extraction="1">Export extraction CSV</button>
         </div>
         <div class="su-review-extract-table">
           <table>
@@ -11655,7 +11360,6 @@
       `;
       return;
     }
-
     if (tab === "quality") {
       const checklist = Array.isArray(project.qualityChecklist) ? project.qualityChecklist : [];
       const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
@@ -11663,7 +11367,7 @@
         <div class="su-review-quality-controls">
           <input id="su-review-quality-field" class="su-review-input" placeholder="Add checklist item" />
           <button type="button" class="su-graph-btn" data-review-add-quality="1">Add item</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-quality="1">Export quality CSV</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-quality="1">Export quality CSV</button>
         </div>
         <div class="su-review-quality-table">
           <table>
@@ -11700,19 +11404,17 @@
       `;
       return;
     }
-
     if (tab === "prisma") {
       content.innerHTML = `
         <div class="su-review-prisma-wrap">
           ${renderPrismaDiagram(stats)}
         </div>
         <div class="su-review-actions">
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-prisma="1">Download PRISMA SVG</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-prisma="1">Download PRISMA SVG</button>
         </div>
       `;
       return;
     }
-
     if (tab === "updates") {
       const updates = Array.isArray(project.updates) ? project.updates : [];
       content.innerHTML = `
@@ -11726,7 +11428,6 @@
       `;
       return;
     }
-
     if (tab === "insights") {
       const screened = stats.total - stats.unscreened;
       const includeRate = screened ? stats.included / screened : 0;
@@ -11757,7 +11458,6 @@
       `;
       return;
     }
-
     if (tab === "team") {
       const reviewerStats = computeReviewerStats(project);
       const conflicts = getConflictPapers(project);
@@ -11766,7 +11466,7 @@
           <input id="su-review-reviewer-name" class="su-review-input" placeholder="Add reviewer name" />
           <button type="button" class="su-graph-btn" data-review-add-reviewer="1">Add reviewer</button>
           <label class="su-review-filter-check"><input type="checkbox" id="su-review-blind-toggle" ${project.blindMode ? "checked" : ""} /> Blind screening</label>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-decisions="1">Export team CSV</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-decisions="1">Export team CSV</button>
         </div>
         <div class="su-review-team-list">
           ${reviewerStats.length ? reviewerStats.map((r) => `
@@ -11799,7 +11499,6 @@
       `;
       return;
     }
-
     if (tab === "report") {
       const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
       const lines = [
@@ -11822,8 +11521,8 @@
         <textarea class="su-review-report" readonly></textarea>
         <div class="su-review-actions">
           <button type="button" class="su-graph-btn" data-review-copy-report="1">Copy report</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-report="1">Download report</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export-bib="1">Export BibTeX</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-report="1">Download report</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export-bib="1">Export BibTeX</button>
         </div>
       `;
       const reviewReportEl = content.querySelector(".su-review-report");
@@ -11831,7 +11530,6 @@
       return;
     }
   }
-
   function ensureReviewOverlay() {
     let overlay = document.getElementById("su-review-overlay");
     if (overlay) return overlay;
@@ -11846,16 +11544,16 @@
             <div class="su-review-title">Systematic Review Workspace</div>
             <div class="su-review-subtitle">Local screening, dedupe, extraction, quality, PRISMA, and updates</div>
           </div>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-close="1">Close</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-close="1">Close</button>
         </div>
         <div class="su-review-project-bar">
           <select id="su-review-project-select"></select>
           <select id="su-review-reviewer-select" title="Active reviewer"></select>
           <button type="button" class="su-graph-btn" data-review-new="1">New</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-rename="1">Rename</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-add-page="1">Add page results</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-export="1">Export JSON</button>
-          <button type="button" class="su-graph-btn su-graph-btn-secondary" data-review-import="1">Import JSON</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-rename="1">Rename</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-add-page="1">Add page results</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-export="1">Export JSON</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-review-import="1">Import JSON</button>
           <label class="su-review-blind-toggle"><input type="checkbox" id="su-review-blind-toggle-top" /> Blind</label>
           <input type="file" id="su-review-import-file" accept="application/json" style="display:none" />
         </div>
@@ -12328,7 +12026,6 @@
     });
     return overlay;
   }
-
   async function openReviewOverlay() {
     await ensureReviewState();
     const overlay = ensureReviewOverlay();
@@ -12349,7 +12046,6 @@
     overlay.classList.add("su-visible");
     renderReviewOverlay(getActiveReviewProject());
   }
-
   function openAuthorCompareOverlay(state) {
     let overlay = document.getElementById("su-author-compare-overlay");
     if (!overlay) {
@@ -12393,7 +12089,6 @@
           const PAGE_SIZE = 20;
           const MAX_PAGES = 25;
           const FETCH_TIMEOUT_MS = 12000;
-
           const fetchPage = async (cstart) => {
             const u = new URL(url);
             u.searchParams.set("cstart", String(cstart));
@@ -12408,12 +12103,10 @@
               clearTimeout(timer);
             }
           };
-
           const html0 = await fetchPage(0);
           const doc0 = new DOMParser().parseFromString(html0, "text/html");
           const nameB = (doc0.querySelector("#gsc_prf_in")?.textContent || "").trim() || "Author B";
           let allRows = Array.from(doc0.querySelectorAll(".gsc_a_tr"));
-
           const rowId = (tr) => tr.getAttribute("data-row") || tr.querySelector(".gsc_a_at")?.getAttribute("href") || tr.textContent?.slice(0, 80) || "";
           for (let page = 1; page < MAX_PAGES; page++) {
             const cstart = page * PAGE_SIZE;
@@ -12428,7 +12121,6 @@
             allRows = allRows.concat(rows);
             if (rows.length < PAGE_SIZE) break;
           }
-
           const stateB = {
             authorVariations: nameB ? generateAuthorNameVariations(nameB) : [],
             qIndex: (state && state.qIndex) || null
@@ -12452,7 +12144,6 @@
     overlay.classList.add("su-visible");
     overlay.querySelector("#su-compare-url-b")?.focus();
   }
-
   function buildAuthorCompareTable(nameA, statsA, nameB, statsB) {
     const s = (st) => (st && typeof st === "object" ? st : null);
     const n = (v) => (v != null && !Number.isNaN(v) ? Number(v) : 0);
@@ -12477,7 +12168,6 @@
       </table>
     `;
   }
-
   function setCompareResultMessage(resultEl, message, className = "") {
     if (!resultEl) return;
     resultEl.textContent = "";
@@ -12486,7 +12176,6 @@
     p.textContent = String(message || "");
     resultEl.appendChild(p);
   }
-
   function sameFlatObject(a, b) {
     const left = a && typeof a === "object" ? a : {};
     const right = b && typeof b === "object" ? b : {};
@@ -12501,12 +12190,10 @@
     }
     return true;
   }
-
   function closePoPOverlay() {
     const overlay = document.getElementById("su-pop-overlay");
     if (overlay) overlay.classList.remove("su-visible");
   }
-
   function bindPoPOverlayEvents(overlay) {
     if (!overlay || overlay.__suPopBound) return;
     overlay.__suPopBound = true;
@@ -12569,7 +12256,6 @@
       if (tip) tip.classList.remove("su-author-stat-tooltip-visible");
     }, true);
   }
-
   function ensurePoPOverlay() {
     let overlay = document.getElementById("su-pop-overlay");
     if (overlay) {
@@ -12596,7 +12282,6 @@
     bindPoPOverlayEvents(overlay);
     return overlay;
   }
-
   function formatPopValue(val, digits = 2) {
     if (val == null || val === "") return "—";
     const num = Number(val);
@@ -12604,7 +12289,6 @@
     if (Number.isInteger(num)) return String(num);
     return num.toFixed(digits);
   }
-
   function buildPoPTooltips(metrics) {
     const years = metrics?.yearsSinceFirst || "n";
     return {
@@ -12630,7 +12314,6 @@
       acc: `<strong>ACC</strong><br>Count of papers with ≥1/2/5/10/20 citations.`
     };
   }
-
   function buildPoPPeersSection(stats) {
     const cfg = getPopPeerConfig();
     const startYear = Number(stats?.firstYear) || null;
@@ -12655,14 +12338,13 @@
     if (pages) metaBits.push(`${pages} page${pages === 1 ? "" : "s"}`);
     const meta = metaBits.length ? `(${metaBits.join(", ")})` : "";
     const btnLabel = loading ? "Loading peers…" : (startYear ? `Find peers for ${startYear}` : "Find peers");
-    const refreshBtn = peers.length ? `<button type="button" class="su-graph-btn su-graph-btn-secondary" data-pop-peers="refresh" ${loading ? "disabled" : ""}>Refresh</button>` : "";
+    const refreshBtn = peers.length ? `<button type="button" class="${CLS_BTN_SEC}" data-pop-peers="refresh" ${loading ? "disabled" : ""}>Refresh</button>` : "";
     const disabledAttr = startYear && !loading ? "" : "disabled";
     const yearRange = startYear && yearWindow ? `${startYear - yearWindow}–${startYear + yearWindow}` : (startYear || "—");
     const conceptsLabel = conceptList.length ? conceptList.join(", ") : conceptName;
     const note = `Data via OpenAlex concepts "${escapeHtml(conceptsLabel)}". Start year range: ${yearRange}. Inferred from OpenAlex counts_by_year; list may be incomplete.`;
     const displayPeers = peers.slice(0, 40);
     const showingLine = peers.length > 40 ? `Showing top 40 of ${peers.length}.` : "";
-
     let bodyHtml = "";
     if (!startYear) {
       bodyHtml = `<div class="su-pop-peers-empty">Start year unavailable for this author.</div>`;
@@ -12710,7 +12392,6 @@
         ? `<div class="su-pop-peers-empty">No peers found for ${yearRange}. Try refresh or broaden the concept.</div>`
         : `<div class="su-pop-peers-empty">No peers loaded yet. Click “Find peers” to search.</div>`;
     }
-
     return `
       <div class="su-pop-section su-pop-peers">
         <div class="su-pop-section-title">Peer comparison (${escapeHtml(cfg.preset || "Field")})</div>
@@ -12735,7 +12416,6 @@
       </div>
     `;
   }
-
   function renderPoPOverlay(stats) {
     const overlay = ensurePoPOverlay();
     const content = overlay.querySelector("#su-pop-content");
@@ -12784,9 +12464,9 @@
       ${partial ? `<div class="su-pop-warning">Partial data: stats based on loaded papers only. Use “Load all for full stats” to complete.</div>` : ""}
       <div class="su-pop-actions">
         <button type="button" class="su-graph-btn" data-pop-export="metrics-csv">Export metrics CSV</button>
-        <button type="button" class="su-graph-btn su-graph-btn-secondary" data-pop-export="papers-csv">Export papers CSV</button>
-        <button type="button" class="su-graph-btn su-graph-btn-secondary" data-pop-export="json">Export JSON</button>
-        <button type="button" class="su-graph-btn su-graph-btn-secondary" data-pop-export="md">Export report (MD)</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-pop-export="papers-csv">Export papers CSV</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-pop-export="json">Export JSON</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-pop-export="md">Export report (MD)</button>
       </div>
       <div class="su-pop-summary">
         ${summaryItems.map(([label, val]) => `<div class="su-pop-card"><span>${label}</span><strong>${formatPopValue(val, 2)}</strong></div>`).join("")}
@@ -12870,7 +12550,6 @@
       papers: rows
     };
   }
-
   async function loadPopPeers({ force = false } = {}) {
     const stats = window.suFullAuthorStats;
     const startYear = Number(stats?.firstYear) || null;
@@ -12947,7 +12626,6 @@
       const scannedAuthors = allCandidates.length;
       const candidateList = allCandidates.slice(0, maxCandidates);
       updateState({ loading: true, status: `Checking ${candidateList.length} authors...`, scanned: scannedAuthors, scannedWorks: candidateRes.scannedWorks, candidateCount: candidateList.length });
-
       const mapWithConcurrency = async (items, limit, worker) => {
         const results = [];
         let idx = 0;
@@ -12963,7 +12641,6 @@
         await Promise.all(runners);
         return results;
       };
-
       const withFirstYear = await mapWithConcurrency(candidateList, concurrency, async (cand) => {
         const firstYear = await fetchOpenAlexAuthorFirstYear(cand.id);
         return { ...cand, firstYear };
@@ -12977,7 +12654,6 @@
       const minYear = startYear - yearWindow;
       const maxYear = startYear + yearWindow;
       const inWindow = withFirstYear.filter((c) => c.firstYear && c.firstYear >= minYear && c.firstYear <= maxYear);
-
       updateState({ loading: true, status: `Loading metrics for ${inWindow.length} peers...`, scanned: scannedAuthors, scannedWorks: candidateRes.scannedWorks, candidateCount: candidateList.length });
       const enriched = await mapWithConcurrency(inWindow, concurrency, async (cand) => {
         const raw = await fetchOpenAlexAuthorById(cand.id);
@@ -12990,7 +12666,6 @@
           sampleCount: cand.count
         };
       });
-
       const peers = enriched.filter((p) => p && p.firstYear != null);
       cache.peers[cacheKey] = {
         ts: Date.now(),
@@ -13022,7 +12697,6 @@
       updateState({ loading: false, error: "Failed to load peers from OpenAlex.", hasSearched: true });
     }
   }
-
   function openPoPOverlay() {
     const stats = window.suFullAuthorStats;
     if (!stats) return;
@@ -13033,7 +12707,6 @@
     overlay.classList.add("su-visible");
     renderPoPOverlay(stats);
   }
-
   function exportPoPMetricsCsv(payload) {
     const { authorName, metrics } = payload;
     if (!metrics) return;
@@ -13069,7 +12742,6 @@
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
     downloadBlob(`${authorName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pop-metrics.csv`, "text/csv;charset=utf-8", csv);
   }
-
   function exportPoPPapersCsv(payload) {
     const { authorName, papers } = payload;
     const rows = [["Title", "Year", "Citations", "Cites/Year", "Authors", "DOI", "URL", "Cluster ID"]];
@@ -13089,7 +12761,6 @@
     const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
     downloadBlob(`${authorName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pop-papers.csv`, "text/csv;charset=utf-8", csv);
   }
-
   function exportPoPJson(payload) {
     const { authorName, metrics, papers } = payload;
     const json = JSON.stringify({
@@ -13100,7 +12771,6 @@
     }, null, 2);
     downloadBlob(`${authorName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pop-report.json`, "application/json", json);
   }
-
   const GENEALOGY_MAX_UP = 2;
   const GENEALOGY_MAX_DOWN = 2;
   const GENEALOGY_CLICK_DOWN = 10;
@@ -13114,14 +12784,12 @@
       edgesUrl: "src/data/genealogy_merged.edges.bin.gz"
     }
   };
-
   function getGenealogyDataState() {
     if (!window.suGenealogyData) {
       window.suGenealogyData = { datasets: {} };
     }
     return window.suGenealogyData;
   }
-
   function getGenealogyDatasetState(key) {
     const root = getGenealogyDataState();
     if (!root.datasets[key]) {
@@ -13137,21 +12805,18 @@
     }
     return root.datasets[key];
   }
-
   function getGenealogyMatchState() {
     if (!window.suGenealogyMatch) {
       window.suGenealogyMatch = { status: "idle", authorKey: "", matchIndex: null, matchName: "", datasetKey: "" };
     }
     return window.suGenealogyMatch;
   }
-
   function getLineageViewState() {
     if (!window.suLineageView) {
-      window.suLineageView = { rootIndex: null, maxUp: GENEALOGY_MAX_UP, maxDown: GENEALOGY_MAX_DOWN, stack: [], datasetKey: "aft" };
+      window.suLineageView = { rootIndex: null, maxUp: GENEALOGY_MAX_UP, maxDown: GENEALOGY_MAX_DOWN, stack: [], datasetKey: "merged" };
     }
     return window.suLineageView;
   }
-
   async function fetchGzipText(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load ${url}`);
@@ -13161,7 +12826,6 @@
     const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
     return await new Response(stream).text();
   }
-
   async function fetchGzipArrayBuffer(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load ${url}`);
@@ -13171,7 +12835,6 @@
     const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
     return await new Response(stream).arrayBuffer();
   }
-
   async function ensureGenealogyNamesLoaded(key) {
     const source = GENEALOGY_SOURCES[key];
     if (!source) throw new Error("Unknown genealogy source.");
@@ -13202,7 +12865,6 @@
     data.status = "ready";
     return data;
   }
-
   async function ensureGenealogyEdgesLoaded(key) {
     const source = GENEALOGY_SOURCES[key];
     if (!source) throw new Error("Unknown genealogy source.");
@@ -13224,13 +12886,10 @@
     }
     data.forward = forward;
     data.reverse = reverse;
-    const forwardAvg = forward.size ? arr.length / 2 / forward.size : 0;
-    const reverseAvg = reverse.size ? arr.length / 2 / reverse.size : 0;
-    data.orientation = forwardAvg < reverseAvg ? "student->advisor" : "advisor->student";
+    data.orientation = "student->advisor";
     data.edgesLoaded = true;
     return data;
   }
-
   function normalizeFullNameForMatch(name) {
     return stripTrailingSuffixTokens(stripNameCredentials(String(name || "")))
       .replace(/[^\p{L}\p{N}]+/gu, " ")
@@ -13238,7 +12897,6 @@
       .trim()
       .toLowerCase();
   }
-
   function resolveGenealogyMatch(authorName, authorVariations, data) {
     const variations = Array.isArray(authorVariations) && authorVariations.length
       ? authorVariations
@@ -13259,7 +12917,6 @@
     }
     return null;
   }
-
   function getGenealogyMaps(data) {
     if (!data) return { advisorsMap: new Map(), studentsMap: new Map() };
     if (data.orientation === "student->advisor") {
@@ -13267,7 +12924,6 @@
     }
     return { advisorsMap: data.reverse || new Map(), studentsMap: data.forward || new Map() };
   }
-
   function ensureGenealogyMatchAsync(authorName, authorVariations) {
     if (!authorName) return;
     const match = getGenealogyMatchState();
@@ -13313,7 +12969,6 @@
         }
       });
   }
-
   function countReachable(root, map, limit = GENEALOGY_DESC_LIMIT) {
     const visited = new Set();
     const queue = [root];
@@ -13332,118 +12987,104 @@
     }
     return { count, truncated: false };
   }
-
-  function buildGenealogyTree(root, advisorsMap, studentsMap, maxUp, maxDown) {
-    const levels = new Map();
-    const edges = [];
-    const overflow = new Map();
-    levels.set(0, [root]);
-
-    let frontier = [root];
-    for (let depth = 1; depth <= maxUp; depth++) {
-      const next = new Set();
-      for (const node of frontier) {
-        const parents = advisorsMap.get(node) || [];
-        for (const p of parents) next.add(p);
-      }
-      let arr = Array.from(next);
-      let extra = 0;
-      if (arr.length > GENEALOGY_MAX_PER_LEVEL) {
-        extra = arr.length - GENEALOGY_MAX_PER_LEVEL;
-        arr = arr.slice(0, GENEALOGY_MAX_PER_LEVEL);
-      }
-      levels.set(-depth, arr);
-      if (extra) overflow.set(-depth, extra);
-      const selected = new Set(arr);
-      for (const node of frontier) {
-        const parents = advisorsMap.get(node) || [];
-        for (const parent of parents) {
-          if (selected.has(parent)) edges.push([parent, node]);
-        }
-      }
-      frontier = arr;
-    }
-
-    frontier = [root];
-    for (let depth = 1; depth <= maxDown; depth++) {
-      const next = new Set();
-      for (const node of frontier) {
-        const kids = studentsMap.get(node) || [];
-        for (const k of kids) next.add(k);
-      }
-      let arr = Array.from(next);
-      let extra = 0;
-      if (arr.length > GENEALOGY_MAX_PER_LEVEL) {
-        extra = arr.length - GENEALOGY_MAX_PER_LEVEL;
-        arr = arr.slice(0, GENEALOGY_MAX_PER_LEVEL);
-      }
-      levels.set(depth, arr);
-      if (extra) overflow.set(depth, extra);
-      const selected = new Set(arr);
-      for (const node of frontier) {
-        const kids = studentsMap.get(node) || [];
-        for (const child of kids) {
-          if (selected.has(child)) edges.push([node, child]);
-        }
-      }
-      frontier = arr;
-    }
-
-    return { levels, edges, overflow };
+  function getLineageRelLabel(depth) {
+    if (depth === 0) return "Focus";
+    if (depth === -1) return "Advisor";
+    if (depth === -2) return "Advisor’s advisor";
+    if (depth < -2) { const n = Math.abs(depth); return `${n}${n === 3 ? "rd" : "th"} gen. advisor`; }
+    if (depth === 1) return "Student";
+    if (depth === 2) return "Grandstudent";
+    if (depth > 2) return `${depth}${depth === 3 ? "rd" : "th"} gen. student`;
+    return "";
   }
-
-  function renderGenealogySvg(tree, data) {
-    const width = 1200;
-    const height = 720;
-    const centerY = height / 2;
-    const yGap = 70;
-    const positions = new Map();
-    const nodes = [];
-    const levels = tree.levels;
-    const depths = Array.from(levels.keys()).sort((a, b) => a - b);
-
-    for (const depth of depths) {
-      const row = levels.get(depth) || [];
-      const y = centerY + depth * yGap;
-      const count = row.length;
-      row.forEach((node, idx) => {
-        const x = count === 1 ? width / 2 : (idx + 1) * (width / (count + 1));
-        positions.set(node, { x, y });
-        nodes.push({ index: node, depth, x, y });
+  function getLineageNodeType(depth) {
+    if (depth === 0) return "focal";
+    if (Math.abs(depth) === 1) return "direct";
+    if (Math.abs(depth) === 2) return "ancestor";
+    return "distant";
+  }
+  function buildHierarchicalTree(rootIdx, data, advisorsMap, studentsMap, maxUp, maxDown) {
+    const names = data.names || [];
+    const visited = new Set();
+    function buildDown(nodeIdx, depth, remaining) {
+      if (visited.has(nodeIdx) || remaining <= 0) return [];
+      visited.add(nodeIdx);
+      const kids = studentsMap.get(nodeIdx) || [];
+      return kids.slice(0, GENEALOGY_MAX_PER_LEVEL).map(k => {
+        const childChildren = buildDown(k, depth + 1, remaining - 1);
+        return { index: k, name: names[k] || "Unknown", depth: depth + 1, children: childChildren };
       });
-      const extra = tree.overflow.get(depth) || 0;
-      if (extra) {
-        const x = width - 40;
-        positions.set(`overflow-${depth}`, { x, y });
-        nodes.push({ index: `overflow-${depth}`, depth, x, y, label: `+${extra} more`, overflow: true });
-      }
     }
-
-    const edgeHtml = tree.edges.map(([a, b]) => {
-      const from = positions.get(a);
-      const to = positions.get(b);
-      if (!from || !to) return "";
-      return `<line class="su-lineage-edge" x1="${from.x.toFixed(1)}" y1="${from.y.toFixed(1)}" x2="${to.x.toFixed(1)}" y2="${to.y.toFixed(1)}" />`;
-    }).join("");
-
-    const nodeHtml = nodes.map((n) => {
-      const name = n.overflow ? n.label : (data.names?.[n.index] || "Unknown");
-      const classes = ["su-lineage-node"];
-      if (n.depth === 0) classes.push("su-lineage-node-root");
-      if (n.overflow) classes.push("su-lineage-node-overflow");
-      return `<g class="${classes.join(" ")}" transform="translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})" data-lineage-name="${escapeHtml(name)}" data-lineage-index="${escapeHtml(String(n.index))}">
-        <circle r="${n.depth === 0 ? 10 : 7}"></circle>
-        <text class="su-lineage-node-text" x="${n.depth === 0 ? 14 : 12}" y="4">${escapeHtml(name)}</text>
-      </g>`;
-    }).join("");
-
-    return `<svg class="su-lineage-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
-      <rect class="su-lineage-bg" x="0" y="0" width="${width}" height="${height}"></rect>
-      ${edgeHtml}
-      ${nodeHtml}
-    </svg>`;
+    function buildUp(nodeIdx, depth, remaining) {
+      if (remaining <= 0) return null;
+      const parents = advisorsMap.get(nodeIdx) || [];
+      if (parents.length === 0) return null;
+      const parent = parents[0];
+      if (visited.has(parent)) return null;
+      visited.add(parent);
+      const grandparent = buildUp(parent, depth - 1, remaining - 1);
+      const node = { index: parent, name: names[parent] || "Unknown", depth: depth - 1, children: [] };
+      if (grandparent) {
+        grandparent.children = [node];
+        return grandparent;
+      }
+      return node;
+    }
+    const focalChildren = buildDown(rootIdx, 0, maxDown);
+    const focal = { index: rootIdx, name: names[rootIdx] || "Unknown", depth: 0, children: focalChildren };
+    const ancestor = buildUp(rootIdx, 0, maxUp);
+    if (ancestor) {
+      let bottom = ancestor;
+      while (bottom.children && bottom.children.length > 0) bottom = bottom.children[0];
+      bottom.children = [focal];
+      return ancestor;
+    }
+    return focal;
   }
-
+  function countSubtree(branch) {
+    if (!branch.children || branch.children.length === 0) return 0;
+    let n = branch.children.length;
+    for (const c of branch.children) n += countSubtree(c);
+    return n;
+  }
+  function renderTimelineNode(branch, search, autoExpand) {
+    const type = getLineageNodeType(branch.depth);
+    const rel = getLineageRelLabel(branch.depth);
+    const name = escapeHtml(branch.name);
+    const dimmed = search && !branch.name.toLowerCase().includes(search) ? ' style="opacity:0.35"' : "";
+    const isFocal = branch.depth === 0;
+    const focalClass = isFocal ? " sl-timeline-focal" : "";
+    const hasKids = branch.children && branch.children.length > 0;
+    const subtreeCount = hasKids ? countSubtree(branch) : 0;
+    const expanded = autoExpand || Math.abs(branch.depth) <= 1;
+    const toggleHtml = hasKids
+      ? ` <button class="sl-collapse-toggle" data-sl-toggle="1">${expanded ? "−" : `+${subtreeCount}`}</button>`
+      : "";
+    const nodeHtml = `<div class="sl-node sl-node-${type}" data-lineage-index="${branch.index}" data-lineage-name="${name}"${dimmed}>
+      <div class="sl-node-rel">${escapeHtml(rel)}${toggleHtml}</div>
+      <div class="sl-node-name">${name}</div>
+      <div class="sl-node-meta">${escapeHtml(branch.meta || "")}</div>
+    </div>`;
+    if (!hasKids) {
+      return `<div class="sl-timeline-node${focalClass}">${nodeHtml}</div>`;
+    }
+    const displayLimit = 5;
+    const visibleKids = expanded ? branch.children : [];
+    const shown = visibleKids.slice(0, displayLimit);
+    const overflow = visibleKids.length > displayLimit ? visibleKids.length - displayLimit : 0;
+    let childrenHtml = shown.map(c => renderTimelineNode(c, search, false)).join("");
+    if (overflow > 0) {
+      const hiddenHtml = visibleKids.slice(displayLimit).map(c => renderTimelineNode(c, search, false)).join("");
+      childrenHtml += `<div class="sl-overflow-group" style="display:none">${hiddenHtml}</div>`;
+      childrenHtml += `<div class="sl-overflow-btn" data-sl-overflow="1">+${overflow} more</div>`;
+    }
+    const collapsedStyle = expanded ? "" : ' style="display:none"';
+    return `<div class="sl-timeline-node${focalClass}">${nodeHtml}<div class="sl-timeline-children"${collapsedStyle}>${childrenHtml}</div></div>`;
+  }
+  function renderGenealogyTree(data, root, advisorsMap, studentsMap, maxUp, maxDown, search) {
+    const hier = buildHierarchicalTree(root, data, advisorsMap, studentsMap, maxUp, maxDown);
+    return `<div class="sl-timeline-tree">${renderTimelineNode(hier, search, true)}</div>`;
+  }
   function ensureLineageOverlay() {
     let overlay = document.getElementById("su-lineage-overlay");
     if (overlay) return overlay;
@@ -13455,27 +13096,33 @@
       <div class="su-lineage-panel">
         <div class="su-lineage-header">
           <div>
-            <div class="su-lineage-title">Academic lineage</div>
-            <div class="su-lineage-subtitle">Advisor/student genealogy based on public family-tree data.</div>
+            <div class="su-lineage-title">Academic Lineage</div>
+            <div class="su-lineage-subtitle">Advisor–student genealogy from public datasets</div>
           </div>
           <div class="su-lineage-actions">
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-lineage-back="1">Back</button>
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-lineage-close="1">Close</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-lineage-back="1">Back</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-lineage-close="1">Close ✕</button>
           </div>
         </div>
         <div class="su-lineage-meta">
           <div id="su-lineage-status" class="su-lineage-status"></div>
-          <div class="su-lineage-controls">
-            <label class="su-lineage-label">Dataset</label>
-            <select id="su-lineage-dataset" class="su-lineage-select"></select>
-          </div>
+        </div>
+        <div style="padding: 0 20px 0 20px; flex-shrink: 0;">
+          <input id="su-lineage-search" class="su-lineage-search" type="text" placeholder="Search tree…" />
         </div>
         <div id="su-lineage-stats" class="su-lineage-stats"></div>
         <div id="su-lineage-tree" class="su-lineage-tree"></div>
+        <div class="su-lineage-footer">
+          <span class="su-lineage-footer-text">Tree view · Click any node to re-root</span>
+        </div>
       </div>
     `;
     document.body.appendChild(overlay);
     overlay.addEventListener("click", (e) => {
+      if (e.target.closest?.("[data-lineage-close]")) {
+        overlay.classList.remove("su-visible");
+        return;
+      }
       const backBtn = e.target.closest?.("[data-lineage-back]");
       if (backBtn) {
         const view = getLineageViewState();
@@ -13487,8 +13134,30 @@
         }
         return;
       }
-      const node = e.target.closest?.(".su-lineage-node");
-      if (!node || node.classList.contains("su-lineage-node-overflow")) return;
+      const toggle = e.target.closest?.("[data-sl-toggle]");
+      if (toggle) {
+        e.stopPropagation();
+        const timelineNode = toggle.closest(".sl-timeline-node");
+        const children = timelineNode?.querySelector(":scope > .sl-timeline-children");
+        if (children) {
+          const hidden = children.style.display === "none";
+          children.style.display = hidden ? "" : "none";
+          const count = toggle.closest(".sl-timeline-node")?.querySelectorAll(".sl-timeline-node").length || 0;
+          toggle.textContent = hidden ? "−" : `+${count}`;
+        }
+        return;
+      }
+      const overflowBtn = e.target.closest?.("[data-sl-overflow]");
+      if (overflowBtn) {
+        const group = overflowBtn.previousElementSibling;
+        if (group?.classList.contains("sl-overflow-group")) {
+          group.style.display = "";
+          overflowBtn.remove();
+        }
+        return;
+      }
+      const node = e.target.closest?.(".sl-node");
+      if (!node) return;
       const rawIndex = node.getAttribute("data-lineage-index");
       const index = rawIndex != null ? Number(rawIndex) : null;
       if (!Number.isFinite(index)) return;
@@ -13501,40 +13170,24 @@
       view.maxDown = GENEALOGY_CLICK_DOWN;
       renderLineageOverlay();
     });
-    overlay.addEventListener("change", (e) => {
-      const select = e.target?.closest?.("#su-lineage-dataset");
-      if (!select) return;
-      const key = String(select.value || "aft");
-      const view = getLineageViewState();
-      view.datasetKey = key;
-      view.rootIndex = null;
-      view.stack = [];
-      view.maxUp = GENEALOGY_MAX_UP;
-      view.maxDown = GENEALOGY_MAX_DOWN;
-      renderLineageOverlay();
+    let searchTimer = null;
+    overlay.addEventListener("input", (e) => {
+      if (!e.target?.closest?.("#su-lineage-search")) return;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => renderLineageOverlay(), 200);
     });
     return overlay;
   }
-
   async function renderLineageOverlay() {
     const overlay = ensureLineageOverlay();
     const statusEl = overlay.querySelector("#su-lineage-status");
     const statsEl = overlay.querySelector("#su-lineage-stats");
     const treeEl = overlay.querySelector("#su-lineage-tree");
     const match = getGenealogyMatchState();
-    const datasetSelect = overlay.querySelector("#su-lineage-dataset");
     const view = getLineageViewState();
     const authorName = (window.suState?.authorVariations?.[0] || extractAuthorName() || "").trim();
     const authorVariations = window.suState?.authorVariations || (authorName ? generateAuthorNameVariations(authorName) : []);
-    const keys = Object.keys(GENEALOGY_SOURCES);
-    if (datasetSelect) {
-      datasetSelect.innerHTML = keys.map((key) => {
-        const label = GENEALOGY_SOURCES[key]?.label || key;
-        const selected = (view.datasetKey || match?.datasetKey || "aft") === key ? "selected" : "";
-        return `<option value="${escapeHtml(key)}" ${selected}>${escapeHtml(label)}</option>`;
-      }).join("");
-    }
-    const activeKey = (datasetSelect?.value || view.datasetKey || match?.datasetKey || "aft");
+    const activeKey = "merged";
     view.datasetKey = activeKey;
     if (!authorName) {
       treeEl.innerHTML = `<div class="su-lineage-empty">No author detected.</div>`;
@@ -13560,8 +13213,11 @@
       const kids = studentsMap.get(root) || [];
       const ancestors = countReachable(root, advisorsMap);
       const descendants = countReachable(root, studentsMap);
-      const tree = buildGenealogyTree(root, advisorsMap, studentsMap, view.maxUp || GENEALOGY_MAX_UP, view.maxDown || GENEALOGY_MAX_DOWN);
-      const svg = renderGenealogySvg(tree, data);
+      const maxUp = view.maxUp || GENEALOGY_MAX_UP;
+      const maxDown = view.maxDown || GENEALOGY_MAX_DOWN;
+      const searchInput = overlay.querySelector("#su-lineage-search");
+      const searchTerm = (searchInput?.value || "").trim().toLowerCase();
+      const treeHtml = renderGenealogyTree(data, root, advisorsMap, studentsMap, maxUp, maxDown, searchTerm);
       const truncAnc = ancestors.truncated ? `${ancestors.count}+` : ancestors.count;
       const truncDesc = descendants.truncated ? `${descendants.count}+` : descendants.count;
       statusEl.textContent = "";
@@ -13587,29 +13243,26 @@
           <div class="su-lineage-stat-value">${truncDesc}</div>
         </div>
       `;
-      treeEl.innerHTML = svg;
+      treeEl.innerHTML = treeHtml;
     } catch (err) {
       statusEl.textContent = "";
       statsEl.innerHTML = "";
       treeEl.innerHTML = `<div class="su-lineage-empty">Unable to load lineage data.</div>`;
     }
   }
-
   async function openLineageOverlay() {
     const match = getGenealogyMatchState();
     if (!match?.matchIndex || match.status !== "ready") return;
     const view = getLineageViewState();
-    if (!view.datasetKey) view.datasetKey = match.datasetKey || "aft";
+    if (!view.datasetKey) view.datasetKey = match.datasetKey || "merged";
     const overlay = ensureLineageOverlay();
     overlay.classList.add("su-visible");
     await renderLineageOverlay();
   }
-
   function closeLineageOverlay() {
     const overlay = document.getElementById("su-lineage-overlay");
     if (overlay) overlay.classList.remove("su-visible");
   }
-
   const IDEA_LINEAGE_CACHE_MS = 6 * 60 * 60 * 1000;
   const IDEA_LINEAGE_MAX_NODES = 200;
   const IDEA_LINEAGE_MAX_EDGES = 400;
@@ -13620,43 +13273,35 @@
   const S2_RATE_LIMIT_TTL_MS = 2 * 60 * 1000;
   const S2_RESOLVE_CACHE_MS = 24 * 60 * 60 * 1000;
   const S2_RESOLVE_NEGATIVE_CACHE_MS = 60 * 60 * 1000;
-
   let s2RateLimitUntil = 0;
   let s2RateLimitReason = "";
-
   const IDEA_LINEAGE_STOPWORDS = new Set([
     "the", "and", "for", "with", "from", "that", "this", "these", "those", "into", "onto", "over", "under",
     "of", "in", "on", "to", "a", "an", "by", "is", "are", "was", "were", "be", "as", "at", "it", "its",
     "we", "our", "their", "they", "you", "your", "can", "may", "might", "will", "would", "should", "could",
     "using", "use", "used", "via", "based", "approach", "method", "methods", "study", "studies", "results"
   ]);
-
   function getIdeaLineageCache() {
     if (!window.suIdeaLineageCache) window.suIdeaLineageCache = new Map();
     return window.suIdeaLineageCache;
   }
-
   function getS2ResolveCache() {
     if (!window.suS2ResolveCache) window.suS2ResolveCache = new Map();
     return window.suS2ResolveCache;
   }
-
   function isS2RateLimited() {
     return Date.now() < s2RateLimitUntil;
   }
-
   function markS2RateLimited(reason) {
     s2RateLimitReason = String(reason || "").trim();
     s2RateLimitUntil = Date.now() + S2_RATE_LIMIT_TTL_MS;
   }
-
   function getS2RateLimitMessage() {
     if (!isS2RateLimited()) return "";
     const remaining = Math.max(0, s2RateLimitUntil - Date.now());
     const seconds = Math.max(1, Math.round(remaining / 1000));
     return `Semantic Scholar rate limited (retry in ~${seconds}s).`;
   }
-
   async function fetchSemanticScholarJson(url, { timeoutMs = 15000 } = {}) {
     if (!url) return null;
     if (isS2RateLimited()) return { __s2_error: "rate_limit" };
@@ -13677,7 +13322,6 @@
         return { __s2_error: "rate_limit" };
       }
     } catch (_) {}
-
     try {
       const raw = await fetchExternalText(url, { timeoutMs, preferBackground: true });
       if (!raw) return null;
@@ -13689,12 +13333,10 @@
     } catch (_) {}
     return null;
   }
-
   function normalizeS2AuthorList(authors) {
     if (!Array.isArray(authors)) return [];
     return authors.map((a) => String(a?.name || a || "").trim()).filter(Boolean);
   }
-
   function normalizeS2Paper(raw) {
     if (!raw || !raw.paperId) return null;
     return {
@@ -13705,7 +13347,6 @@
       abstract: String(raw.abstract || "").trim()
     };
   }
-
   function pickBestS2SearchResult(results, paper) {
     const targetTitle = normalizeText(paper?.title || "");
     const targetYear = Number(paper?.year) || null;
@@ -13739,14 +13380,12 @@
     }
     return bestScore >= 0.52 ? best : null;
   }
-
   function simplifyTitleForS2(title) {
     const raw = String(title || "").replace(/^\[[^\]]+\]\s*/g, "").trim();
     if (!raw) return "";
     const parts = raw.split(/\s*[:–—-]\s+/);
     return parts[0] || raw;
   }
-
   function buildS2SearchQueries(paper) {
     const title = String(paper?.title || "").trim();
     const shortTitle = simplifyTitleForS2(title);
@@ -13778,7 +13417,6 @@
     }
     return queries;
   }
-
   async function fetchS2PaperById(paperId) {
     if (!paperId) return null;
     const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}?fields=paperId,title,year,authors,abstract`;
@@ -13786,7 +13424,6 @@
     if (data?.__s2_error === "rate_limit") return null;
     return normalizeS2Paper(data);
   }
-
   async function resolveS2Paper(paper, doi) {
     const cacheKey = paper?.key || computeKey({
       clusterId: paper?.clusterId,
@@ -13800,7 +13437,6 @@
       const cached = getS2ResolveCache().get(cacheKey);
       if (cached && (now - cached.ts) < cached.ttl) return cached.result;
     }
-
     const normalizedDoi = normalizeDoi(doi);
     if (normalizedDoi) {
       const url = `https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(normalizedDoi)}?fields=paperId,title,year,authors,abstract`;
@@ -13835,7 +13471,6 @@
         return result;
       }
     }
-
     // Fallback: ask OpenAlex for a DOI, then retry Semantic Scholar via DOI.
     try {
       const authorName = pickFirstAuthorName(paper);
@@ -13857,7 +13492,6 @@
         }
       }
     } catch (_) {}
-
     // Final fallback: Crossref title search -> DOI -> Semantic Scholar.
     try {
       const crossrefDoi = await findCrossrefDoiForPaper(paper);
@@ -13882,7 +13516,6 @@
     if (cacheKey) getS2ResolveCache().set(cacheKey, { ts: now, ttl: S2_RESOLVE_NEGATIVE_CACHE_MS, result });
     return result;
   }
-
   async function findCrossrefDoiForPaper(paper) {
     const title = String(paper?.title || "").trim();
     if (!title) return null;
@@ -13914,7 +13547,6 @@
     if (bestScore < 0.5) return null;
     return best?.DOI || best?.doi || null;
   }
-
   async function fetchS2References(paperId, limit) {
     if (!paperId) return [];
     const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}/references?limit=${Math.max(1, limit || IDEA_LINEAGE_REF_LIMIT)}&fields=citedPaper.paperId,citedPaper.title,citedPaper.year,citedPaper.authors,citedPaper.abstract`;
@@ -13923,7 +13555,6 @@
     const rows = Array.isArray(data?.data) ? data.data : [];
     return rows.map((r) => normalizeS2Paper(r?.citedPaper)).filter(Boolean);
   }
-
   async function fetchS2Citations(paperId, limit) {
     if (!paperId) return [];
     const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}/citations?limit=${Math.max(1, limit || IDEA_LINEAGE_CITE_LIMIT)}&fields=citingPaper.paperId,citingPaper.title,citingPaper.year,citingPaper.authors,citingPaper.abstract`;
@@ -13932,12 +13563,10 @@
     const rows = Array.isArray(data?.data) ? data.data : [];
     return rows.map((r) => normalizeS2Paper(r?.citingPaper)).filter(Boolean);
   }
-
   function openalexLineageId(work) {
     if (!work) return null;
     return work.openalexId || normalizeOpenAlexId(work.id || "") || (work.doi ? `doi:${work.doi}` : null);
   }
-
   function openalexPaperToLineageNode(work, abstract) {
     const id = openalexLineageId(work);
     if (!id) return null;
@@ -13949,7 +13578,6 @@
       abstract: abstract || ""
     };
   }
-
   async function buildIdeaLineageFromOpenAlex(paper) {
     const authorName = pickFirstAuthorName(paper);
     const work = await fetchOpenAlexWorkForPaper(paper, authorName);
@@ -13967,7 +13595,6 @@
     const targetNode = openalexPaperToLineageNode(work, targetAbstract);
     if (!targetNode) return { error: "OpenAlex record missing identifier." };
     addIdeaLineageNode(nodes, targetNode);
-
     const refs = Array.isArray(work.referencedWorks) ? work.referencedWorks.slice(0, IDEA_LINEAGE_REF_LIMIT) : [];
     const refWorks = await mapWithConcurrency(refs, 2, async (id) => await fetchOpenAlexWorkById(id));
     refWorks.filter(Boolean).forEach((ref) => {
@@ -13977,7 +13604,6 @@
       addIdeaLineageNode(nodes, refNode);
       addIdeaLineageEdge(edges, edgeKeys, refNode.paperId, targetNode.paperId, "ref");
     });
-
     const citing = await fetchOpenAlexCitingWorks(work, IDEA_LINEAGE_CITE_LIMIT);
     citing.forEach((cw) => {
       if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
@@ -13986,7 +13612,6 @@
       addIdeaLineageNode(nodes, citeNode);
       addIdeaLineageEdge(edges, edgeKeys, targetNode.paperId, citeNode.paperId, "cite");
     });
-
     if (citing.length && nodes.size < IDEA_LINEAGE_MAX_NODES) {
       const depthSeeds = citing.slice(0, IDEA_LINEAGE_CITE_DEPTH_LIMIT);
       const depthResults = await mapWithConcurrency(depthSeeds, 2, async (seed) => {
@@ -14004,18 +13629,15 @@
         });
       });
     }
-
     const vectors = buildTfIdfVectors(nodes);
     edges.forEach((e) => {
       const sim = cosineSimilarity(vectors.get(e.source), vectors.get(e.target));
       e.similarity = sim;
       e.weight = 0.6 + 0.4 * sim;
     });
-
     const lineageIds = extractIdeaLineagePath(targetNode.paperId, edges);
     const branches = extractIdeaLineageBranches(lineageIds, edges);
     const originId = lineageIds.length ? lineageIds[0] : targetNode.paperId;
-
     return {
       targetId: targetNode.paperId,
       originId,
@@ -14030,7 +13652,6 @@
       source: "openalex"
     };
   }
-
   function tokenizeIdeaLineageText(text) {
     const cleaned = String(text || "")
       .toLowerCase()
@@ -14040,7 +13661,6 @@
     const parts = cleaned.split(/\s+/);
     return parts.filter((p) => p.length > 2 && !IDEA_LINEAGE_STOPWORDS.has(p));
   }
-
   function buildTfIdfVectors(nodes) {
     const docs = [];
     const ids = [];
@@ -14070,7 +13690,6 @@
     });
     return vectors;
   }
-
   function cosineSimilarity(vecA, vecB) {
     if (!vecA || !vecB || !vecA.weights || !vecB.weights) return 0;
     if (!vecA.norm || !vecB.norm) return 0;
@@ -14084,7 +13703,6 @@
     });
     return dot / (vecA.norm * vecB.norm);
   }
-
   function addIdeaLineageNode(nodes, paper) {
     if (!paper || !paper.paperId) return;
     const id = String(paper.paperId);
@@ -14097,7 +13715,6 @@
       abstract: paper.abstract || existing.abstract || ""
     });
   }
-
   function addIdeaLineageEdge(edges, edgeKeys, source, target, type) {
     if (!source || !target || source === target) return;
     if (edges.length >= IDEA_LINEAGE_MAX_EDGES) return;
@@ -14106,7 +13723,6 @@
     edgeKeys.add(key);
     edges.push({ source, target, type, similarity: 0, weight: 0 });
   }
-
   function buildScholarTitleSearchUrl(title) {
     const q = String(title || "").trim();
     if (!q) return null;
@@ -14117,7 +13733,6 @@
     } catch {}
     return `${origin}/scholar?q=${encodeURIComponent(q)}`;
   }
-
   function renderIdeaLineagePaperButton(node, extraClass = "") {
     const title = escapeHtml(node?.title || "Untitled");
     const id = node?.id ? escapeHtml(String(node.id)) : "";
@@ -14125,7 +13740,6 @@
     if (!id) return `<span class="${cls}">${title}</span>`;
     return `<button type="button" class="${cls}" data-lineage-paper-id="${id}">${title}</button>`;
   }
-
   function openIdeaLineagePaperOverlay(node) {
     if (!node) return;
     const overlay = document.getElementById("su-idea-lineage-overlay");
@@ -14140,21 +13754,20 @@
     detail.innerHTML = `
       <div class="su-idea-lineage-detail-header">
         <div class="su-idea-lineage-detail-title">${escapeHtml(node.title || "Untitled")}</div>
-        <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-detail-close="1">Close</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-idea-lineage-detail-close="1">Close</button>
       </div>
       <div class="su-idea-lineage-detail-meta">${escapeHtml(String(node.year || "—"))}${authorText ? ` · ${escapeHtml(authorText)}` : ""}</div>
       <div class="su-idea-lineage-detail-abstract">${escapeHtml(abstract || "Abstract unavailable.")}</div>
       <div class="su-idea-lineage-detail-actions">
         ${[
           scholarUrl ? `<a class="su-graph-btn" href="${scholarUrl}" target="_blank" rel="noopener">Search Scholar</a>` : "",
-          s2Url ? `<a class="su-graph-btn su-graph-btn-secondary" href="${s2Url}" target="_blank" rel="noopener">Semantic Scholar</a>` : ""
+          s2Url ? `<a class="${CLS_BTN_SEC}" href="${s2Url}" target="_blank" rel="noopener">Semantic Scholar</a>` : ""
         ].filter(Boolean).join("")}
       </div>
     `;
     detail.classList.add("su-visible");
     detail.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
-
   function ensureIdeaLineagePopover() {
     let pop = document.getElementById("su-idea-lineage-popover");
     if (pop) return pop;
@@ -14164,7 +13777,6 @@
     document.body.appendChild(pop);
     return pop;
   }
-
   function positionIdeaLineagePopover(pop, anchorRect) {
     const pad = 8;
     const vw = window.innerWidth;
@@ -14182,7 +13794,6 @@
     pop.style.left = `${left}px`;
     pop.style.top = `${top}px`;
   }
-
   function showIdeaLineagePopover(anchorEl, node) {
     if (!anchorEl || !node) return;
     const pop = ensureIdeaLineagePopover();
@@ -14198,14 +13809,12 @@
     pop.classList.add("su-visible");
     positionIdeaLineagePopover(pop, anchorEl.getBoundingClientRect());
   }
-
   function hideIdeaLineagePopover() {
     const pop = document.getElementById("su-idea-lineage-popover");
     if (!pop) return;
     pop.classList.remove("su-visible");
     pop.style.display = "none";
   }
-
   function extractIdeaLineagePath(targetId, edges) {
     const incoming = new Map();
     edges.forEach((e) => {
@@ -14230,7 +13839,6 @@
     }
     return path.reverse();
   }
-
   function extractIdeaLineageBranches(pathIds, edges) {
     const pathSet = new Set(pathIds);
     const outgoing = new Map();
@@ -14249,7 +13857,6 @@
     }
     return branches;
   }
-
   async function buildIdeaLineageForPaper(paper, doi) {
     try {
       const resolved = await resolveS2Paper(paper, doi);
@@ -14273,21 +13880,18 @@
       const edges = [];
       const edgeKeys = new Set();
       addIdeaLineageNode(nodes, target);
-
       const references = await fetchS2References(target.paperId, IDEA_LINEAGE_REF_LIMIT);
       references.forEach((ref) => {
         if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
         addIdeaLineageNode(nodes, ref);
         addIdeaLineageEdge(edges, edgeKeys, ref.paperId, target.paperId, "ref");
       });
-
       const citations = await fetchS2Citations(target.paperId, IDEA_LINEAGE_CITE_LIMIT);
       citations.forEach((cite) => {
         if (nodes.size >= IDEA_LINEAGE_MAX_NODES) return;
         addIdeaLineageNode(nodes, cite);
         addIdeaLineageEdge(edges, edgeKeys, target.paperId, cite.paperId, "cite");
       });
-
       if (citations.length && nodes.size < IDEA_LINEAGE_MAX_NODES) {
         const depthSeeds = citations.slice(0, IDEA_LINEAGE_CITE_DEPTH_LIMIT);
         const depthResults = await mapWithConcurrency(depthSeeds, 2, async (seed) => {
@@ -14303,18 +13907,15 @@
           });
         });
       }
-
       const vectors = buildTfIdfVectors(nodes);
       edges.forEach((e) => {
         const sim = cosineSimilarity(vectors.get(e.source), vectors.get(e.target));
         e.similarity = sim;
         e.weight = 0.6 + 0.4 * sim;
       });
-
       const lineageIds = extractIdeaLineagePath(target.paperId, edges);
       const branches = extractIdeaLineageBranches(lineageIds, edges);
       const originId = lineageIds.length ? lineageIds[0] : target.paperId;
-
       return {
         targetId: target.paperId,
         originId,
@@ -14337,7 +13938,6 @@
       return { error: "Unable to build idea lineage right now." };
     }
   }
-
   function ensureIdeaLineageOverlay() {
     let overlay = document.getElementById("su-idea-lineage-overlay");
     if (overlay) return overlay;
@@ -14353,8 +13953,8 @@
             <div class="su-idea-lineage-subtitle">Hybrid citation + semantic similarity path.</div>
           </div>
           <div class="su-idea-lineage-actions">
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-refresh="1">Refresh</button>
-            <button type="button" class="su-graph-btn su-graph-btn-secondary" data-idea-lineage-close="1">Close</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-idea-lineage-refresh="1">Refresh</button>
+            <button type="button" class="${CLS_BTN_SEC}" data-idea-lineage-close="1">Close</button>
           </div>
         </div>
         <div class="su-idea-lineage-meta">
@@ -14441,14 +14041,12 @@
     }
     return overlay;
   }
-
   function renderIdeaLineageOverlay(state) {
     const overlay = ensureIdeaLineageOverlay();
     const statusEl = overlay.querySelector("#su-idea-lineage-status");
     const summaryEl = overlay.querySelector("#su-idea-lineage-summary");
     const treeEl = overlay.querySelector("#su-idea-lineage-tree");
     if (!statusEl || !summaryEl || !treeEl) return;
-
     if (state?.loading) {
       statusEl.textContent = "Building idea lineage…";
       summaryEl.innerHTML = "";
@@ -14468,7 +14066,6 @@
       treeEl.innerHTML = "";
       return;
     }
-
     const nodes = data.nodes || new Map();
     const lineage = Array.isArray(data.lineageIds) ? data.lineageIds.map((id) => nodes.get(id)).filter(Boolean) : [];
     const origin = nodes.get(data.originId);
@@ -14477,7 +14074,6 @@
     statusParts.push(`${data.stats?.nodeCount || nodes.size} papers · ${data.stats?.edgeCount || 0} edges`);
     statusParts.push(`Source: ${sourceLabel}`);
     statusEl.textContent = statusParts.join(" · ");
-
     const noteHtml = data.note ? `<div class="su-idea-lineage-note">${escapeHtml(data.note)}</div>` : "";
     summaryEl.innerHTML = `
       ${noteHtml}
@@ -14492,7 +14088,6 @@
         <div class="su-idea-lineage-summary-meta">${lineage.length ? escapeHtml(lineage[lineage.length - 1]?.title || "") : ""}</div>
       </div>
     `;
-
     const mainHtml = lineage.map((node, idx) => `
       <div class="su-idea-lineage-step ${idx === lineage.length - 1 ? "is-current" : ""}">
         <div class="su-idea-lineage-dot"></div>
@@ -14502,7 +14097,6 @@
         </div>
       </div>
     `).join("");
-
     const branchGroups = new Map();
     (data.branches || []).forEach((b) => {
       if (!branchGroups.has(b.from)) branchGroups.set(b.from, []);
@@ -14527,7 +14121,6 @@
         </div>
       `;
     }).join("");
-
     let fallbackHtml = "";
     if (!branchHtml) {
       const lineageSet = new Set(data.lineageIds || []);
@@ -14556,7 +14149,6 @@
         `;
       }
     }
-
     treeEl.innerHTML = `
       <div class="su-idea-lineage-section">
         <div class="su-idea-lineage-section-title">Main lineage</div>
@@ -14570,7 +14162,6 @@
       </div>
     `;
   }
-
   async function openIdeaLineageOverlay(container, paper, forceRefresh = false, doiOverride = null) {
     const overlay = ensureIdeaLineageOverlay();
     overlay.classList.add("su-visible");
@@ -14579,7 +14170,6 @@
       renderIdeaLineageOverlay(window.suIdeaLineageState);
       return;
     }
-
     const key = paper?.key || computeKey({
       clusterId: paper?.clusterId,
       url: paper?.url,
@@ -14595,7 +14185,6 @@
       renderIdeaLineageOverlay(window.suIdeaLineageState);
       return;
     }
-
     const doi = normalizeDoi(doiOverride || paper?.doi || (container ? extractDOIFromResult(container) : null));
     window.suIdeaLineageState = { data: null, loading: true, error: null, paper, paperContainer: container, doi };
     renderIdeaLineageOverlay(window.suIdeaLineageState);
@@ -14609,12 +14198,10 @@
     window.suIdeaLineageState = { data: result, loading: false, error: null, paper, paperContainer: container, doi };
     renderIdeaLineageOverlay(window.suIdeaLineageState);
   }
-
   function closeIdeaLineageOverlay() {
     const overlay = document.getElementById("su-idea-lineage-overlay");
     if (overlay) overlay.classList.remove("su-visible");
   }
-
   function exportPoPMarkdown(payload) {
     const { authorName, metrics } = payload;
     if (!metrics) return;
@@ -14671,7 +14258,6 @@
     }
     downloadBlob(`${authorName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-pop-report.md`, "text/markdown;charset=utf-8", lines.join("\n"));
   }
-
   /** Get profile author's role for a paper: 'solo' | 'first' | 'last' | 'middle'. */
   function getAuthorRole(paper, authorVariations) {
     if (!paper || !authorVariations?.length) return "middle";
@@ -14690,7 +14276,6 @@
     if (isLast) return "last";
     return "middle";
   }
-
   /** True if paper's author role matches the position filter (e.g. 'first', 'first+last'). */
   function paperMatchesPositionFilter(paper, positionFilter, authorVariations) {
     if (!positionFilter || positionFilter === "all") return true;
@@ -14698,11 +14283,9 @@
     const want = String(positionFilter).toLowerCase().split("+").map(s => s.trim());
     return want.includes(role);
   }
-
   function escapeRegExp(s) {
     return String(s || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
-
   function paperMatchesTitleToken(paper, token) {
     const t = String(token || "").toLowerCase().trim();
     if (!t) return true;
@@ -14711,7 +14294,6 @@
     const re = new RegExp(`\\b${escapeRegExp(t)}\\b`, "i");
     return re.test(title);
   }
-
   function normalizeTopicFilters(filters) {
     const raw = Array.isArray(filters)
       ? filters
@@ -14726,7 +14308,6 @@
     }
     return out;
   }
-
   function paperMatchesTitleTokens(paper, tokens) {
     const list = normalizeTopicFilters(tokens);
     if (!list.length) return true;
@@ -14735,7 +14316,6 @@
     }
     return true;
   }
-
   function computeHIndexFromCitations(list) {
     if (!Array.isArray(list) || list.length === 0) return 0;
     const sorted = list
@@ -14748,7 +14328,6 @@
     }
     return h;
   }
-
   function normalizeProceedingsVenue(venue) {
     const v = String(venue || "").trim();
     if (!v) return v;
@@ -14786,7 +14365,6 @@
     out = out.replace(/[\s,;-]+$/g, "").trim();
     return out || v;
   }
-
   const SU_VENUE_STOPWORDS = new Set([
     "proceedings", "proceeding", "proc", "conference", "conf", "symposium", "workshop", "meeting",
     "annual", "international", "intl", "on", "of", "the", "and", "for", "in",
@@ -14794,7 +14372,6 @@
     "studies", "research", "science", "sciences", "technology", "technologies",
     "ieee", "acm", "ais", "association", "institute", "society"
   ]);
-
   const SU_VENUE_ACRONYMS = {
     hicss: "hawaii international conference on system sciences",
     jmis: "journal of management information systems",
@@ -14804,7 +14381,6 @@
     pacis: "pacific asia conference on information systems",
     ecis: "european conference on information systems"
   };
-
   function normalizeVenueKey(venue) {
     const cleaned = normalizeProceedingsVenue(venue);
     if (!cleaned) return "";
@@ -14836,7 +14412,6 @@
     }
     return tokens.join(" ");
   }
-
   function pickVenueDisplay(current, candidate) {
     if (!current) return candidate;
     if (!candidate) return current;
@@ -14851,11 +14426,9 @@
     if (candScore > curScore) return candidate;
     return current;
   }
-
   const SU_TITLECASE_LOWER = new Set([
     "a", "an", "and", "as", "at", "but", "by", "for", "if", "in", "nor", "of", "on", "or", "per", "the", "to", "vs", "via"
   ]);
-
   function normalizeVenueDisplay(venue) {
     const v = String(venue || "").trim();
     if (!v) return v;
@@ -14888,15 +14461,11 @@
     });
     return out.join("");
   }
-
   function paperMatchesFilter(paper, filter, state) {
     if (!filter || !state || !state.qIndex) return true;
-    
     if (!paper || !paper.venue) return false;
-    
     const badges = qualityBadgesForVenue(paper.venue, state.qIndex);
     const has = (kind, re) => badges.some((b) => b.kind === kind && (!re || re.test(String(b.text || ""))));
-    
     switch (filter) {
       case "q1":
         // Check for Q1 quartile badge
@@ -14986,23 +14555,12 @@
         return true;
     }
   }
-
   function getSnippetText(container) {
     const snippetEl = container.querySelector(".gs_rs");
     if (!snippetEl) return "";
     return text(snippetEl).trim();
   }
-
   /** Search terms from current query (normalized, min length 2). */
-  function getSearchTerms() {
-    const q = getScholarSearchQuery();
-    if (!q) return [];
-    return q
-      .split(/\s+/)
-      .map((s) => s.replace(/^["']|["']$/g, "").trim().toLowerCase())
-      .filter((s) => s.length >= 2);
-  }
-
   /** Chrome Prompt API (Gemini Nano): availability and one-sentence contribution from snippet. */
   async function getLocalContributionStatement(snippetText, session) {
     if (!snippetText || snippetText.length < 20) return null;
@@ -15015,7 +14573,6 @@
       return null;
     }
   }
-
   async function runLocalSummaries() {
     const LM = globalThis.LanguageModel || window.LanguageModel;
     if (!LM?.availability) {
@@ -15071,7 +14628,6 @@
       session.destroy?.();
     } catch {}
   }
-
   function showLocalSummaryMessage(msg) {
     const id = "su-ai-summary-message";
     let el = document.getElementById(id);
@@ -15087,7 +14643,6 @@
     el.style.display = "block";
     setTimeout(() => { el.style.display = "none"; }, 8000);
   }
-
   function getScholarSearchQuery() {
     try {
       const url = new URL(window.location.href);
@@ -15098,7 +14653,6 @@
       return null;
     }
   }
-
   /** Current Scholar search URL with optional year range (applies across all pages). */
   function getScholarSearchUrl(opts) {
     try {
@@ -15116,7 +14670,6 @@
       return null;
     }
   }
-
   /** Read year filter from URL (as_ylo, as_yhi). */
   function readYearFilterFromUrl() {
     try {
@@ -15129,7 +14682,6 @@
       return { yearMin: "", yearMax: "" };
     }
   }
-
   /** URL for the next page of results (start=current+10), or null. */
   function getNextPageUrl() {
     try {
@@ -15143,7 +14695,6 @@
       return null;
     }
   }
-
   /** Fetch next page HTML, append .gs_r rows to current page, re-apply filters. Returns { added, visible, hasMore }. */
   async function fetchNextPageAndStitch(state) {
     const nextUrl = getNextPageUrl();
@@ -15184,7 +14735,6 @@
       return { added, visible: 0, hasMore: true };
     }
   }
-
   function highlightSearchQuerySyntax(q) {
     if (!q) return "";
     const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -15223,11 +14773,9 @@
     }
     return out;
   }
-
   function ensureSearchSyntaxHighlighting() {
     return;
   }
-
   async function loadSemanticExpansionData() {
     try {
       const url = chrome.runtime.getURL("src/data/semantic_expansion.json");
@@ -15239,13 +14787,11 @@
       return null;
     }
   }
-
   function getExpansionForQuery(query, termsMap) {
     if (!query || !termsMap || typeof termsMap !== "object") return null;
     const key = query.toLowerCase().trim();
     return termsMap[key] || null;
   }
-
   function buildSemanticExpansionPanel(expansion, currentQuery) {
     const baseUrl = "https://scholar.google.com/scholar";
     const link = (label) => {
@@ -15301,7 +14847,6 @@
     if (nar) root.appendChild(nar);
     return root;
   }
-
   async function ensureSemanticExpansionPanel(state) {
     if (!state.settings?.showSemanticExpansion) {
       document.getElementById("su-semantic-expansion")?.remove();
@@ -15326,7 +14871,6 @@
       document.body.insertBefore(panel, document.body.firstChild);
     }
   }
-
   function applyCitationSort() {
     const mode = window.suSearchSortByCitations;
     if (!mode || mode === "default") return;
@@ -15344,7 +14888,6 @@
     });
     rows.forEach((r) => container.appendChild(r));
   }
-
   function ensureFilterBar(state) {
     const q = getScholarSearchQuery();
     if (!q) return;
@@ -15377,17 +14920,14 @@
     };
     const f = state.filters;
     const showAdvancedFilters = state.settings?.showAdvancedFilters !== false;
-
     bar = document.createElement("div");
     bar.id = "su-within-results-filter";
     bar.className = "su-within-results-filter";
-
     const apply = () => {
       if (window.suSearchSortByCitations && window.suSearchSortByCitations !== "default") applyCitationSort();
       const { results, isAuthorProfile } = scanResults();
       if (!isAuthorProfile) applyResultFilters(results, state);
     };
-
     const yearMinEl = document.createElement("input");
     yearMinEl.type = "number";
     yearMinEl.placeholder = "From";
@@ -15400,13 +14940,11 @@
     yearMaxEl.title = "Max year (applies to all pages; blur to apply)";
     yearMaxEl.value = f.yearMax || "";
     yearMaxEl.className = "su-filter-input su-filter-year";
-
     const venueEl = document.createElement("input");
     venueEl.type = "text";
     venueEl.placeholder = "Venue keyword";
     venueEl.value = f.venueKeyword || "";
     venueEl.className = "su-filter-input su-filter-venue";
-
     const pdfCheck = document.createElement("input");
     pdfCheck.type = "checkbox";
     pdfCheck.checked = !!f.hasPdf;
@@ -15416,7 +14954,6 @@
     pdfLabel.className = "su-filter-label";
     pdfLabel.appendChild(pdfCheck);
     pdfLabel.appendChild(document.createTextNode(" PDF"));
-
     const codeCheck = document.createElement("input");
     codeCheck.type = "checkbox";
     codeCheck.checked = !!f.hasCode;
@@ -15426,7 +14963,6 @@
     codeLabel.className = "su-filter-label";
     codeLabel.appendChild(codeCheck);
     codeLabel.appendChild(document.createTextNode(" Code"));
-
     const citeEl = document.createElement("input");
     citeEl.type = "number";
     citeEl.placeholder = "≥ cites";
@@ -15434,13 +14970,11 @@
     citeEl.title = "Min citations";
     citeEl.value = f.minCitations || "";
     citeEl.className = "su-filter-input su-filter-cite";
-
     const authorEl = document.createElement("input");
     authorEl.type = "text";
     authorEl.placeholder = "Author match";
     authorEl.value = f.authorMatch || "";
     authorEl.className = "su-filter-input su-filter-author";
-
     const maxCiteEl = document.createElement("input");
     maxCiteEl.type = "number";
     maxCiteEl.placeholder = "≤ cites";
@@ -15448,7 +14982,6 @@
     maxCiteEl.title = "Max citations";
     maxCiteEl.value = f.maxCitations || "";
     maxCiteEl.className = "su-filter-input su-filter-cite";
-
     const citesPerYearEl = document.createElement("input");
     citesPerYearEl.type = "number";
     citesPerYearEl.placeholder = "≥ cites/yr";
@@ -15456,7 +14989,6 @@
     citesPerYearEl.title = "Min citations per year";
     citesPerYearEl.value = f.minCitesPerYear || "";
     citesPerYearEl.className = "su-filter-input su-filter-cite";
-
     const inflMinEl = document.createElement("input");
     inflMinEl.type = "number";
     inflMinEl.placeholder = "≥ infl cites (proxy)";
@@ -15464,7 +14996,6 @@
     inflMinEl.title = "Influential citations (Semantic Scholar; attention proxy) min";
     inflMinEl.value = f.minInfluential || "";
     inflMinEl.className = "su-filter-input su-filter-cite";
-
     const inflMaxEl = document.createElement("input");
     inflMaxEl.type = "number";
     inflMaxEl.placeholder = "≤ infl cites (proxy)";
@@ -15472,21 +15003,18 @@
     inflMaxEl.title = "Influential citations (Semantic Scholar; attention proxy) max";
     inflMaxEl.value = f.maxInfluential || "";
     inflMaxEl.className = "su-filter-input su-filter-cite";
-
     const affiliationEl = document.createElement("input");
     affiliationEl.type = "text";
     affiliationEl.placeholder = "Affiliation contains";
     affiliationEl.title = "Filter by author affiliation (OpenAlex)";
     affiliationEl.value = f.affiliationContains || "";
     affiliationEl.className = "su-filter-input su-filter-venue";
-
     const funderEl = document.createElement("input");
     funderEl.type = "text";
     funderEl.placeholder = "Funder contains";
     funderEl.title = "Filter by funder/award metadata (Crossref)";
     funderEl.value = f.funderContains || "";
     funderEl.className = "su-filter-input su-filter-venue";
-
     const fullTextCheck = document.createElement("input");
     fullTextCheck.type = "checkbox";
     fullTextCheck.checked = !!f.hasFullText;
@@ -15496,7 +15024,6 @@
     fullTextLabel.className = "su-filter-label";
     fullTextLabel.appendChild(fullTextCheck);
     fullTextLabel.appendChild(document.createTextNode(" Full text"));
-
     const fundingCheck = document.createElement("input");
     fundingCheck.type = "checkbox";
     fundingCheck.checked = !!f.hasFunding;
@@ -15506,7 +15033,6 @@
     fundingLabel.className = "su-filter-label";
     fundingLabel.appendChild(fundingCheck);
     fundingLabel.appendChild(document.createTextNode(" Funding"));
-
     const updatesCheck = document.createElement("input");
     updatesCheck.type = "checkbox";
     updatesCheck.checked = !!f.hasUpdates;
@@ -15516,7 +15042,6 @@
     updatesLabel.className = "su-filter-label";
     updatesLabel.appendChild(updatesCheck);
     updatesLabel.appendChild(document.createTextNode(" Updates"));
-
     const openCiteCheck = document.createElement("input");
     openCiteCheck.type = "checkbox";
     openCiteCheck.checked = !!f.hasOpenCitations;
@@ -15526,7 +15051,6 @@
     openCiteLabel.className = "su-filter-label";
     openCiteLabel.appendChild(openCiteCheck);
     openCiteLabel.appendChild(document.createTextNode(" Open cites"));
-
     const datasetCheck = document.createElement("input");
     datasetCheck.type = "checkbox";
     datasetCheck.checked = !!f.hasDatasetDoi;
@@ -15536,7 +15060,6 @@
     datasetLabel.className = "su-filter-label";
     datasetLabel.appendChild(datasetCheck);
     datasetLabel.appendChild(document.createTextNode(" Dataset DOI"));
-
     const softwareCheck = document.createElement("input");
     softwareCheck.type = "checkbox";
     softwareCheck.checked = !!f.hasSoftwareDoi;
@@ -15546,7 +15069,6 @@
     softwareLabel.className = "su-filter-label";
     softwareLabel.appendChild(softwareCheck);
     softwareLabel.appendChild(document.createTextNode(" Software DOI"));
-
     const oaCheck = document.createElement("input");
     oaCheck.type = "checkbox";
     oaCheck.checked = !!f.hasOa;
@@ -15556,7 +15078,6 @@
     oaLabel.className = "su-filter-label";
     oaLabel.appendChild(oaCheck);
     oaLabel.appendChild(document.createTextNode(" OA"));
-
     const preprintCheck = document.createElement("input");
     preprintCheck.type = "checkbox";
     preprintCheck.checked = !!f.hasPreprint;
@@ -15566,7 +15087,6 @@
     preprintLabel.className = "su-filter-label";
     preprintLabel.appendChild(preprintCheck);
     preprintLabel.appendChild(document.createTextNode(" Preprint"));
-
     const pubmedCheck = document.createElement("input");
     pubmedCheck.type = "checkbox";
     pubmedCheck.checked = !!f.hasPubmed;
@@ -15576,7 +15096,6 @@
     pubmedLabel.className = "su-filter-label";
     pubmedLabel.appendChild(pubmedCheck);
     pubmedLabel.appendChild(document.createTextNode(" PubMed"));
-
     const pmcCheck = document.createElement("input");
     pmcCheck.type = "checkbox";
     pmcCheck.checked = !!f.hasPmc;
@@ -15586,7 +15105,6 @@
     pmcLabel.className = "su-filter-label";
     pmcLabel.appendChild(pmcCheck);
     pmcLabel.appendChild(document.createTextNode(" PMC"));
-
     const meshCheck = document.createElement("input");
     meshCheck.type = "checkbox";
     meshCheck.checked = !!f.hasMesh;
@@ -15596,7 +15114,6 @@
     meshLabel.className = "su-filter-label";
     meshLabel.appendChild(meshCheck);
     meshLabel.appendChild(document.createTextNode(" MeSH"));
-
     const qualitySelect = document.createElement("select");
     qualitySelect.className = "su-filter-select su-filter-quality";
     qualitySelect.title = "Venue quality filter";
@@ -15661,20 +15178,17 @@
       </optgroup>
     `;
     qualitySelect.value = f.qualityFilter || "";
-
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "su-filter-clear";
     clearBtn.textContent = "Clear";
     clearBtn.title = "Clear all filters";
-
     const summarizeBtn = document.createElement("button");
     summarizeBtn.type = "button";
     summarizeBtn.className = "su-filter-clear su-summarize-ai";
     summarizeBtn.textContent = "Summarize (local AI)";
     summarizeBtn.title = "One-sentence contribution per result using Chrome Prompt API (Gemini Nano). Runs on your device; 100% private.";
     summarizeBtn.addEventListener("click", () => runLocalSummaries());
-
     const sortSelect = document.createElement("select");
     sortSelect.className = "su-filter-sort-citations";
     sortSelect.title = "Sort search results by citation count";
@@ -15689,7 +15203,6 @@
       applyCitationSort();
       apply();
     });
-
     const loadMoreBtn = document.createElement("button");
     loadMoreBtn.type = "button";
     loadMoreBtn.className = "su-filter-clear su-load-more-pages";
@@ -15716,7 +15229,6 @@
       loadMoreBtn.textContent = totalAdded ? `Loaded ${totalAdded} more (${lastVisible} match)` : "Load more pages";
       if (totalAdded) setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 3000);
     });
-
     const MAX_BATCH_PDFS = 25;
     const openTabsInBackground = async (urls) => {
       if (!urls || urls.length === 0) return 0;
@@ -15732,7 +15244,6 @@
       }
       return urls.length;
     };
-
     const openPdfBtn = document.createElement("button");
     openPdfBtn.type = "button";
     openPdfBtn.className = "su-filter-clear su-batch-open-pdf";
@@ -15749,7 +15260,6 @@
       }
       const desired = Math.min(parsed, MAX_BATCH_PDFS);
       safeSessionSet("su-batch-open-count", String(desired));
-
       const { results, isAuthorProfile } = scanResults();
       if (isAuthorProfile) {
         window.alert("Batch PDF open is only available on search result pages.");
@@ -15774,7 +15284,6 @@
         ? `Found ${urls.length} PDFs. Open them in background tabs?`
         : `Open ${urls.length} PDFs in background tabs?`;
       if (!window.confirm(msg)) return;
-
       const prevText = openPdfBtn.textContent;
       openPdfBtn.disabled = true;
       openPdfBtn.textContent = "Opening…";
@@ -15785,14 +15294,12 @@
         openPdfBtn.disabled = false;
       }, 2500);
     });
-
     const reviewBtn = document.createElement("button");
     reviewBtn.type = "button";
     reviewBtn.className = "su-filter-clear su-review-workspace";
     reviewBtn.textContent = "Review workspace";
     reviewBtn.title = "Open the systematic review workspace for screening and extraction.";
     reviewBtn.addEventListener("click", () => openReviewOverlay());
-
     const readFilterValues = () => ({
       yearMin: yearMinEl.value.trim(),
       yearMax: yearMaxEl.value.trim(),
@@ -15820,7 +15327,6 @@
       affiliationContains: showAdvancedFilters ? affiliationEl.value.trim() : "",
       funderContains: showAdvancedFilters ? funderEl.value.trim() : ""
     });
-
     const quickButtons = new Map();
     const currentYear = new Date().getFullYear();
     const quickDefs = [
@@ -15843,7 +15349,6 @@
         isActive: (v) => v.minCitations === "100"
       }
     ];
-
     function updateQuickButtons() {
       try {
         const vals = readFilterValues();
@@ -15855,7 +15360,6 @@
         }
       } catch (_) {}
     }
-
     const applyFilterValues = (next) => {
       try {
         state.filters.yearMin = next.yearMin;
@@ -15891,7 +15395,6 @@
         // Avoid breaking the page if apply/scanResults/filters throw
       }
     };
-
     let updateStateAndApply = () => {
       try {
         const next = readFilterValues();
@@ -15900,7 +15403,6 @@
         // Avoid breaking the page if apply/scanResults/filters throw
       }
     };
-
     let filterDebounceId = null;
     const scheduleFilterApply = () => {
       if (filterDebounceId) clearTimeout(filterDebounceId);
@@ -15909,17 +15411,14 @@
         updateStateAndApply();
       }, 180);
     };
-
     const onFilterInput = () => {
       updateToggleLabel();
       scheduleFilterApply();
     };
-
     [yearMinEl, yearMaxEl, venueEl, pdfCheck, codeCheck, qualitySelect, fullTextCheck, fundingCheck, updatesCheck, openCiteCheck, datasetCheck, softwareCheck, oaCheck, preprintCheck, pubmedCheck, pmcCheck, meshCheck, citeEl, authorEl, maxCiteEl, citesPerYearEl, inflMinEl, inflMaxEl, affiliationEl, funderEl].forEach((el) => {
       el.addEventListener("input", onFilterInput);
       el.addEventListener("change", updateStateAndApply);
     });
-
     const setFilterInputs = (vals) => {
       yearMinEl.value = vals.yearMin || "";
       yearMaxEl.value = vals.yearMax || "";
@@ -15950,7 +15449,6 @@
       }
       syncSlidersFromInputs();
     };
-
     function applyYearToAllPages() {
       const yMin = yearMinEl.value.trim();
       const yMax = yearMaxEl.value.trim();
@@ -15963,7 +15461,6 @@
     }
     yearMinEl.addEventListener("blur", applyYearToAllPages);
     yearMaxEl.addEventListener("blur", applyYearToAllPages);
-
     clearBtn.addEventListener("click", () => {
       try {
         const url = new URL(window.location.href);
@@ -16029,13 +15526,11 @@
         applyFilterValues(readFilterValues());
       } catch (_) {}
     });
-
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
     toggleBtn.className = "su-filter-toggle";
     toggleBtn.setAttribute("aria-expanded", "false");
     toggleBtn.title = "Show/hide filter options";
-
     function updateToggleLabel() {
       try {
         const g = readFilterValues();
@@ -16072,7 +15567,6 @@
         if (toggleBtn) toggleBtn.textContent = n ? `Filter (${n}) ${arrow}` : `Filter ${arrow}`;
       } catch (_) {}
     }
-
     const applyQuickFilter = (def) => {
       const current = readFilterValues();
       const active = def.isActive(current);
@@ -16088,7 +15582,6 @@
       setFilterInputs(next);
       applyFilterValues(readFilterValues());
     };
-
     const row = document.createElement("div");
     row.className = "su-within-results-filter-row";
     try {
@@ -16109,7 +15602,6 @@
     } catch (_) {
       // If any append fails, still try to show the bar with what we have
     }
-
     const signalsRow = document.createElement("div");
     signalsRow.className = "su-within-results-filter-row su-filter-signals-row";
     const signalsLabel = document.createElement("span");
@@ -16122,7 +15614,6 @@
     signalsRow.appendChild(openCiteLabel);
     signalsRow.appendChild(datasetLabel);
     signalsRow.appendChild(softwareLabel);
-
     const signalsRow2 = document.createElement("div");
     signalsRow2.className = "su-within-results-filter-row su-filter-signals-row";
     const signalsLabel2 = document.createElement("span");
@@ -16134,7 +15625,6 @@
     signalsRow2.appendChild(pubmedLabel);
     signalsRow2.appendChild(pmcLabel);
     signalsRow2.appendChild(meshLabel);
-
     const advRow = document.createElement("div");
     advRow.className = "su-within-results-filter-row su-filter-advanced-row";
     if (showAdvancedFilters) {
@@ -16149,7 +15639,6 @@
       advRow.appendChild(affiliationEl);
       advRow.appendChild(funderEl);
     }
-
     const quickRow = document.createElement("div");
     quickRow.className = "su-within-results-filter-row su-filter-quick-row";
     for (const def of quickDefs) {
@@ -16162,30 +15651,23 @@
       quickRow.appendChild(btn);
       quickButtons.set(def.id, btn);
     }
-
     // --- Year range dual-thumb slider ---
     // Determine year bounds from current results (fall back to 1990–currentYear)
     const SLIDER_MIN_YEAR = 1990;
     const SLIDER_MAX_YEAR = currentYear;
-
     const sliderRow = document.createElement("div");
     sliderRow.className = "su-year-slider-row";
-
     const sliderLabel = document.createElement("span");
     sliderLabel.className = "su-year-slider-label";
     sliderLabel.textContent = "Years:";
     sliderRow.appendChild(sliderLabel);
-
     const sliderWrap = document.createElement("div");
     sliderWrap.className = "su-year-slider-wrap";
-
     const sliderTrack = document.createElement("div");
     sliderTrack.className = "su-year-slider-track";
-
     const sliderFill = document.createElement("div");
     sliderFill.className = "su-year-slider-fill";
     sliderTrack.appendChild(sliderFill);
-
     const sliderMin = document.createElement("input");
     sliderMin.type = "range";
     sliderMin.className = "su-year-slider-thumb su-year-slider-thumb-min";
@@ -16193,7 +15675,6 @@
     sliderMin.max = String(SLIDER_MAX_YEAR);
     sliderMin.step = "1";
     sliderMin.value = String(f.yearMin ? Math.max(SLIDER_MIN_YEAR, parseInt(f.yearMin, 10)) : SLIDER_MIN_YEAR);
-
     const sliderMax = document.createElement("input");
     sliderMax.type = "range";
     sliderMax.className = "su-year-slider-thumb su-year-slider-thumb-max";
@@ -16201,12 +15682,10 @@
     sliderMax.max = String(SLIDER_MAX_YEAR);
     sliderMax.step = "1";
     sliderMax.value = String(f.yearMax ? Math.min(SLIDER_MAX_YEAR, parseInt(f.yearMax, 10)) : SLIDER_MAX_YEAR);
-
     sliderTrack.appendChild(sliderMin);
     sliderTrack.appendChild(sliderMax);
     sliderWrap.appendChild(sliderTrack);
     sliderRow.appendChild(sliderWrap);
-
     const updateSliderFill = () => {
       const lo = parseInt(sliderMin.value, 10);
       const hi = parseInt(sliderMax.value, 10);
@@ -16216,7 +15695,6 @@
       sliderFill.style.left = leftPct + "%";
       sliderFill.style.right = rightPct + "%";
     };
-
     // Sync sliders → text inputs
     sliderMin.addEventListener("input", () => {
       const lo = parseInt(sliderMin.value, 10);
@@ -16234,7 +15712,6 @@
       updateSliderFill();
       scheduleFilterApply();
     });
-
     // Sync text inputs → sliders
     const syncSlidersFromInputs = () => {
       const lo = parseInt(yearMinEl.value, 10);
@@ -16245,10 +15722,8 @@
     };
     yearMinEl.addEventListener("input", syncSlidersFromInputs);
     yearMaxEl.addEventListener("input", syncSlidersFromInputs);
-
     updateSliderFill();
     // --- End year slider ---
-
     const body = document.createElement("div");
     body.className = "su-within-results-filter-body";
     body.appendChild(quickRow);
@@ -16257,7 +15732,6 @@
     body.appendChild(signalsRow2);
     if (showAdvancedFilters) body.appendChild(advRow);
     body.appendChild(sliderRow);
-
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (bar) bar.classList.toggle("su-filter-open");
@@ -16276,7 +15750,6 @@
         setTimeout(() => document.addEventListener("click", close), 0);
       }
     });
-
     state.filters = state.filters || {};
     updateToggleLabel();
     updateQuickButtons();
@@ -16286,7 +15759,6 @@
     triggerRow.appendChild(reviewBtn);
     bar.appendChild(triggerRow);
     bar.appendChild(body);
-
     const origUpdate = updateStateAndApply;
     updateStateAndApply = () => {
       try {
@@ -16294,12 +15766,9 @@
       } catch (_) {}
       updateToggleLabel();
     };
-
     document.body.appendChild(bar);
   }
-
   const FILTER_STORAGE_KEY = "su-filter-client";
-
   function loadClientFilterFromStorage() {
     try {
       const q = getScholarSearchQuery();
@@ -16313,7 +15782,6 @@
       return null;
     }
   }
-
   function saveClientFilterToStorage(state) {
     try {
       const q = getScholarSearchQuery();
@@ -16346,7 +15814,6 @@
       }));
     } catch (_) {}
   }
-
   async function run() {
     const state = {
       saved: {},
@@ -16398,7 +15865,6 @@
         if (window.suState?.settings?.theme === "auto") applyTheme("auto");
       });
     }
-
     const q = getScholarSearchQuery();
     if (q) {
       const urlYear = readYearFilterFromUrl();
@@ -16431,7 +15897,6 @@
       funderContains: (stored && stored.funderContains) || ""
     };
   }
-
     // Extract author name if on author profile page
     let authorVariations = [];
     const isAuthorProfilePage = document.querySelector(".gsc_a_tr") !== null;
@@ -16456,7 +15921,6 @@
         console.warn("[SU] graph state bootstrap failed", e);
       });
     }
-
     const scheduleNonCriticalBootstrap = () => {
       if (state.__suNonCriticalScheduled) return;
       state.__suNonCriticalScheduled = true;
@@ -16483,7 +15947,6 @@
         setTimeout(() => { runDeferred().catch(() => {}); }, 250);
       }
     };
-
     let scheduled = false;
     let processing = false;
     let needsRerun = false;
@@ -16494,14 +15957,12 @@
     const AUTHOR_AUTOLOAD_MAX = 200;
     let viewObserver = null;
     const visibleRows = new Set();
-
     const markDirtyRow = (row) => {
       if (!row || !row.isConnected) return;
       row.dataset.suDirty = "1";
       invalidateRowCache(row);
       pendingDirtyRows.add(row);
     };
-
     const ensureViewObserver = () => {
       if (viewObserver || typeof IntersectionObserver === "undefined") return;
       viewObserver = new IntersectionObserver((entries) => {
@@ -16520,14 +15981,12 @@
         if (newlyVisible.length > 0) scheduleProcess({ rows: newlyVisible });
       }, { rootMargin: `${VIEWPORT_MARGIN}px`, threshold: 0 });
     };
-
     const observeRow = (row) => {
       ensureViewObserver();
       if (!viewObserver || row.__suObserved) return;
       row.__suObserved = true;
       viewObserver.observe(row);
     };
-
     const processDirtyRows = async (rows, isAuthorProfile) => {
       if (!rows || rows.length === 0) return;
       const filteredRows = rows.filter((r) => r && r.isConnected);
@@ -16550,7 +16009,6 @@
         )
       );
     };
-
     const processAll = async () => {
       if (document.hidden) return;
       if (processing) {
@@ -16579,12 +16037,10 @@
             state.authorAutoLoadDisabled = false;
           }
         }
-        
         if (!doFull) {
           await processDirtyRows(dirtyRows, isAuthorProfile);
           return;
         }
-
       // First pass: extract venues from all results and find the best one for each paper
       if (!isAuthorProfile) {
         const venueMap = new Map(); // clusterId -> best venue info
@@ -16598,7 +16054,6 @@
             if (clusterId) {
               const currentVenue = paper.venue || "";
               const existing = venueMap.get(clusterId);
-              
               // Score venues: prefer complete, non-truncated venues with journal/conference names
               const scoreVenue = (venue) => {
                 if (!venue) return 0;
@@ -16610,10 +16065,8 @@
                 if (venue.length < 10) score -= 50; // Penalize very short venues
                 return score;
               };
-              
               const currentScore = scoreVenue(currentVenue);
               const existingScore = existing ? scoreVenue(existing) : -1;
-              
               // Keep the best scored venue
               if (currentScore > existingScore) {
                 venueMap.set(clusterId, currentVenue);
@@ -16629,7 +16082,6 @@
           state.venueCache.set(clusterId, venue);
         }
       }
-      
       // Second pass: process all results with shared venue information
       // First, apply filters if active (quality filter and/or author position filter)
       const authorTopicFilters = normalizeTopicFilters(window.suAuthorTitleFilters || window.suAuthorTitleFilter);
@@ -16671,7 +16123,6 @@
           r.style.display = "";
         }
       }
-
       // New since last visit: compute page key and which keys are new
       const pageKey = (location.pathname || "") + (location.search || "");
       if (state.settings.showNewSinceLastVisit) {
@@ -16702,7 +16153,6 @@
         state.newSinceLastVisitKeys = new Set();
         state.currentResultKeys = [];
       }
-
       if (state.settings.showCitationSpike || state.settings.showEmergingScore) {
         try {
           state.citationSnapshots = await getCitationSnapshots();
@@ -16712,7 +16162,6 @@
       } else {
         state.citationSnapshots = {};
       }
-
       // Compute velocity bucket averages for trajectory arrows
       const needsVelocityBuckets = state.settings.viewMode !== "minimal";
       if (needsVelocityBuckets) {
@@ -16752,7 +16201,6 @@
         state.localCohortExpected = new Map();
       }
       window.suState = state;
-      
       // Now process UI: visible rows first, offscreen rows when they enter viewport
       const visibleResults = results.filter((r) => r.style.display !== "none");
       const processBatch = (rows, inViewportDefault = false) =>
@@ -16765,7 +16213,6 @@
             }).catch(() => {})
           )
         );
-
       let initialRowsForPrefetch = [];
       if (typeof IntersectionObserver !== "undefined") {
         ensureViewObserver();
@@ -16804,7 +16251,6 @@
       if (initialRowsForPrefetch.length > 0) {
         scheduleEmergingPrefetch(initialRowsForPrefetch, state, isAuthorProfile);
       }
-
       // Smart-rename PDF: build url -> { author, year, title } for onDeterminingFilename in background
       try {
         const pdfUrlToMetadata = {};
@@ -16836,12 +16282,10 @@
       } catch {
         // Non-fatal
       }
-
       // Re-apply sort by citations/year if toggle is on (e.g. after "Show more")
       if (isAuthorProfile && window.suAuthorSortByVelocity) {
         applyAuthorSort();
       }
-
       if (isAuthorProfile) {
         const filterBar = document.getElementById("su-within-results-filter");
         if (filterBar) filterBar.style.display = "none";
@@ -16850,9 +16294,7 @@
         ensureFilterBar(state);
         applyResultFilters(results, state);
       }
-
       if (isAuthorProfile) markAuthorProfileTitleToolbar();
-
       if (!isAuthorProfile && state.settings.showTrendTracker) {
         const q = getScholarSearchQuery();
         if (q) {
@@ -16873,7 +16315,6 @@
       } else if (!isAuthorProfile && !state.settings.showTrendTracker && trendTracker_destroyTrendPanel) {
         trendTracker_destroyTrendPanel();
       }
-
       // Update author stats if on author profile page (use only visible rows when a filter is active)
       if (isAuthorProfile && state.settings && state.settings.showQualityBadges) {
         const visibleAuthorResults = results.filter(
@@ -16939,7 +16380,6 @@
           await renderAuthorStatsWithGrowth(fullStats);
         }
       }
-
       // Persist visit cache for "new since last visit" next time
       if (state.settings.showNewSinceLastVisit && state.currentPageKey && Array.isArray(state.currentResultKeys) && state.currentResultKeys.length >= 0) {
         setPageVisitCacheEntry(state.currentPageKey, state.currentResultKeys).catch(() => {});
@@ -16952,7 +16392,6 @@
         }
       }
     };
-
     const scheduleProcess = (opts = {}) => {
       if (opts.full) forceFull = true;
       if (Array.isArray(opts.rows)) {
@@ -16972,7 +16411,6 @@
         }, 250);
       }
     };
-
     /** Mark the papers table header row (TITLE / CITED BY / YEAR) so dark mode can style it. */
     function markAuthorProfileTitleToolbar() {
       const tbody = document.getElementById("gsc_a_b");
@@ -17009,12 +16447,10 @@
         for (const cell of header.querySelectorAll("th, td, div")) cell.classList.add("su-title-toolbar-cell");
       }
     }
-
     const resultsRoot = () => {
       const mid = document.querySelector("#gs_res_ccl_mid");
       return mid || document.querySelector("#gsc_a_b");
     };
-
     const isSuNode = (node) => {
       if (!node || node.nodeType !== 1) return false;
       const el = node;
@@ -17026,7 +16462,6 @@
       }
       return false;
     };
-
     const isWithinSuSubtree = (node) => {
       let cur = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
       while (cur) {
@@ -17035,7 +16470,6 @@
       }
       return false;
     };
-    
     const mo = new MutationObserver((mutations) => {
       if (document.hidden) return;
       const root = resultsRoot();
@@ -17044,10 +16478,8 @@
         root.contains(m.target) || (typeof m.target.contains === "function" && m.target.contains(root))
       );
       if (!inResults) return;
-
       let structural = false;
       const dirtyRows = new Set();
-
       const markRowFromNode = (node) => {
         if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
         const el = node;
@@ -17065,7 +16497,6 @@
           dirtyRows.add(inner);
         }
       };
-
       for (const m of mutations) {
         if (!(root.contains(m.target) || (typeof m.target.contains === "function" && m.target.contains(root)))) continue;
         if (isWithinSuSubtree(m.target)) continue;
@@ -17080,7 +16511,6 @@
         const targetRow = m.target?.closest?.(".gs_r, .gsc_a_tr");
         if (targetRow && !isWithinSuSubtree(m.target) && !isSuNode(targetRow)) dirtyRows.add(targetRow);
       }
-
       if (dirtyRows.size === 0 && !structural) return;
       scheduleProcess({ full: structural, rows: Array.from(dirtyRows) });
     });
@@ -17088,20 +16518,17 @@
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) scheduleProcess();
     });
-    
     // Store processAll function and state globally so filter badges can trigger it
     window.suProcessAll = () => {
       forceFull = true;
       return processAll();
     };
     window.suState = state;
-
     await processAll();
     scheduleNonCriticalBootstrap();
     ensureReadingQueueSidebar().catch((e) => {
       console.warn("[SU] reading queue bootstrap failed", e);
     });
-
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.onChanged?.addListener) {
         const onChanged = chrome.storage.onChanged;
@@ -17130,10 +16557,8 @@
       }
       // Extension was reloaded or context invalidated; chrome.storage is no longer valid
     }
-
     // ——— Vim-style keyboard navigation (j/k, Enter, s, c, /) ———
     let keyboardSelectedIndex = null;
-
     function getVisibleResults() {
       const { results, isAuthorProfile } = scanResults();
       return results.filter(
@@ -17144,7 +16569,6 @@
           !r.classList.contains("su-hidden")
       );
     }
-
     function updateKeyboardHighlight() {
       document.querySelectorAll(".su-keyboard-selected").forEach((el) => el.classList.remove("su-keyboard-selected"));
       const visible = getVisibleResults();
@@ -17157,12 +16581,10 @@
         row.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     }
-
     document.addEventListener("keydown", (e) => {
       if (e.target?.closest?.("input, textarea, select") || (e.target?.isContentEditable && e.target?.isContentEditable)) return;
       const visible = getVisibleResults();
       if (visible.length === 0) return;
-
       const key = e.key?.toLowerCase();
       // Command palette (single key)
       if (key === "p") {
@@ -17229,20 +16651,17 @@
         return;
       }
     });
-
     // Command palette (single key)
     let commandPaletteEl = null;
     let commandBackdropEl = null;
     let commandItems = [];
     let commandIndex = 0;
     let paletteOpen = false;
-
     function closeCommandPalette() {
       paletteOpen = false;
       if (commandBackdropEl) commandBackdropEl.classList.remove("su-command-visible");
       if (commandPaletteEl) commandPaletteEl.classList.remove("su-command-visible");
     }
-
     function ensureCommandPalette() {
       if (commandPaletteEl && commandBackdropEl) return;
       commandBackdropEl = document.createElement("div");
@@ -17280,7 +16699,6 @@
         }
       });
     }
-
     function renderCommandPalette() {
       if (!commandPaletteEl) return;
       commandPaletteEl.innerHTML = `
@@ -17299,7 +16717,6 @@
         });
       });
     }
-
     function openCommandPalette(visible) {
       ensureCommandPalette();
       const { isAuthorProfile } = scanResults();
@@ -17352,7 +16769,6 @@
       commandBackdropEl.classList.add("su-command-visible");
       commandPaletteEl.classList.add("su-command-visible");
     }
-
     // ——— Funding tag tooltip (hover on search result; snippet-only) ———
     let fundingTooltipEl = document.getElementById("su-funding-tooltip");
     if (!fundingTooltipEl) {
@@ -17362,7 +16778,6 @@
       fundingTooltipEl.setAttribute("aria-hidden", "true");
       document.body.appendChild(fundingTooltipEl);
     }
-
     document.addEventListener("mouseover", (e) => {
       const row = e.target?.closest?.(".gs_r");
       if (!row) return;
@@ -17390,7 +16805,6 @@
       fundingTooltipEl.classList.add("su-funding-tooltip-visible");
       requestAnimationFrame(() => clampFixedToViewport(fundingTooltipEl, 8));
     });
-
     document.addEventListener("mouseout", (e) => {
       const row = e.target?.closest?.(".gs_r");
       const related = e.relatedTarget;
@@ -17398,14 +16812,12 @@
       if (related && (row.contains(related) || fundingTooltipEl.contains(related))) return;
       fundingTooltipEl.classList.remove("su-funding-tooltip-visible");
     });
-
     // ——— Hover-summary: fetch landing page and show abstract/description in tooltip ———
     const snippetCache = new Map();
     const SNIPPET_HOVER_DELAY_MS = 400;
     const SNIPPET_MAX_LEN = 520;
     let snippetHoverTimer = null;
     let snippetHoverRow = null;
-
     let snippetTooltipEl = document.getElementById("su-snippet-tooltip");
     if (!snippetTooltipEl) {
       snippetTooltipEl = document.createElement("div");
@@ -17414,7 +16826,6 @@
       snippetTooltipEl.setAttribute("aria-hidden", "true");
       document.body.appendChild(snippetTooltipEl);
     }
-
     document.addEventListener("mouseover", (e) => {
       const row = e.target?.closest?.(".gs_r");
       if (!row) return;
@@ -17462,7 +16873,6 @@
         requestAnimationFrame(() => clampFixedToViewport(snippetTooltipEl, 8));
       }, SNIPPET_HOVER_DELAY_MS);
     });
-
     document.addEventListener("mouseout", (e) => {
       const row = e.target?.closest?.(".gs_r");
       const related = e.relatedTarget;
@@ -17474,11 +16884,9 @@
       snippetHoverRow = null;
       snippetTooltipEl.classList.remove("su-snippet-tooltip-visible");
     });
-
     // ——— Reading guide (visor): horizontal band that follows the mouse ———
     let visorActive = false;
     let visorRaf = null;
-
     let visorEl = document.getElementById("su-reading-visor");
     if (!visorEl) {
       visorEl = document.createElement("div");
@@ -17487,7 +16895,6 @@
       visorEl.setAttribute("aria-hidden", "true");
       document.body.appendChild(visorEl);
     }
-
     // Floating toolbar: theme toggle above reading guide
     function themeLabel(t) {
       return (t === "dark" ? "Dark" : t === "light" ? "Light" : "Auto");
@@ -17499,7 +16906,6 @@
       toolbarEl.className = "su-theme-guide-toolbar";
       document.body.appendChild(toolbarEl);
     }
-
     let themeToggleEl = document.getElementById("su-theme-toggle");
     if (!themeToggleEl) {
       themeToggleEl = document.createElement("button");
@@ -17517,14 +16923,12 @@
       toolbarEl.appendChild(themeToggleEl);
     }
     themeToggleEl.textContent = themeLabel(state.settings.theme);
-
     // Reading guide button removed per request; ensure any existing instance is removed.
     let guideToggleEl = document.getElementById("su-reading-guide-toggle");
     if (guideToggleEl) {
       guideToggleEl.parentNode?.removeChild(guideToggleEl);
       guideToggleEl = null;
     }
-
     function setVisorActive(active) {
       visorActive = active;
       if (visorActive) {
@@ -17535,12 +16939,10 @@
         if (guideToggleEl) guideToggleEl.classList.remove("su-reading-guide-on");
       }
     }
-
     function updateVisorY(clientY) {
       if (!visorEl || !visorActive) return;
       visorEl.style.setProperty("--visor-y", `${clientY}px`);
     }
-
     const onVisorMouseMove = (e) => {
       if (!visorActive) return;
       if (visorRaf) cancelAnimationFrame(visorRaf);
@@ -17549,7 +16951,6 @@
         visorRaf = null;
       });
     };
-
     const onVisorKeyDown = (e) => {
       if (e.key === "Escape" && visorActive) {
         setVisorActive(false);
@@ -17557,7 +16958,6 @@
         document.removeEventListener("keydown", onVisorKeyDown);
       }
     };
-
     if (guideToggleEl) {
       guideToggleEl.addEventListener("click", () => {
         if (!state.settings.showReadingGuide) return;
@@ -17573,9 +16973,7 @@
         }
       });
     }
-
     document.addEventListener("mousemove", (e) => { window.lastMouseY = e.clientY; }, { passive: true });
-
     if (guideToggleEl) {
       guideToggleEl.style.display = state.settings.showReadingGuide ? "" : "none";
     } else if (visorActive) {
@@ -17584,16 +16982,8 @@
       document.removeEventListener("keydown", onVisorKeyDown);
     }
   }
-
-  function escapeHtml(s) {
-    const div = document.createElement("div");
-    div.textContent = s;
-    return div.innerHTML;
-  }
-
   let bootAttempts = 0;
   let bootInFlight = false;
-
   function scheduleBoot(reason) {
     if (bootInFlight) return;
     bootInFlight = true;
@@ -17614,6 +17004,5 @@
         if (bootAttempts === attempt) bootInFlight = false;
       });
   }
-
   scheduleBoot("initial");
 })();

@@ -1,4 +1,4 @@
-import { getSavedPapers } from "../common/storage.js";
+import { getSavedPapers, getSettings, setSettings } from "../common/storage.js";
 
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: "application/json" });
@@ -12,7 +12,8 @@ function downloadText(filename, text) {
 
 async function refresh() {
   const saved = await getSavedPapers();
-  document.getElementById("savedCount").textContent = String(Object.keys(saved).length);
+  const count = Object.keys(saved).length;
+  document.getElementById("savedCount").textContent = String(count);
 }
 
 function setHint(msg) {
@@ -51,7 +52,7 @@ document.getElementById("importJson").addEventListener("change", async (e) => {
     const existing = await chrome.storage.local.get({ savedPapers: {} });
     const merged = { ...(existing.savedPapers || {}), ...(data.savedPapers || {}) };
     await chrome.storage.local.set({ savedPapers: merged });
-    setHint("Imported JSON (merged).\n");
+    setHint("Imported JSON (merged).");
     await refresh();
   } catch (err) {
     setHint(`Import failed: ${err?.message || String(err)}`);
@@ -60,4 +61,26 @@ document.getElementById("importJson").addEventListener("change", async (e) => {
   }
 });
 
+// Quick-settings toggles
+const TOGGLE_IDS = [
+  "showQualityBadges",
+  "showEmergingScore",
+  "showRetractionWatch",
+  "showHoverSummary",
+  "showReadingGuide"
+];
+
+async function initToggles() {
+  const settings = await getSettings();
+  for (const id of TOGGLE_IDS) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.checked = !!settings[id];
+    el.addEventListener("change", () => {
+      setSettings({ [id]: el.checked });
+    });
+  }
+}
+
 refresh();
+initToggles();
