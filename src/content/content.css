@@ -1119,10 +1119,16 @@ body[data-su-theme="light"] .su-has-fma .gs_fma * {
 .su-related-works {
   margin: 8px 0;
   padding: 10px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid #e0e4e8;
   border-radius: 10px;
-  background: transparent;
+  /* Solid, not transparent: when anchored below the fixed filter bar (see
+     toggleRelatedWorksPanel), this panel floats over page content rather
+     than sitting inline, and needs an opaque background to stay legible. */
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   font-size: 13px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 .su-related-title {
   font-size: 11px;
@@ -1136,8 +1142,13 @@ body[data-su-theme="light"] .su-has-fma .gs_fma * {
 .su-related-item a { color: #1a0dab; text-decoration: none; }
 .su-related-item a:hover { text-decoration: underline; }
 .su-related-meta { color: #64748b; font-size: 11px; margin-left: 6px; }
-body[data-su-theme="dark"] .su-related-works { border-color: rgba(148, 163, 184, 0.12); }
+body[data-su-theme="dark"] .su-related-works {
+  border-color: #3c4043;
+  background: #202124;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
 body[data-su-theme="dark"] .su-related-item a { color: #8ab4f8; }
+body[data-su-theme="dark"] .su-related-meta { color: #9aa0a6; }
 .su-tortured-badge {
   background: #fff7ed;
   color: #9a3412;

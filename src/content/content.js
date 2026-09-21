@@ -14874,6 +14874,12 @@
     el.style.display = "block";
     setTimeout(() => { el.style.display = "none"; }, 8000);
   }
+  // Session-lived cache: re-toggling the panel closed then open again (or
+  // moving focus and coming back) is instant instead of re-hitting OpenAlex
+  // every click. Naturally resets on page navigation/reload since this is a
+  // plain module-scope variable. Failures are never cached, so a transient
+  // network error doesn't get "stuck" on retry.
+  let relatedWorksCache = null; // { query, html }
   /**
    * Related-works panel: OpenAlex relevance search for the current query.
    * Uses the documented search= endpoint (relevance_score ranked). OpenAlex's
@@ -14889,35 +14895,64 @@
     }
     const query = getScholarSearchQuery();
     if (!query) return;
-    btn.disabled = true;
-    btn.textContent = "Loading\u2026";
     const panel = document.createElement("div");
     panel.id = "su-related-works";
     panel.className = "su-related-works";
-    try {
-      const params = new URLSearchParams();
-      params.set("search", query);
-      params.set("per_page", "6");
-      params.set("select", "display_name,publication_year,cited_by_count,doi,id,primary_location");
-      const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
-      const data = await fetchExternalJson(url, { timeoutMs: 15000 });
-      const results = Array.isArray(data?.results) ? data.results : [];
-      if (!results.length) throw new Error("empty");
-      const items = results.map((w) => {
-        const href = w.doi ? `https://doi.org/${encodeURIComponent(String(w.doi).replace(/^https?:\/\/doi\.org\//, ""))}` : (w.id || "#");
-        const venue = w?.primary_location?.source?.display_name || "";
-        return `<div class="su-related-item"><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(w.display_name || "Untitled")}</a><span class="su-related-meta">${w.publication_year || ""}${venue ? ` \u00b7 ${escapeHtml(venue)}` : ""} \u00b7 ${Number(w.cited_by_count) || 0} cites</span></div>`;
-      }).join("");
-      panel.innerHTML = `<div class="su-related-title">Related works (OpenAlex relevance)</div>${items}`;
+    if (relatedWorksCache && relatedWorksCache.query === query) {
+      panel.innerHTML = relatedWorksCache.html;
       btn.textContent = "Hide related";
-    } catch {
-      panel.innerHTML = `<div class="su-related-title">Related works unavailable${window.suState?.settings?.openalexApiKey ? "" : " \u2014 add an OpenAlex API key in Options (required since Feb 2026)"}.</div>`;
-      btn.textContent = "Related (OpenAlex)";
+    } else {
+      btn.disabled = true;
+      btn.textContent = "Loading\u2026";
+      try {
+        const params = new URLSearchParams();
+        params.set("search", query);
+        params.set("per_page", "6");
+        params.set("select", "display_name,publication_year,cited_by_count,doi,id,primary_location");
+        const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
+        const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+        const results = Array.isArray(data?.results) ? data.results : [];
+        if (!results.length) throw new Error("empty");
+        const items = results.map((w) => {
+          const href = w.doi ? `https://doi.org/${encodeURIComponent(String(w.doi).replace(/^https?:\/\/doi\.org\//, ""))}` : (w.id || "#");
+          const venue = w?.primary_location?.source?.display_name || "";
+          return `<div class="su-related-item"><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(w.display_name || "Untitled")}</a><span class="su-related-meta">${w.publication_year || ""}${venue ? ` \u00b7 ${escapeHtml(venue)}` : ""} \u00b7 ${Number(w.cited_by_count) || 0} cites</span></div>`;
+        }).join("");
+        panel.innerHTML = `<div class="su-related-title">Related works (OpenAlex relevance)</div>${items}`;
+        relatedWorksCache = { query, html: panel.innerHTML };
+        btn.textContent = "Hide related";
+      } catch {
+        panel.innerHTML = `<div class="su-related-title">Related works unavailable${window.suState?.settings?.openalexApiKey ? "" : " \u2014 add an OpenAlex API key in Options (required since Feb 2026)"}.</div>`;
+        btn.textContent = "Related (OpenAlex)";
+      }
+      btn.disabled = false;
     }
-    btn.disabled = false;
-    const bar = document.querySelector(".su-within-results-filter") || document.getElementById("gs_res_ccl");
-    if (bar) bar.insertAdjacentElement("afterend", panel);
-    else document.body.appendChild(panel);
+    // .su-within-results-filter is position: fixed (see content.css), so it's
+    // out of normal document flow — a DOM-sibling "afterend" insertion lands
+    // wherever that bar happens to sit in the DOM tree, not visually below
+    // it. Anchor the panel with its own fixed position instead.
+    const fixedBar = document.querySelector(".su-within-results-filter");
+    const flowBar = document.getElementById("gs_res_ccl");
+    if (fixedBar) {
+      const rect = fixedBar.getBoundingClientRect();
+      panel.style.position = "fixed";
+      panel.style.top = `${Math.round(rect.bottom + 8)}px`;
+      panel.style.left = "50%";
+      panel.style.transform = "translateX(-50%)";
+      panel.style.zIndex = "10001";
+      panel.style.maxWidth = "min(640px, 90vw)";
+      document.body.appendChild(panel);
+    } else if (flowBar) {
+      flowBar.insertAdjacentElement("afterend", panel);
+    } else {
+      // Scholar's "best result" single-answer layout (few/no matches) lacks
+      // both containers above — fall back to the same top-of-page insertion
+      // point already proven to work there (see ensureApiKeyBanner) rather
+      // than document.body, which lands the panel below the page footer.
+      const container = document.querySelector("#gs_res_ccl_mid, #gs_res_ccl, #gs_bdy");
+      if (container) container.insertBefore(panel, container.firstChild);
+      else document.body.insertBefore(panel, document.body.firstChild);
+    }
   }
 
   function getScholarSearchQuery() {
