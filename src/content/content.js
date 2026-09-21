@@ -8528,24 +8528,27 @@
       const flpDisplay = stats.flpIndex % 1 === 0 ? stats.flpIndex : stats.flpIndex.toFixed(2);
       metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="flpIndex"><span class="su-stat-label">FLP Index:</span> <strong>${flpDisplay}</strong><span class="su-author-stat-tooltip">${tip}</span></span>`);
     }
+    const isPaidUser = !!cachedEntitlement?.paid;
     {
       const loading = stats.pIndexStatus === "loading";
       const done = stats.pIndexStatus === "done";
       const fmtPct = (v) => v == null ? "—" : (v % 1 === 0 ? v + "%" : v.toFixed(1) + "%");
-      // p-index (PI)
-      const pTip = getAuthorStatTooltipHtml("pIndex", stats);
-      if (done && stats.pIndex != null) {
-        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${fmtPct(stats.pIndex)}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
-      } else {
-        metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${loading ? "…" : "—"}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
+      // p-index (PI) — Pro (Scholar Utility Belt Pro)
+      if (isPaidUser) {
+        const pTip = getAuthorStatTooltipHtml("pIndex", stats);
+        if (done && stats.pIndex != null) {
+          metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${fmtPct(stats.pIndex)}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
+        } else {
+          metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="pIndex"><span class="su-stat-label">p-index:</span> <strong>${loading ? "…" : "—"}</strong><span class="su-author-stat-tooltip">${pTip}</span></span>`);
+        }
       }
       // OWPI (authorship-weighted p-index)
       if (done && stats.owpiIndex != null) {
         const owTip = getAuthorStatTooltipHtml("owpiIndex", stats);
         metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="owpiIndex"><span class="su-stat-label">OWPI:</span> <strong>${fmtPct(stats.owpiIndex)}</strong><span class="su-author-stat-tooltip">${owTip}</span></span>`);
       }
-      // FWCI (mean + median)
-      if (done && stats.fwci != null) {
+      // FWCI (mean + median) — Pro (Scholar Utility Belt Pro)
+      if (isPaidUser && done && stats.fwci != null) {
         const fTip = getAuthorStatTooltipHtml("fwci", stats);
         const med = stats.fwciMedian != null ? ` / ${stats.fwciMedian.toFixed(2)} med` : "";
         metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="fwci"><span class="su-stat-label">FWCI:</span> <strong>${stats.fwci.toFixed(2)}${med}</strong><span class="su-author-stat-tooltip">${fTip}</span></span>`);
@@ -8565,12 +8568,12 @@
       const h5Tip = getAuthorStatTooltipHtml("h5Index", stats);
       metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="h5Index"><span class="su-stat-label">h5 (5 yr):</span> <strong>${stats.h5Index}</strong><span class="su-author-stat-tooltip">${h5Tip}</span></span>`);
     }
-    if (stats.influentialCitations != null) {
+    if (isPaidUser && stats.influentialCitations != null) {
       const iTip = getAuthorStatTooltipHtml("influential", stats);
       const rate = stats.influentialRate != null ? ` (${stats.influentialRate}%)` : "";
       metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="influential"><span class="su-stat-label">Influential cites:</span> <strong>${stats.influentialCitations}${rate}</strong><span class="su-author-stat-tooltip">${iTip}</span></span>`);
     }
-    if (stats.rcrMean != null) {
+    if (isPaidUser && stats.rcrMean != null) {
       const rTip = getAuthorStatTooltipHtml("rcr", stats);
       metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="rcr"><span class="su-stat-label">RCR (mean):</span> <strong>${stats.rcrMean}</strong><span class="su-author-stat-tooltip">${rTip}</span></span>`);
     }
@@ -8780,12 +8783,14 @@
         </table>
         </div>
       ` : "";
-      const narrativeHtml = generateResearchNarrative(stats);
+      const narrativeHtml = isPaidUser ? generateResearchNarrative(stats) : "";
       const narrativeOpen = !!window.suNarrativeOpen;
-      const narrativeBlock = narrativeHtml
-        ? `<div id="su-narrative" class="su-narrative${narrativeOpen ? "" : " su-narrative-hidden"}">${narrativeHtml}<div class="su-narrative-note">Auto-generated from profile data${stats.pIndexStatus !== "done" ? " · field-normalized metrics still loading…" : ""}. Copy freely.</div></div>`
-        : "";
-      const narrativeBtn = narrativeHtml
+      const narrativeBlock = isPaidUser
+        ? (narrativeHtml
+            ? `<div id="su-narrative" class="su-narrative${narrativeOpen ? "" : " su-narrative-hidden"}">${narrativeHtml}<div class="su-narrative-note">Auto-generated from profile data${stats.pIndexStatus !== "done" ? " · field-normalized metrics still loading…" : ""}. Copy freely.</div></div>`
+            : "")
+        : renderLockedFeature("narrative-cv", "Narrative CV, p-index, FWCI, RCR, and Influential Citations are part of Scholar Utility Belt Pro.");
+      const narrativeBtn = isPaidUser && narrativeHtml
         ? `<button type="button" class="su-compare-authors-btn" data-narrative-toggle="1">${narrativeOpen ? "Hide narrative" : "Narrative"}</button>`
         : "";
       statsContainer.innerHTML = `
