@@ -176,6 +176,32 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     checkGraphMonitors(authorId).then((res) => sendResponse({ ok: true, result: res })).catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
     return true;
   }
+  if (msg?.action === "getEntitlementStatus") {
+    (async () => {
+      const { describeEntitlement } = await import(chrome.runtime.getURL("dist/common/entitlement.js"));
+      const { grandfathered } = await chrome.storage.local.get("grandfathered");
+      if (grandfathered) {
+        sendResponse(describeEntitlement({ grandfathered: true, extpayUser: null }));
+        return;
+      }
+      // Re-declare extpay locally: per ExtPay's Manifest V3 documentation,
+      // the outer `extpay` const can be undefined inside message callbacks.
+      const localExtpay = ExtPay(EXTPAY_ID);
+      const user = await localExtpay.getUser();
+      sendResponse(describeEntitlement({ grandfathered: false, extpayUser: user }));
+    })();
+    return true;
+  }
+  if (msg?.action === "openUpsellModal") {
+    const localExtpay = ExtPay(EXTPAY_ID);
+    localExtpay.openPaymentPage(); // shows all configured plans (lifetime, monthly, yearly) for the user to choose
+    return false;
+  }
+  if (msg?.action === "openLoginPage") {
+    const localExtpay = ExtPay(EXTPAY_ID);
+    localExtpay.openLoginPage();
+    return false;
+  }
 });
 
 const GRAPH_ALERTS_KEY = "authorGraphAlerts";
