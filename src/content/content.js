@@ -3689,6 +3689,11 @@
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      const entitlement = await getEntitlementStatus();
+      if (!entitlement.paid) {
+        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        return;
+      }
       const p = getCachedAuthorPaper(container) || extractPaperFromResult(container);
       if (!p) return;
       const prevText = btn.textContent;
@@ -5861,6 +5866,11 @@
           }
           setTimeout(() => { btn.textContent = prevText; }, 1500);
         } else if (act === "idealineage") {
+          const entitlement = await getEntitlementStatus();
+          if (!entitlement.paid) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
           const p = isAuthorProfile
             ? getCachedAuthorPaper(container)
             : extractPaperFromResult(container);
