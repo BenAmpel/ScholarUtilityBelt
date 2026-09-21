@@ -7707,17 +7707,23 @@
     const growth = await getAuthorHIndexGrowth(window.location.href, fullStats.hIndex);
     if (growth != null) fullStats.hIndexGrowth = growth;
     renderAuthorStats(fullStats);
-    // Async metric passes: p-index (OpenAlex), influential citations (S2), RCR (iCite)
+    // computePIndex also populates OWPI/top-10%-share/open-access-share, which stay
+    // free — so it must run for every user. Only its p-index/FWCI numbers are gated
+    // at render time (see renderAuthorStats). Influential Citations and RCR are
+    // entirely Pro with no free sub-feature riding on them, so skip those network
+    // calls outright for free users rather than fetching data they won't see.
     if (fullStats.pIndexStatus === "idle" && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
       computePIndex(fullStats).then(() => renderAuthorStats(fullStats)).catch(() => {});
     }
-    if (!fullStats.influentialStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
-      computeInfluentialCitations(fullStats).then(() => renderAuthorStats(fullStats)).catch(() => {});
-    }
-    if (!fullStats.rcrStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 3) {
-      computeRcrMetrics(fullStats).then(() => {
-        if (fullStats.rcrMean != null) renderAuthorStats(fullStats);
-      }).catch(() => {});
+    if (cachedEntitlement?.paid) {
+      if (!fullStats.influentialStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
+        computeInfluentialCitations(fullStats).then(() => renderAuthorStats(fullStats)).catch(() => {});
+      }
+      if (!fullStats.rcrStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 3) {
+        computeRcrMetrics(fullStats).then(() => {
+          if (fullStats.rcrMean != null) renderAuthorStats(fullStats);
+        }).catch(() => {});
+      }
     }
   }
   function renderAuthorStats(stats, isLoading = false) {
