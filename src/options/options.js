@@ -18,6 +18,7 @@ import {
   setSettings
 } from "../common/storage.js";
 import { normalizeVenueName } from "../common/quality.js";
+import { getEntitlementStatus } from "../common/entitlement.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -1041,8 +1042,40 @@ function initSettingsFilter() {
   });
 }
 
+async function renderProStatus() {
+  const statusEl = document.getElementById("su-pro-status");
+  const actionsEl = document.getElementById("su-pro-actions");
+  if (!statusEl || !actionsEl) return;
+
+  const entitlement = await getEntitlementStatus();
+  const labels = {
+    grandfathered: "Free forever (existing user) — all features unlocked.",
+    lifetime: "Pro — Lifetime unlock.",
+    monthly: "Pro — Monthly subscription.",
+    yearly: "Pro — Annual subscription.",
+    free: "Free plan — compare authors, citation lineage, narrative CV, the review workspace, the citation graph, and the Publish-or-Perish report are part of Pro.",
+  };
+  statusEl.textContent = labels[entitlement.tier] || labels.free;
+
+  actionsEl.innerHTML = "";
+  if (!entitlement.paid) {
+    const unlockBtn = document.createElement("button");
+    unlockBtn.type = "button";
+    unlockBtn.className = "primary";
+    unlockBtn.textContent = "Unlock Pro";
+    unlockBtn.addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+    actionsEl.appendChild(unlockBtn);
+  }
+  const loginBtn = document.createElement("button");
+  loginBtn.type = "button";
+  loginBtn.textContent = "Already purchased on another device?";
+  loginBtn.addEventListener("click", () => chrome.runtime.sendMessage({ action: "openLoginPage" }));
+  actionsEl.appendChild(loginBtn);
+}
+
 buildBadgePaletteMenu();
 initBadgePaletteDropdown();
 initCollapsibleSections();
 initSettingsFilter();
 load();
+renderProStatus();
