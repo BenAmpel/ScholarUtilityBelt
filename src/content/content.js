@@ -647,6 +647,25 @@
       });
       window.__suFloatingTooltipObserver.observe(document.body, { childList: true, subtree: true });
     }
+    // Single shared listener set, not one per tooltip: this function is called
+    // once per PDF/Copy-MD button on every result row, and attaching fresh
+    // pointerdown/scroll/blur listeners here on every call leaked 3 permanent
+    // document/window listeners each time — nothing ever removed them, even
+    // after the tooltip's own DOM node was cleaned up by the observer above.
+    if (!window.__suFloatingTooltipGlobalHideBound) {
+      window.__suFloatingTooltipGlobalHideBound = true;
+      const hideAllVisible = () => {
+        const openTips = document.querySelectorAll(".su-floating-tooltip-visible");
+        for (const t of openTips) {
+          t.classList.remove("su-floating-tooltip-visible");
+          t.style.display = "none";
+          if (t.__suOwner && !t.__suOwner.isConnected) t.remove();
+        }
+      };
+      document.addEventListener("pointerdown", hideAllVisible, true);
+      window.addEventListener("scroll", hideAllVisible, true);
+      window.addEventListener("blur", hideAllVisible);
+    }
     const hide = () => {
       tip.classList.remove("su-floating-tooltip-visible");
       tip.style.display = "none";
@@ -689,9 +708,6 @@
     el.addEventListener("pointerenter", show);
     el.addEventListener("pointermove", position);
     el.addEventListener("pointerleave", hide);
-    document.addEventListener("pointerdown", hide, true);
-    window.addEventListener("scroll", hide, true);
-    window.addEventListener("blur", hide);
   }
   /** Keep a fixed-position tooltip inside the viewport. Call after making it visible. */
   function clampFixedToViewport(el, pad = 8) {
@@ -13495,6 +13511,7 @@
     if (overlay) overlay.classList.remove("su-visible");
   }
   const IDEA_LINEAGE_CACHE_MS = 6 * 60 * 60 * 1000;
+  const IDEA_LINEAGE_CACHE_MAX_ENTRIES = 50;
   const IDEA_LINEAGE_MAX_NODES = 200;
   const IDEA_LINEAGE_MAX_EDGES = 400;
   const IDEA_LINEAGE_REF_LIMIT = 30;
@@ -13515,6 +13532,19 @@
   function getIdeaLineageCache() {
     if (!window.suIdeaLineageCache) window.suIdeaLineageCache = new Map();
     return window.suIdeaLineageCache;
+  }
+  // The 6h TTL above only hides stale entries at read time — nothing ever
+  // removed them, so a session spent opening lineage on many distinct papers
+  // grew this Map without bound. Evict oldest-inserted entries past the cap.
+  function setIdeaLineageCacheEntry(cache, key, value) {
+    if (!key) return;
+    cache.delete(key);
+    cache.set(key, value);
+    while (cache.size > IDEA_LINEAGE_CACHE_MAX_ENTRIES) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey === undefined) break;
+      cache.delete(oldestKey);
+    }
   }
   function getS2ResolveCache() {
     if (!window.suS2ResolveCache) window.suS2ResolveCache = new Map();
@@ -14425,7 +14455,7 @@
       renderIdeaLineageOverlay(window.suIdeaLineageState);
       return;
     }
-    if (key) cache.set(key, { data: result, timestamp: now });
+    if (key) setIdeaLineageCacheEntry(cache, key, { data: result, timestamp: now });
     window.suIdeaLineageState = { data: result, loading: false, error: null, paper, paperContainer: container, doi };
     renderIdeaLineageOverlay(window.suIdeaLineageState);
   }
