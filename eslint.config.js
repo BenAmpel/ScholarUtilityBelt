@@ -70,8 +70,9 @@ module.exports = [
         // Chrome extension APIs
         chrome: "readonly",
         importScripts: "readonly",
-        // Set by importScripts("dist/common/extpay.js") in sw.js before use.
+        // Set by importScripts(...) in sw.js before use.
         ExtPay: "readonly",
+        SUEntitlement: "readonly",
         // Browser globals missing from the list above.
         prompt: "readonly",
         DecompressionStream: "readonly",

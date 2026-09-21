@@ -56,7 +56,13 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // undefined inside service-worker event callbacks).
 // importScripts() resolves relative URLs against this script's own location
 // (src/), not the extension root — chrome.runtime.getURL() is required here.
-importScripts(chrome.runtime.getURL("dist/common/extpay.js"));
+// Dynamic import() is disallowed in a classic (non-module) service worker
+// per the HTML spec, so entitlement.js is loaded the same way, as a global
+// (SUEntitlement), rather than via import().
+importScripts(
+  chrome.runtime.getURL("dist/common/extpay.js"),
+  chrome.runtime.getURL("dist/common/entitlement.sw.js")
+);
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();
@@ -180,7 +186,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.action === "getEntitlementStatus") {
     (async () => {
-      const { describeEntitlement } = await import(chrome.runtime.getURL("dist/common/entitlement.js"));
+      const { describeEntitlement } = SUEntitlement;
       const { grandfathered } = await chrome.storage.local.get("grandfathered");
       if (grandfathered) {
         sendResponse(describeEntitlement({ grandfathered: true, extpayUser: null }));
@@ -469,7 +475,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Freemium grandfathering: decide once, on install/update, whether this
 // user keeps all current features free forever. See src/common/entitlement.js.
 chrome.runtime.onInstalled.addListener(async (details) => {
-  const { decideGrandfathered } = await import(chrome.runtime.getURL("dist/common/entitlement.js"));
+  const { decideGrandfathered } = SUEntitlement;
   const { grandfathered } = await chrome.storage.local.get("grandfathered");
   const decided = decideGrandfathered(details.reason, grandfathered);
   if (decided !== grandfathered) {

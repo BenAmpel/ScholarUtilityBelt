@@ -67,6 +67,13 @@ const TARGETS = [
     args: ['src/common/entitlement.js', '--bundle=false', '--minify', '--outfile=dist/common/entitlement.js', '--log-level=warning'],
   },
   {
+    // Same source, built as a global for the classic (non-module) service
+    // worker: dynamic import() is disallowed in ServiceWorkerGlobalScope
+    // per the HTML spec, so sw.js loads this via importScripts() instead.
+    label: 'common/entitlement.sw.js',
+    args: ['src/common/entitlement.js', '--bundle=true', '--format=iife', '--global-name=SUEntitlement', '--minify', '--outfile=dist/common/entitlement.sw.js', '--log-level=warning'],
+  },
+  {
     // Third-party library — not minified, so the shipped bytes match what was audited.
     label: 'common/extpay.js',
     args: ['src/common/extpay.js', '--bundle=false', '--minify=false', '--outfile=dist/common/extpay.js', '--log-level=warning'],
