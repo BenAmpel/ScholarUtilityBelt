@@ -87,6 +87,10 @@ const TARGETS = [
     args: ['src/content/genealogy-lineage.js', '--bundle=false', '--minify', '--outfile=dist/content/genealogy-lineage.js', '--log-level=warning'],
   },
   {
+    label: 'content/review-workspace.js',
+    args: ['src/content/review-workspace.js', '--bundle=false', '--minify', '--outfile=dist/content/review-workspace.js', '--log-level=warning'],
+  },
+  {
     label: 'content/content-author.js',
     args: ['src/content/content-author.js', '--bundle=false', '--minify', '--outfile=dist/content/content-author.js', '--log-level=warning'],
   },

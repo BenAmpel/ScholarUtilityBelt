@@ -98,6 +98,7 @@ module.exports = [
       "src/content/data-loader.js",
       "src/content/dom-cache.js",
       "src/content/genealogy-lineage.js",
+      "src/content/review-workspace.js",
       "src/content/trend-methods.js",
       "src/content/trend-tracker.js",
       "src/library/library.js",

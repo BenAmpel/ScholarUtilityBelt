@@ -197,6 +197,7 @@
         "dist/content/trend-tracker.js",
         "dist/content/trend-methods.js",
         "dist/content/genealogy-lineage.js",
+        "dist/content/review-workspace.js",
         "src/data/*.txt",
         "src/data/*.csv",
         "src/data/*.json",
