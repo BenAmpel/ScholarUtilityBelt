@@ -14,3 +14,4 @@ skill-updates/
 dist/
 store-assets/*.html
 store-assets/render.mjs
+.worktrees/
