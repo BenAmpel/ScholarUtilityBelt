@@ -1148,6 +1148,48 @@ body[data-su-theme="dark"] .su-tortured-badge {
   color: #fdba74;
   border-color: rgba(249, 115, 22, 0.3);
 }
+.su-locked-feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--su-surface-muted, #f4f4f5);
+  font-size: 12px;
+}
+.su-locked-feature-badge {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--su-accent, #6d28d9);
+  color: #fff;
+}
+.su-locked-feature-desc {
+  flex: 1;
+  color: var(--su-text-muted, #52525b);
+}
+.su-locked-feature-unlock {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--su-accent, #6d28d9);
+  background: transparent;
+  color: var(--su-accent, #6d28d9);
+  cursor: pointer;
+}
+.su-locked-feature-unlock:hover {
+  background: var(--su-accent, #6d28d9);
+  color: #fff;
+}
+body[data-su-theme="dark"] .su-locked-feature {
+  background: rgba(148, 163, 184, 0.12);
+}
+body[data-su-theme="dark"] .su-locked-feature-desc {
+  color: #94a3b8;
+}
 .su-retraction-tooltip {
   display: none;
   position: absolute;

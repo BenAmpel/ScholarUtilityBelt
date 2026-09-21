@@ -57,6 +57,12 @@
   let loadTorturedPhrases;
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
+  let getEntitlementStatus;
+  let cachedEntitlement = null;
+  async function refreshEntitlementCache() {
+    cachedEntitlement = await getEntitlementStatus();
+    return cachedEntitlement;
+  }
   async function importModuleWithRetry(path, attempts = 2) {
     let lastError = null;
     for (let i = 0; i < attempts; i++) {
@@ -72,11 +78,12 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
       importModuleWithRetry("dist/content/data-loader.js"),
+      importModuleWithRetry("dist/common/entitlement.js"),
     ]);
     ({
       addHiddenAuthor,
@@ -140,6 +147,8 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
+    ({ getEntitlementStatus } = entitlement);
+    await refreshEntitlementCache();
     modulesLoaded = true;
   }
   function safeSessionGet(key) {
@@ -3664,6 +3673,15 @@
     b.textContent = label;
     if (act) b.dataset.act = act;
     return b;
+  }
+  function renderLockedFeature(featureName, description) {
+    return `
+      <div class="su-locked-feature">
+        <div class="su-locked-feature-badge">Pro</div>
+        <div class="su-locked-feature-desc">${description}</div>
+        <button type="button" class="su-locked-feature-unlock" data-unlock-feature="${featureName}">Unlock</button>
+      </div>
+    `;
   }
   function bindIdeaLineageButton(btn, container) {
     if (!btn || btn.dataset.suLineageBound === "1") return;
@@ -7831,10 +7849,22 @@
           narrativeToggle.textContent = window.suNarrativeOpen ? "Hide narrative" : "Narrative";
           return;
         }
+        const unlockBtn = e.target.closest("[data-unlock-feature]");
+        if (unlockBtn) {
+          e.stopPropagation();
+          e.preventDefault();
+          chrome.runtime.sendMessage({ action: "openUpsellModal" });
+          return;
+        }
         const compareBtn = e.target.closest(".su-compare-authors-btn");
         if (compareBtn) {
           e.stopPropagation();
           e.preventDefault();
+          const entitlement = await getEntitlementStatus();
+          if (!entitlement.paid) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
           openAuthorCompareOverlay(window.suState);
           return;
         }
