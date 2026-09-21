@@ -7846,6 +7846,11 @@
         if (popBtn) {
           e.stopPropagation();
           e.preventDefault();
+          const entitlement = await getEntitlementStatus();
+          if (!entitlement.paid) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
           openPoPOverlay();
           return;
         }
@@ -8157,12 +8162,22 @@
           const openBtn = e.target.closest("[data-graph-open]");
           if (openBtn) {
             e.preventDefault();
+            const entitlement = await getEntitlementStatus();
+            if (!entitlement.paid) {
+              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              return;
+            }
             await openGraphOverlay();
             return;
           }
           const buildBtn = e.target.closest("[data-graph-build]");
           if (buildBtn) {
             e.preventDefault();
+            const entitlement = await getEntitlementStatus();
+            if (!entitlement.paid) {
+              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              return;
+            }
             const count = Math.min(50, Math.max(3, Number(buildBtn.dataset.graphBuildCount) || 10));
             await openGraphOverlay();
             await buildGraphFromSeeds(count);
@@ -15548,7 +15563,14 @@
     reviewBtn.className = "su-filter-clear su-review-workspace";
     reviewBtn.textContent = "Review workspace";
     reviewBtn.title = "Open the systematic review workspace for screening and extraction.";
-    reviewBtn.addEventListener("click", () => openReviewOverlay());
+    reviewBtn.addEventListener("click", async () => {
+      const entitlement = await getEntitlementStatus();
+      if (!entitlement.paid) {
+        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        return;
+      }
+      openReviewOverlay();
+    });
     const readFilterValues = () => ({
       yearMin: yearMinEl.value.trim(),
       yearMax: yearMaxEl.value.trim(),
