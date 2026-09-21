@@ -1,6 +1,6 @@
 {
   "name": "chrome-scholar-extension",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg)](https://doi.org/10.5281/zenodo.18645552)",
   "main": "index.js",
   "scripts": {
