@@ -67,6 +67,11 @@ const TARGETS = [
     args: ['src/common/entitlement.js', '--bundle=false', '--minify', '--outfile=dist/common/entitlement.js', '--log-level=warning'],
   },
   {
+    // Third-party library — not minified, so the shipped bytes match what was audited.
+    label: 'common/extpay.js',
+    args: ['src/common/extpay.js', '--bundle=false', '--minify=false', '--outfile=dist/common/extpay.js', '--log-level=warning'],
+  },
+  {
     label: 'content/dom-cache.js',
     args: ['src/content/dom-cache.js', '--bundle=false', '--minify', '--outfile=dist/content/dom-cache.js', '--log-level=warning'],
   },

@@ -76,6 +76,9 @@
   "optional_host_permissions": [
     "<all_urls>"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://extensionpay.com"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -175,6 +178,15 @@
         "dist/content/content.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://extensionpay.com/*"
+      ],
+      "js": [
+        "dist/common/extpay.js"
+      ],
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [

@@ -49,6 +49,16 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   }
 }
 
+// ExtensionPay background initialization. Must run exactly once per
+// service worker lifecycle and must NOT be called again inside message
+// listeners below — re-declare `extpay` locally in each listener instead,
+// per ExtPay's own documented Manifest V3 caveat (it can otherwise become
+// undefined inside service-worker event callbacks).
+importScripts("dist/common/extpay.js");
+const EXTPAY_ID = "scholar-utility-belt";
+const extpay = ExtPay(EXTPAY_ID);
+extpay.startBackground();
+
 // Smart-rename PDF: when a PDF download matches a URL we have metadata for (from Scholar result), suggest [Author] - [Year] - [Title].pdf
 if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFilename) {
   chrome.downloads.onDeterminingFilename.addListener(function (downloadItem, suggest) {
