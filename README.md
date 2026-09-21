@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-4285F4?logo=googlechrome&logoColor=white"></a>
   <a href="https://github.com/BenAmpel/ScholarUtilityBelt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BenAmpel/ScholarUtilityBelt?style=flat"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.2-2f855a">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.6.0-2f855a">
   <a href="https://doi.org/10.5281/zenodo.18645552"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-ISC-black"></a>
   <a href="https://buymeacoffee.com/bampel"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00"></a>
@@ -37,10 +37,17 @@ The extension layers paper triage, venue quality signals, lightweight bibliometr
 
 - [x] Search-result action grid for save/remove, PDF, abstract, and citation utilities
 - [x] Venue-quality badges from FT50, UTD24, ABDC, VHB, ABS/AJG, CORE/ICORE, CCF, SCImago, ERA, Norwegian register, and related sources
-- [x] Local-first `Emerging` and citation-velocity signals to reduce scan time on dense result pages
+- [x] Local-first `Emerging` and citation-velocity signals, retraction-watch and tortured-phrase (paper-mill) screening badges, to reduce scan time on dense result pages
+- [x] Query Trend Tracker: year-distribution chart, OpenAlex rising-concept chips, and method-keyword pills for the current search
 - [x] Author-profile filters, summary metrics, and compare-author overlays
-- [x] Local saved-paper library with notes, tags, collections, export/import, and review-workspace tooling
+- [x] Extended bibliometrics: p-index, Field-Weighted Citation Impact, Relative Citation Ratio (NIH iCite), Influential Citations (Semantic Scholar), and an auto-generated narrative CV
+- [x] Citation-lineage/idea-lineage views and an interactive citation-graph overlay for exploring a paper's or author's citation network
+- [x] Systematic-review workspace: multi-reviewer screening, PICO fields, PRISMA flow diagrams, and CSV/BibTeX/Markdown export
+- [x] Publish-or-Perish-style report with peer-cohort benchmarking
+- [x] Local saved-paper library with notes, tags, collections, export/import
 - [x] Configurable options page for feature toggles, quality sources, and enrichment behavior
+
+Author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report are part of **Scholar Utility Belt Pro** for new installs — see [A note on the Pro tier](#a-note-on-the-pro-tier). If you installed the extension before this tier shipped, every one of these stays free for you, permanently.
 
 ## Links
 
@@ -68,19 +75,24 @@ Scholar Utility Belt addresses those gaps in-place. Instead of replacing Scholar
 - Result-level action grid for common tasks such as save/remove, copy citation snippets, open PDFs, abstract toggles, and lineage exploration.
 - Local-first “Emerging” scoring that compares a paper against venue/year cohorts, with bounded fallback to external sources when local evidence is sparse.
 - Citation-velocity and skimmability cues intended to lower scan cost on dense result pages.
+- Retraction-watch and tortured-phrase (paper-mill/plagiarism-evasion) screening badges.
+- Query Trend Tracker: a collapsible panel showing the year distribution, OpenAlex "rising concepts," and detected method keywords for the current search.
+- An OpenAlex "Related works" panel alongside the result filters.
 - Optional result filtering, grouping, hiding, and sort overlays that run client-side.
 
 ### Author-profile augmentation
 
-- Additional author summary metrics beyond the default Scholar profile view.
+- Additional author summary metrics beyond the default Scholar profile view (h-index, m-index, g-index, L-index, h5-index, and more).
 - Local filters for venue quality, author position, coauthors, citation bands, and topic terms.
-- Compare-authors overlay for side-by-side profile analysis.
-- Citation-map and idea-lineage views built from bounded external enrichment.
+- **Pro:** compare-authors overlay for side-by-side profile analysis.
+- **Pro:** extended bibliometrics — p-index, Field-Weighted Citation Impact, Relative Citation Ratio (NIH iCite), and Influential Citations (Semantic Scholar) — plus an auto-generated narrative CV built from those numbers.
+- **Pro:** citation-lineage/idea-lineage views and an interactive citation-graph overlay, both built from bounded external enrichment.
+- **Pro:** Publish-or-Perish-style report with peer-cohort benchmarking.
 
 ### Library and workflow tooling
 
 - Local saved-paper library with tags, notes, search, sorting, export/import, and collection-style organization.
-- Review-workspace flow for sifting, sorting, and report generation.
+- **Pro:** systematic-review workspace — multi-reviewer screening with blind mode, consensus/conflict detection, PICO fields, PRISMA flow-diagram export, and CSV/BibTeX/Markdown report export.
 - Popup and options pages for configuring badge sources, external enrichments, UI density, and quality datasets.
 
 ## Design principles
@@ -111,15 +123,22 @@ Local-only or packaged-data features include:
 
 Optional external enrichment can use public APIs such as:
 
-- [OpenAlex](https://openalex.org/)
+- [OpenAlex](https://openalex.org/) (a free API key, added in Options, is recommended — see note below)
 - [Crossref](https://www.crossref.org/)
 - [Unpaywall](https://unpaywall.org/)
 - [OpenCitations](https://opencitations.net/)
 - [Semantic Scholar](https://www.semanticscholar.org/product/api)
 - [DBLP](https://dblp.org/)
+- [NIH iCite](https://icite.od.nih.gov/) (Relative Citation Ratio, PubMed-indexed works only)
 - selected metadata services such as PubMed, Europe PMC, and ROR
 
 The extension is built to minimize those calls and to make their effects legible in the UI.
+
+**A note on OpenAlex rate limits:** as of February 2026, OpenAlex asks unauthenticated callers to attach a free API key for reliable service. Without one, requests behind citation metrics, p-index/FWCI, trends, and related-works may be rate-limited or fail. Add a free key from [openalex.org/settings/api](https://openalex.org/settings/api) in Options → OpenAlex API key; the extension works without one but degrades gracefully.
+
+### A note on the Pro tier
+
+Scholar Utility Belt Pro (author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report) is licensed through [ExtensionPay](https://extensionpay.com), which makes a network request to `extensionpay.com` to check your entitlement status. This is the one exception to the "no backend, no telemetry" design above — everything else in the extension still runs entirely from data already on the page or packaged with the extension. If you installed Scholar Utility Belt before this tier shipped, nothing changes for you: every one of these features stays free, permanently.
 
 ## Packaged data sources
 
