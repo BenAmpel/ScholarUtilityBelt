@@ -23,6 +23,17 @@
 
 ---
 
+## Implementation Status (2026-09-20)
+
+All 10 tasks are implemented and committed on `main` (commits `a16285a`..`d90297b`, plus the plan/spec revision at `20a7577`). Tests pass (183 total, `npm test`), `npm run build` succeeds cleanly, and `node --check` passes on `content.js` and `sw.js`.
+
+**Not done, and not automatable in this environment:** the manual browser-verification steps in Tasks 2, 3, 8, and 9 (loading the unpacked extension in `chrome://extensions`, clicking through gated features, confirming the grandfathering/upsell/Pro-status UI visually). No live Chrome profile was available to drive here — before shipping 0.6.0, walk through those checklists in a real browser, especially:
+
+- Task 2 Step 4 and Task 8 Step 9's combined verification (grandfathering both branches, all seven gates, then the `grandfathered: true` override unlocking everything).
+- Task 3 Step 6 (service worker console loads `ExtPay` without error).
+- A real end-to-end purchase against the live `lifetime`/`monthly`/`yearly` Stripe plans (test mode, per ExtensionPay's own docs) — this has not been exercised at all.
+- `npm run lint` is currently broken by a pre-existing, unrelated dependency issue (`Cannot find module '@eslint/js'`) — not caused by this work, but worth fixing separately since it silently disabled lint's own pre-release checklist item.
+
 ### Task 1: Grandfathering decision logic (pure, unit-tested)
 
 **Files:**
