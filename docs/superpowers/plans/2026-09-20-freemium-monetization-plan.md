@@ -2,7 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a freemium paid tier (author compare, citation lineage, p-index/FWCI, narrative CV) sold via ExtensionPay, while every currently-installed user keeps free access to everything they already have.
+**Goal:** Add a freemium paid tier (author compare, citation lineage, p-index/FWCI/RCR/influential-citations, narrative CV, systematic-review workspace, citation-graph overlay, Publish-or-Perish report) sold via ExtensionPay, while every currently-installed user keeps free access to everything they already have.
+
+**Revision note (2026-09-20, post-audit):** expanded from the original 3-feature gate (compare, lineage, narrative/p-index/FWCI) to 7, per the design spec's revision note — see `docs/superpowers/specs/2026-09-20-freemium-monetization-design.md` Section 2. `EXTPAY_ID` is resolved: `scholar-utility-belt`, with real `lifetime`/`monthly`/`yearly` plans already configured — Task 3 no longer needs a placeholder.
 
 **Architecture:** A pure, unit-tested decision module (`src/common/entitlement.js`) determines grandfathered/paid status; `src/sw.js` wires it to `chrome.runtime.onInstalled` and to ExtensionPay's background SDK, exposing status via `chrome.runtime.onMessage`; `content.js`, `popup.js`, and `options.js` all query that same message handler rather than talking to ExtensionPay directly (ExtensionPay's own docs only document background-context usage, and content scripts can't safely load third-party scripts into the Scholar page's CSP context).
 
@@ -17,7 +19,7 @@
 - Test command: `npm test` (runs `node --import ./tests/register-loader.mjs --test tests/*.test.mjs`). The custom loader (`tests/loader.mjs`) forces `.js` files under `src/` to load as ES modules even though `package.json` says `"type": "commonjs"`.
 - Build command: `npm run build` (runs `build.js`, which regenerates `manifest.json` from `manifest.template.json` via `scripts/build_manifest.js`, then runs esbuild over each target in `build.js`'s `TARGETS` array into `dist/`).
 - Manual verification throughout: `chrome://extensions` → Developer mode → "Load unpacked" → select the repo root → after any change, click the reload icon on the extension card.
-- Ben (repo owner) must create the ExtensionPay account and a plan with nicknames `lifetime`, `monthly`, and `yearly` in the ExtensionPay dashboard, and give you the extension's ExtensionPay ID before Task 3. This plan treats that ID as the constant `EXTPAY_ID` — do not invent a value for it; if it isn't available yet, stop at Task 3 and ask for it rather than guessing.
+- **Resolved 2026-09-20**: Ben's ExtensionPay account is live at `extensionpay.com/home`, extension `scholar-utility-belt`, with three plans configured: `lifetime` ($40 once), `monthly` ($3/mo), `yearly` ($20/yr). `EXTPAY_ID = "scholar-utility-belt"` — Task 3 uses this constant directly, no placeholder needed.
 
 ---
 
@@ -225,12 +227,10 @@ Append to `src/sw.js` (after the grandfathering listener added in Task 2):
 // listeners below — re-declare `extpay` locally in each listener instead,
 // per ExtPay's own documented Manifest V3 caveat.
 importScripts("dist/common/extpay.js");
-const EXTPAY_ID = "REPLACE_WITH_REAL_EXTENSIONPAY_ID"; // set from the ExtensionPay dashboard before shipping
+const EXTPAY_ID = "scholar-utility-belt"; // confirmed 2026-09-20 via extensionpay.com/home
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();
 ```
-
-**Do not replace `REPLACE_WITH_REAL_EXTENSIONPAY_ID` with a guessed value.** If Ben has not yet provided the real ExtensionPay ID, stop here and ask for it before continuing to Task 4 — the rest of the plan depends on this constant being wired to a real ExtensionPay account, and a wrong ID will fail silently (payment pages will 404 or reject).
 
 - [ ] **Step 6: Manually verify the background loads without errors**
 
@@ -555,12 +555,12 @@ git commit -m "feat: wire upsell modal and login page message handlers"
 
 ---
 
-### Task 8: Gate the three feature render points
+### Task 8: Gate the seven feature render points
 
 **Files:**
 - Modify: `src/content/content.js`
 
-This task has three independent sub-steps — one per gated feature. Do all three, then run one combined manual verification.
+**Revision note (2026-09-20):** expanded from 3 to 7 gated entry points per the design spec's revision — added the review workspace, citation-graph overlay, Publish-or-Perish report, and the RCR/Influential-Citations numeric badges (gated alongside p-index/FWCI in Step 4). This task has seven independent sub-steps. Do all seven, then run one combined manual verification.
 
 - [ ] **Step 1: Load the entitlement helper into content.js's module set**
 
@@ -690,22 +690,115 @@ with:
         : "";
 ```
 
-This gates the narrative text, p-index, and FWCI together as one block (they're already generated together by `generateResearchNarrative`), matching the spec's grouping of these three under one "Pro" feature.
+This gates the narrative text, p-index, and FWCI together as one block (they're already generated together by `generateResearchNarrative`), matching the spec's grouping of these three under one "Pro" feature. Because `generateResearchNarrative` also composes RCR and Influential-Citations sentences into the same `bits` array (added in the prior, unrelated bibliometrics commit), gating `narrativeHtml` on `isPaidUser` already covers their prose mentions too — Step 5 below handles their separate numeric badges in the stats row.
 
-- [ ] **Step 5: Combined manual verification**
+- [ ] **Step 5: Gate the RCR / Influential-Citations numeric badges**
+
+These render as standalone stat-row items alongside (but not inside) the p-index/FWCI block, around `src/content/content.js:8528-8536`. Wrap both pushes in the same `isPaidUser` flag computed in Step 4 (compute it once, above both this block and the narrative block, since both live in the same render function):
+
+```js
+    if (isPaidUser && stats.influentialCitations != null) {
+      const iTip = getAuthorStatTooltipHtml("influential", stats);
+      const rate = stats.influentialRate != null ? ` (${stats.influentialRate}%)` : "";
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="influential"><span class="su-stat-label">Influential cites:</span> <strong>${stats.influentialCitations}${rate}</strong><span class="su-author-stat-tooltip">${iTip}</span></span>`);
+    }
+    if (isPaidUser && stats.rcrMean != null) {
+      const rTip = getAuthorStatTooltipHtml("rcr", stats);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="rcr"><span class="su-stat-label">RCR (mean):</span> <strong>${stats.rcrMean}</strong><span class="su-author-stat-tooltip">${rTip}</span></span>`);
+    }
+```
+
+Since `isPaidUser` is computed later in the function (near the narrative block), hoist that one line (`const isPaidUser = !!cachedEntitlement?.paid;`) to above this block instead, then reuse it at the narrative block in Step 4.
+
+- [ ] **Step 6: Gate the Publish-or-Perish report**
+
+The popup button handler is at `src/content/content.js:7817-7823`, inside the same delegated async click handler as the compare-authors gate from Step 2 — add the identical gate pattern:
+
+```js
+        const popBtn = e.target.closest("[data-pop-report]");
+        if (popBtn) {
+          e.stopPropagation();
+          e.preventDefault();
+          const entitlement = await getEntitlementStatus();
+          if (!entitlement.paid) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
+          openPoPOverlay();
+          return;
+        }
+```
+
+- [ ] **Step 7: Gate the citation-graph overlay**
+
+The "Open map" and "Build" buttons are handled in the `[data-graph-open]` / `[data-graph-build]` delegated click listener at `src/content/content.js:8113-8131`, which is already `async`:
+
+```js
+        document.addEventListener("click", async (e) => {
+          if (e.target.closest("#su-graph-overlay")) return;
+          const openBtn = e.target.closest("[data-graph-open]");
+          if (openBtn) {
+            e.preventDefault();
+            const entitlement = await getEntitlementStatus();
+            if (!entitlement.paid) {
+              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              return;
+            }
+            await openGraphOverlay();
+            return;
+          }
+          const buildBtn = e.target.closest("[data-graph-build]");
+          if (buildBtn) {
+            e.preventDefault();
+            const entitlement = await getEntitlementStatus();
+            if (!entitlement.paid) {
+              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              return;
+            }
+            const count = Math.min(50, Math.max(3, Number(buildBtn.dataset.graphBuildCount) || 10));
+            await openGraphOverlay();
+            await buildGraphFromSeeds(count);
+          }
+        });
+```
+
+- [ ] **Step 8: Gate the systematic-review workspace**
+
+The review-workspace button is created and bound around `src/content/content.js:15501-15506`:
+
+```js
+    const reviewBtn = document.createElement("button");
+    reviewBtn.type = "button";
+    reviewBtn.className = "su-filter-clear su-review-workspace";
+    reviewBtn.textContent = "Review workspace";
+    reviewBtn.title = "Open the systematic review workspace for screening and extraction.";
+    reviewBtn.addEventListener("click", async () => {
+      const entitlement = await getEntitlementStatus();
+      if (!entitlement.paid) {
+        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        return;
+      }
+      openReviewOverlay();
+    });
+```
+
+- [ ] **Step 9: Combined manual verification**
 
 `npm run build`, reload extension. On a fresh test profile (not grandfathered):
-1. Visit a Google Scholar author profile page. Confirm the narrative/p-index/FWCI area now shows the "Pro" locked block with an "Unlock" button instead of real numbers.
+1. Visit a Google Scholar author profile page. Confirm the narrative/p-index/FWCI/RCR/influential area now shows the "Pro" locked block with an "Unlock" button instead of real numbers.
 2. Click "Compare authors". Confirm it opens the upsell flow instead of the compare overlay.
 3. Click a "Lineage" button on a search result or author page. Confirm it opens the upsell flow instead of the lineage overlay.
+4. Click "Publish or Perish" report button. Confirm it opens the upsell flow.
+5. Click "Open map" / "Build" on the citation graph. Confirm it opens the upsell flow.
+6. Click "Review workspace". Confirm it opens the upsell flow.
 
-Then, in the service worker console, run `chrome.storage.local.set({ grandfathered: true })`, reload the Scholar tab, and confirm all three features render normally again (proving the grandfathering path fully unlocks everything, matching a real existing user).
+Then, in the service worker console, run `chrome.storage.local.set({ grandfathered: true })`, reload the Scholar tab, and confirm all seven features render/open normally again (proving the grandfathering path fully unlocks everything, matching a real existing user).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add src/content/content.js
-git commit -m "feat: gate compare/lineage/narrative-CV features behind paid entitlement"
+git commit -m "feat: gate compare/lineage/narrative-CV/PoP/graph/review-workspace behind paid entitlement"
 ```
 
 ---
@@ -815,8 +908,8 @@ Add an entry (matching whatever format the existing changelog/README section use
 
 - [ ] **Step 4: Final pre-release checklist (manual, not automatable)**
 
-- [ ] Confirm `EXTPAY_ID` in `src/sw.js` (Task 3, Step 5) has been replaced with the real ID from Ben's ExtensionPay dashboard — grep for the placeholder to confirm it's gone: `grep -rn "REPLACE_WITH_REAL_EXTENSIONPAY_ID" src/` should return nothing.
-- [ ] Confirm the ExtensionPay dashboard has three plans configured with nicknames exactly `lifetime`, `monthly`, `yearly` matching what `openPaymentPage()` calls in this plan expect (Task 7 currently calls `openPaymentPage()` with no argument, showing all plans — confirm this is the desired UX, or pass a specific nickname if a single default should be pre-selected).
+- [x] `EXTPAY_ID` is the real value (`scholar-utility-belt`) — confirmed 2026-09-20, no placeholder was ever committed.
+- [x] ExtensionPay dashboard has three plans configured with nicknames exactly `lifetime`, `monthly`, `yearly` — confirmed 2026-09-20. Task 7's `openPaymentPage()` call with no argument (showing all plans) is the desired UX.
 - [ ] Run the full test suite once more: `npm test` — expected all green, including every test added in Tasks 1, 4, and 5.
 - [ ] Run `npm run lint` — expected no new errors introduced by this plan's changes (pre-existing lint issues from the unrelated uncommitted work are out of scope).
 - [ ] Update the Chrome Web Store listing description to mention the new Pro tier before submitting the new version for review.

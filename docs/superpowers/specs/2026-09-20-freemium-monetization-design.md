@@ -44,12 +44,17 @@ An install-date timestamp would need to be added retroactively and has no reliab
 
 ### Gated features (paid tier, new installs only)
 
-These are already-shipped v0.5.0 features that free (grandfathered) users keep, but which are gated for anyone whose `grandfathered` flag is `false`:
+**Revision note (2026-09-20, post-audit):** the original gated list below drew its line around the four features that happened to ship in the immediately-preceding v0.5.0 release, rather than a deliberate inventory of "advanced/power-user" vs. "basic" functionality. An audit of the full feature set found several comparably (or more) sophisticated features — the systematic-review workspace, the citation-graph overlay, and the Publish-or-Perish peer-comparison report — that were free by omission simply because they predated this spec. The list below has been expanded to close that gap, using this principle: **individual reading/browsing aids stay free forever; workflow tools that save significant time for power users (systematic reviews, citation mapping, cross-cohort benchmarking, cross-database author metrics) are Pro.**
+
+These are gated for anyone whose `grandfathered` flag is `false`:
 
 - Author compare-overlay (side-by-side author profile comparison)
 - Citation-lineage / idea-lineage view
-- p-index and FWCI (Field-Weighted Citation Impact) metrics
+- p-index, FWCI (Field-Weighted Citation Impact), Relative Citation Ratio (NIH iCite), and Influential Citations (Semantic Scholar) metrics
 - Narrative CV generation
+- Systematic-review workspace (PRISMA/PICO screening, multi-reviewer consensus, active-learning-assisted prioritization, export)
+- Citation-graph / network overlay (build-from-seeds, expand references/citations, save/load graph collections, export)
+- Publish-or-Perish report (peer-cohort benchmarking, CSV/JSON/Markdown export) — previously implicitly free under the single "Enable Publish or Perish metrics" toggle; now explicitly Pro, consistent with author-compare and narrative CV
 
 ### Free tier (all users, always)
 
@@ -57,8 +62,9 @@ These are already-shipped v0.5.0 features that free (grandfathered) users keep, 
 - Search-result action grid (save/remove, PDF, abstract, citation utilities)
 - Citation-velocity and "Emerging" signals
 - Local saved-paper library (notes, tags, collections, export/import)
-- Author-profile summary metrics (h-index, m-index, L-index, g-index) and basic filters
+- Author-profile summary metrics (h-index, m-index, L-index, g-index, h5-index, OWPI, top-10% share, open-access share) and basic filters
 - Query Trend Tracker panel (existing feature, unrelated to this spec)
+- Tortured-phrase screening badge and OpenAlex "Related works" panel (both new, low-effort, integrity/discovery-oriented — kept free to reinforce trust ahead of the paywall rollout)
 
 ### Gating check
 
@@ -79,8 +85,10 @@ Every gated feature's render path checks `isPaidUser()` before rendering. If `fa
 
 ### Pricing
 
-- **Lifetime unlock**: $19 one-time.
-- **Subscription**: $3/month or $24/year.
+Configured live in the ExtensionPay dashboard (`scholar-utility-belt` extension, plan nicknames `lifetime` / `monthly` / `yearly` — confirmed 2026-09-20, supersedes this doc's earlier $19/$3/$24 draft figures):
+
+- **Lifetime unlock**: $40 one-time.
+- **Subscription**: $3/month or $20/year.
 
 Both unlock the same gated feature set; the choice is presented to the user as "pay once" vs. "pay less up front."
 
@@ -103,9 +111,11 @@ Integration points:
 
 Ben creates the ExtensionPay account and connects Purplelink's Stripe account through ExtensionPay's own dashboard. This is a real business account with payout details and cannot be created on his behalf.
 
+**Status: done.** The `scholar-utility-belt` extension is registered on ExtensionPay with a connected Stripe account and three plans (`lifetime`, `monthly`, `yearly`) configured — `EXTPAY_ID = "scholar-utility-belt"`.
+
 ## 4. Upsell UI
 
-When a non-paid, non-grandfathered user reaches a gated feature (author compare, lineage view, p-index/FWCI display, narrative CV):
+When a non-paid, non-grandfathered user reaches a gated feature (any of the seven listed in Section 2: author compare, lineage view, p-index/FWCI/RCR/influential-citations display, narrative CV, review workspace, citation graph, or Publish-or-Perish report):
 
 - The feature's normal UI slot renders a locked-state placeholder instead: a short one-line description of what the feature does, a "Pro" badge, and a single "Unlock" button.
 - "Unlock" opens a small modal (rendered in the extension's own popup/options context, not injected into the Scholar page) showing both pricing options (lifetime vs. subscription) and calls `extpay.openPaymentPage()` for the selected option.
