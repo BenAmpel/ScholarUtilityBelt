@@ -17,10 +17,15 @@ rm -f "${ZIP_PATH}"
 
 pushd "${ROOT_DIR}" >/dev/null
 
+# dist/ is what the manifest actually loads for content scripts — rebuild it
+# fresh so the zip can never ship stale bundles.
+node build.js
+
 zip -r "${ZIP_PATH}" \
   "manifest.json" \
   "icons" \
   "src" \
+  "dist" \
   -x \
   ".DS_Store" \
   "*/.DS_Store" \
