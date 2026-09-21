@@ -54,7 +54,9 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // listeners below — re-declare `extpay` locally in each listener instead,
 // per ExtPay's own documented Manifest V3 caveat (it can otherwise become
 // undefined inside service-worker event callbacks).
-importScripts("dist/common/extpay.js");
+// importScripts() resolves relative URLs against this script's own location
+// (src/), not the extension root — chrome.runtime.getURL() is required here.
+importScripts(chrome.runtime.getURL("dist/common/extpay.js"));
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();
