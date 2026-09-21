@@ -423,3 +423,14 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
   }
 });
+
+// Freemium grandfathering: decide once, on install/update, whether this
+// user keeps all current features free forever. See src/common/entitlement.js.
+chrome.runtime.onInstalled.addListener(async (details) => {
+  const { decideGrandfathered } = await import(chrome.runtime.getURL("dist/common/entitlement.js"));
+  const { grandfathered } = await chrome.storage.local.get("grandfathered");
+  const decided = decideGrandfathered(details.reason, grandfathered);
+  if (decided !== grandfathered) {
+    await chrome.storage.local.set({ grandfathered: decided });
+  }
+});

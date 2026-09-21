@@ -63,6 +63,10 @@ const TARGETS = [
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },
   {
+    label: 'common/entitlement.js',
+    args: ['src/common/entitlement.js', '--bundle=false', '--minify', '--outfile=dist/common/entitlement.js', '--log-level=warning'],
+  },
+  {
     label: 'content/dom-cache.js',
     args: ['src/content/dom-cache.js', '--bundle=false', '--minify', '--outfile=dist/content/dom-cache.js', '--log-level=warning'],
   },
