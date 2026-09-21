@@ -70,6 +70,13 @@ module.exports = [
         // Chrome extension APIs
         chrome: "readonly",
         importScripts: "readonly",
+        // Set by importScripts("dist/common/extpay.js") in sw.js before use.
+        ExtPay: "readonly",
+        // Browser globals missing from the list above.
+        prompt: "readonly",
+        DecompressionStream: "readonly",
+        requestIdleCallback: "readonly",
+        cancelIdleCallback: "readonly",
       },
     },
     rules: {
@@ -80,6 +87,27 @@ module.exports = [
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "src/data/**"],
+    // Real ES modules (import/export) — everything else in src/ is a classic
+    // script loaded via <script>, importScripts(), or dynamic import().
+    files: [
+      "src/common/storage.js",
+      "src/common/quality.js",
+      "src/common/entitlement.js",
+      "src/content/content-author.js",
+      "src/content/data-loader.js",
+      "src/content/dom-cache.js",
+      "src/content/trend-methods.js",
+      "src/content/trend-tracker.js",
+      "src/library/library.js",
+      "src/options/options.js",
+      "src/popup/popup.js",
+    ],
+    languageOptions: {
+      sourceType: "module",
+    },
+  },
+  {
+    // Vendored third-party library — not our lint debt to fix.
+    ignores: ["dist/**", "node_modules/**", "src/data/**", "src/common/extpay.js"],
   },
 ];

@@ -35,6 +35,13 @@
   let setTrajectoryVenueExpectedCache;
   let setPageVisitCacheEntry;
   let setReadingLoadPageCount;
+  let getStorageMapEntry;
+  let setStorageMapEntry;
+  let getStorageMap;
+  let setStorageMap;
+  let removeStorageKeys;
+  let setStorageValue;
+  let getStorageValue;
   let uniqTags;
   let upsertPaper;
   let DEFAULT_SETTINGS;
