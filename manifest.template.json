@@ -31,9 +31,6 @@
     "https://icite.od.nih.gov/*"
   ],
   "optional_host_permissions": ["<all_urls>"],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://extensionpay.com"
-  },
   "content_scripts": [
     {
       "matches": ["$SCHOLAR_MATCHES"],
