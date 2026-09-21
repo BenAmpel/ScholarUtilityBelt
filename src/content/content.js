@@ -15135,6 +15135,41 @@
       document.body.insertBefore(panel, document.body.firstChild);
     }
   }
+  /**
+   * OpenAlex has asked unauthenticated callers to attach a free API key
+   * since Feb 2026; without one, citation metrics/p-index/FWCI/trends/
+   * related-works can be rate-limited or fail silently. Nudge once,
+   * dismissible forever via chrome.storage.local (not sessionStorage —
+   * this shouldn't reappear every tab).
+   */
+  async function ensureApiKeyBanner(state) {
+    document.getElementById("su-apikey-banner")?.remove();
+    if (state.settings?.openalexApiKey) return;
+    if (await getStorageValue("suApiKeyBannerDismissed", false)) return;
+    const banner = document.createElement("div");
+    banner.id = "su-apikey-banner";
+    banner.className = "su-apikey-banner";
+    banner.innerHTML = [
+      '<span class="su-apikey-banner-text">Add a free <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">OpenAlex API key</a> in Options for reliable citation metrics, trends, and related-works results (recommended since Feb 2026).</span>',
+      '<button type="button" class="su-apikey-banner-open" data-apikey-open-options="1">Open Options</button>',
+      '<button type="button" class="su-apikey-banner-dismiss" aria-label="Dismiss">&times;</button>'
+    ].join("");
+    banner.querySelector(".su-apikey-banner-dismiss").addEventListener("click", async () => {
+      await setStorageValue("suApiKeyBannerDismissed", true);
+      banner.remove();
+    });
+    banner.querySelector("[data-apikey-open-options]").addEventListener("click", async () => {
+      await setStorageValue("suApiKeyBannerDismissed", true);
+      chrome.runtime.sendMessage({ action: "openOptionsPage" });
+      banner.remove();
+    });
+    const container = document.querySelector("#gs_res_ccl_mid, #gs_res_ccl, #gs_bdy");
+    if (container) {
+      container.insertBefore(banner, container.firstChild);
+    } else {
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+  }
   function applyCitationSort() {
     const mode = window.suSearchSortByCitations;
     if (!mode || mode === "default") return;
@@ -16214,6 +16249,11 @@
           await ensureSemanticExpansionPanel(state);
         } catch (e) {
           console.warn("[SU] semantic expansion bootstrap failed", e);
+        }
+        try {
+          await ensureApiKeyBanner(state);
+        } catch (e) {
+          console.warn("[SU] API key banner bootstrap failed", e);
         }
         try {
           ensureSearchSyntaxHighlighting();

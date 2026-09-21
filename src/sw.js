@@ -202,6 +202,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     localExtpay.openLoginPage();
     return false;
   }
+  if (msg?.action === "openOptionsPage") {
+    chrome.runtime.openOptionsPage();
+    return false;
+  }
 });
 
 const GRAPH_ALERTS_KEY = "authorGraphAlerts";

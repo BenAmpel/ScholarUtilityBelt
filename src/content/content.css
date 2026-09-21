@@ -1190,6 +1190,54 @@ body[data-su-theme="dark"] .su-locked-feature {
 body[data-su-theme="dark"] .su-locked-feature-desc {
   color: #94a3b8;
 }
+.su-apikey-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: rgba(234, 179, 8, 0.08);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.su-apikey-banner-text {
+  flex: 1;
+  color: #7c5e00;
+}
+.su-apikey-banner-text a {
+  color: inherit;
+  text-decoration: underline;
+}
+.su-apikey-banner-open {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  background: transparent;
+  color: #7c5e00;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.su-apikey-banner-dismiss {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #7c5e00;
+  padding: 0 2px;
+}
+body[data-su-theme="dark"] .su-apikey-banner {
+  border-color: rgba(234, 179, 8, 0.25);
+  background: rgba(234, 179, 8, 0.08);
+}
+body[data-su-theme="dark"] .su-apikey-banner-text,
+body[data-su-theme="dark"] .su-apikey-banner-open,
+body[data-su-theme="dark"] .su-apikey-banner-dismiss {
+  color: #eab308;
+}
 .su-retraction-tooltip {
   display: none;
   position: absolute;
