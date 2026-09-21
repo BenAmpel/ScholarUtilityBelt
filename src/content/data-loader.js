@@ -195,6 +195,22 @@ export async function loadRetractionBloom() {
   }
 }
 
+export async function loadTorturedPhrases() {
+  if (window.__suTorturedPhrases !== undefined) return window.__suTorturedPhrases;
+  try {
+    const url = chrome.runtime.getURL("src/data/tortured_phrases.txt");
+    const r = await fetch(url);
+    const text = r.ok ? await r.text() : "";
+    const phrases = text.split(/\r?\n/)
+      .map((l) => l.trim().toLowerCase())
+      .filter((l) => l && !l.startsWith("#"));
+    window.__suTorturedPhrases = phrases.length ? phrases : null;
+  } catch {
+    window.__suTorturedPhrases = null;
+  }
+  return window.__suTorturedPhrases;
+}
+
 export function bloomHasDoi(doi, bloom) {
   if (!doi || !bloom) return false;
   const { m, k, bits } = bloom;

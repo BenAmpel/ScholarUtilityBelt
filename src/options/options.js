@@ -195,6 +195,7 @@ async function load() {
     if (input) input.checked = asv[kind] !== false;
   }
   el("highlightSaved").checked = !!s.highlightSaved;
+  el("openalexApiKey").value = s.openalexApiKey || "";
   el("defaultTagsCsv").value = s.defaultTagsCsv || "";
   el("keywordHighlightsCsv").value = s.keywordHighlightsCsv || "";
   el("hideTitleRegex").value = s.hideTitleRegex || "";
@@ -621,6 +622,7 @@ async function handleSave() {
     citationSpikeThresholdPct: Math.max(10, Math.min(500, parseInt(el("citationSpikeThresholdPct").value, 10) || 50)),
     citationSpikeMonths: Math.max(1, Math.min(24, parseInt(el("citationSpikeMonths").value, 10) || 6)),
     highlightSaved: el("highlightSaved").checked,
+    openalexApiKey: el("openalexApiKey").value.trim(),
     defaultTagsCsv: el("defaultTagsCsv").value,
     keywordHighlightsCsv: el("keywordHighlightsCsv").value,
     hideTitleRegex: el("hideTitleRegex").value,

@@ -100,6 +100,20 @@ export async function evictCache() {
 }
 
 export const OPENALEX_RATE_LIMIT_MS = 1000;
+
+let _oaKeyPromise = null;
+function getOpenAlexKeySuffix() {
+  if (!_oaKeyPromise) {
+    _oaKeyPromise = (async () => {
+      try {
+        const { settings } = await chrome.storage.local.get({ settings: {} });
+        const key = settings?.openalexApiKey || "";
+        return key ? `&api_key=${encodeURIComponent(key)}` : "";
+      } catch { return ""; }
+    })();
+  }
+  return _oaKeyPromise;
+}
 let lastApiCallTs = 0;
 
 async function rateLimitedFetch(url) {
@@ -125,7 +139,7 @@ export async function fetchConceptTrends(query) {
   try {
     const encoded = encodeURIComponent(String(query || "").trim());
     if (!encoded) return [];
-    const url = `https://api.openalex.org/concepts?search=${encoded}&per_page=8&mailto=scholar-extension@local`;
+    const url = `https://api.openalex.org/concepts?search=${encoded}&per_page=8&mailto=scholar-extension@local${await getOpenAlexKeySuffix()}`;
     const res = await rateLimitedFetch(url);
     if (!res.ok) return [];
     const data = await res.json();

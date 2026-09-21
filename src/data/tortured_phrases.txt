@@ -1,0 +1,86 @@
+# Tortured phrases — high-precision subset from the Problematic Paper Screener
+# (Cabanac, Labbé & Magazinov; see arXiv:2210.04895 and the public PPS phrase list).
+# Nonsensical paraphrases of standard terms, typically produced by thesaurus-spinning
+# tools to evade plagiarism detection. One phrase per line; matching is
+# case-insensitive substring over title + snippet. Expected term in parentheses.
+counterfeit consciousness
+man-made consciousness
+man-made brainpower
+computerized reasoning
+profound learning
+profound neural organization
+profound neural organizations
+deep neural organization
+neural organization
+neural organizations
+counterfeit neural organization
+fake neural organization
+convolutional neural organization
+repetitive neural organization
+bolster vector machine
+support vector machines calculation
+help vector machine
+choice tree calculation
+choice trees calculation
+arbitrary woodland
+arbitrary backwoods
+irregular woodland
+irregular backwoods
+arbitrary timberland
+innocent bayes
+credulous bayes
+guileless bayes
+gullible bayes
+k-implies grouping
+k-implies calculation
+fake insight
+ai calculation dependent on
+information mining procedures dependent on
+huge information investigation
+colossal information
+enormous information examination
+gigantic information
+flag to commotion
+sign to commotion
+commotion proportion
+mean square blunder
+mean squared blunder
+root mean square blunder
+outright blunder
+supreme blunder
+mean outright mistake
+picture division dependent
+picture handling dependent
+discourse acknowledgment dependent
+face acknowledgment dependent
+malicious growth cells
+bosom malignant growth
+bosom disease
+kidney disappointment
+cardiovascular breakdown
+heart disappointment rate
+glucose bigotry
+sugar bigotry
+lactose bigotry patients
+vitality utilization
+vitality productivity
+vitality proficiency
+warmth move
+warmth exchange
+wind stream examination
+water powered driven
+pressure driven framework
+remote sensor organizations
+remote sensor organization
+subterranean insect province
+subterranean insect settlement
+molecule swarm streamlining
+fake bee colony calculation
+hereditary calculation
+transformative calculation
+fluffy rationale
+fluffy sets
+grey wolf streamlining agent
+dark wolf enhancer
+cuckoo look calculation
+firefly calculation

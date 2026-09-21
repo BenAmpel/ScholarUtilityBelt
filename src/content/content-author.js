@@ -13,6 +13,20 @@ const SELF_CITE_MIN_NAME_SIM = 0.65;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+let _oaKeyPromise = null;
+function oaKey() {
+  if (!_oaKeyPromise) {
+    _oaKeyPromise = (async () => {
+      try {
+        const { settings } = await chrome.storage.local.get({ settings: {} });
+        const key = settings?.openalexApiKey || "";
+        return key ? `&api_key=${encodeURIComponent(key)}` : "";
+      } catch { return ""; }
+    })();
+  }
+  return _oaKeyPromise;
+}
+
 function normalizeText(str) {
   return String(str || "")
     .toLowerCase()
@@ -51,7 +65,7 @@ function jaroWinkler(a, b) {
 
 async function searchOpenAlexAuthors(name) {
   if (!name) return [];
-  const url = `https://api.openalex.org/authors?search=${encodeURIComponent(name)}&per-page=10`;
+  const url = `https://api.openalex.org/authors?search=${encodeURIComponent(name)}&per-page=10${await oaKey()}`;
   try {
     const r = await fetch(url);
     if (!r.ok) return [];
@@ -61,7 +75,7 @@ async function searchOpenAlexAuthors(name) {
 }
 
 async function fetchOpenAlexWorks(authorId, limit = SELF_CITE_SAMPLE_WORKS) {
-  const url = `https://api.openalex.org/works?filter=author.id:${authorId}&sort=cited_by_count:desc&select=id,display_name,cited_by_count&per-page=${limit}`;
+  const url = `https://api.openalex.org/works?filter=author.id:${authorId}&sort=cited_by_count:desc&select=id,display_name,cited_by_count&per-page=${limit}${await oaKey()}`;
   try {
     const r = await fetch(url);
     if (!r.ok) return [];
@@ -71,7 +85,7 @@ async function fetchOpenAlexWorks(authorId, limit = SELF_CITE_SAMPLE_WORKS) {
 }
 
 async function countOpenAlexSelfCitations(authorId, workId) {
-  const url = `https://api.openalex.org/works?filter=cites:${encodeURIComponent(workId)},authorships.author.id:${authorId}&select=id&per-page=1`;
+  const url = `https://api.openalex.org/works?filter=cites:${encodeURIComponent(workId)},authorships.author.id:${authorId}&select=id&per-page=1${await oaKey()}`;
   const r = await fetch(url);
   if (!r.ok) return 0;
   const data = await r.json();

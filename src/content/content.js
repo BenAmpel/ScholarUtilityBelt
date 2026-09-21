@@ -54,6 +54,7 @@
   let loadRetractionBloom;
   let bloomHasDoi;
   let checkRetractionStatus;
+  let loadTorturedPhrases;
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   async function importModuleWithRetry(path, attempts = 2) {
@@ -136,7 +137,8 @@
       loadImpactIndex,
       loadRetractionBloom,
       bloomHasDoi,
-      checkRetractionStatus
+      checkRetractionStatus,
+      loadTorturedPhrases
     } = dataLoader);
     modulesLoaded = true;
   }
@@ -1155,6 +1157,8 @@
     try {
       const u = new URL(url);
       if (!u.searchParams.has("mailto")) u.searchParams.set("mailto", "scholar-extension@local");
+      const key = window.suState?.settings?.openalexApiKey;
+      if (key && !u.searchParams.has("api_key")) u.searchParams.set("api_key", key);
       return u.toString();
     } catch {
       return url;
@@ -5309,6 +5313,26 @@
     root.appendChild(clearBtn);
     root.appendChild(actions);
   }
+  function renderTorturedBadge(container, phrase) {
+    if (container.querySelector(".su-tortured-badge")) return;
+    const gsRi = container.querySelector(".gs_ri");
+    const target = gsRi || container;
+    const badge = document.createElement("span");
+    badge.className = "su-retraction-badge su-tortured-badge";
+    badge.textContent = "Tortured phrase";
+    const tooltip = document.createElement("span");
+    tooltip.className = "su-retraction-tooltip";
+    tooltip.innerHTML = [
+      `Contains &ldquo;${escapeHtml(phrase)}&rdquo; &mdash; a nonsensical paraphrase associated with paper mills and plagiarism-evasion tools.`,
+      "",
+      "Source: Problematic Paper Screener phrase list (Cabanac et al.)",
+      '<a href="https://dbrech.irit.fr/pls/apex/f?p=9999:1" target="_blank" rel="noopener">Verify at PPS</a>'
+    ].join("<br>");
+    badge.appendChild(tooltip);
+    badge.addEventListener("mouseenter", () => tooltip.classList.add("su-retraction-tooltip-visible"));
+    badge.addEventListener("mouseleave", () => tooltip.classList.remove("su-retraction-tooltip-visible"));
+    target.insertAdjacentElement("afterbegin", badge);
+  }
   function renderRetractionBadge(container, state) {
     const existing = container.querySelector(".su-retraction-badge");
     if (existing) existing.remove();
@@ -5521,6 +5545,7 @@
     } else {
       state.retractionBloom = null;
     }
+    state.torturedPhrases = settings.showTorturedPhrases !== false ? await loadTorturedPhrases() : null;
     applyTheme(settings.theme);
     applyBadgePalette(settings.badgePalette);
     const themeBtn = document.getElementById("su-theme-toggle");
@@ -5662,6 +5687,15 @@
         } else {
           runRetractionCheck();
         }
+      }
+    }
+    // Tortured-phrase screening (Problematic Paper Screener phrase list)
+    if (!isAuthorProfile && state.settings.showTorturedPhrases !== false && state.torturedPhrases && container.dataset.suTorturedChecked !== "1") {
+      container.dataset.suTorturedChecked = "1";
+      const rowText = ((text(getCachedElement(container, ".gs_rt")) || "") + " " + (text(getCachedElement(container, ".gs_rs")) || "")).toLowerCase();
+      if (rowText.length > 20) {
+        const hit = state.torturedPhrases.find((ph) => rowText.includes(ph));
+        if (hit) renderTorturedBadge(container, hit);
       }
     }
     // Inline citation tooltip (APA/MLA/BibTeX) on hover.
@@ -7151,6 +7185,99 @@
     }
     stats.pIndexStatus = "done";
   }
+
+  /**
+   * Influential citations via Semantic Scholar: citations where the citing
+   * paper substantively used the cited work (trained classifier, not name-checks).
+   * Resolves the S2 author by name + title overlap, pulls their papers in one
+   * call, matches against the profile's papers, and aggregates.
+   */
+  async function computeInfluentialCitations(stats) {
+    if (!stats || stats.influentialStatus) return;
+    stats.influentialStatus = "loading";
+    try {
+      const papers = Array.isArray(stats.papers) ? stats.papers : [];
+      const authorName = (window.suState?.authorVariations?.[0] || "").trim();
+      if (papers.length < 5 || !authorName) { stats.influentialStatus = "done"; return; }
+      const profileTitles = new Set(papers.map((p) => normalizeTitleForMatch(p.title)).filter(Boolean));
+
+      const searchUrl = `https://api.semanticscholar.org/graph/v1/author/search?query=${encodeURIComponent(authorName)}&fields=name,paperCount&limit=5`;
+      const search = await fetchExternalJson(searchUrl, { timeoutMs: 12000 });
+      const candidates = Array.isArray(search?.data) ? search.data : [];
+
+      let best = null;
+      let bestOverlap = 0;
+      for (const cand of candidates) {
+        if (!cand?.authorId) continue;
+        const papersUrl = `https://api.semanticscholar.org/graph/v1/author/${cand.authorId}/papers?fields=title,citationCount,influentialCitationCount&limit=200`;
+        const resp = await fetchExternalJson(papersUrl, { timeoutMs: 15000 });
+        const s2papers = Array.isArray(resp?.data) ? resp.data : [];
+        const matched = s2papers.filter((p) => profileTitles.has(normalizeTitleForMatch(p?.title || "")));
+        if (matched.length > bestOverlap) {
+          bestOverlap = matched.length;
+          best = matched;
+        }
+        if (bestOverlap >= Math.min(10, papers.length)) break;
+      }
+
+      if (best && bestOverlap >= 3) {
+        let inf = 0, cites = 0;
+        for (const p of best) {
+          inf += Number(p.influentialCitationCount) || 0;
+          cites += Number(p.citationCount) || 0;
+        }
+        stats.influentialCitations = inf;
+        stats.influentialRate = cites > 0 ? Math.round((inf / cites) * 1000) / 10 : null;
+        stats.influentialMatched = bestOverlap;
+      }
+    } catch { /* leave nulls */ }
+    stats.influentialStatus = "done";
+  }
+
+  /**
+   * RCR (Relative Citation Ratio) via NIH iCite — field-normalized article
+   * influence benchmarked so 1.0 = median NIH-funded paper. PubMed-indexed
+   * works only. Two calls: NCBI esearch (author PMIDs) → iCite batch, then
+   * title-match against the profile to drop homonym noise.
+   */
+  async function computeRcrMetrics(stats) {
+    if (!stats || stats.rcrStatus) return;
+    stats.rcrStatus = "loading";
+    try {
+      const papers = Array.isArray(stats.papers) ? stats.papers : [];
+      const authorName = (window.suState?.authorVariations?.[0] || "").trim();
+      if (papers.length < 3 || !authorName) { stats.rcrStatus = "done"; return; }
+      const parts = authorName.split(/\s+/);
+      const lastName = parts[parts.length - 1];
+      const initial = (parts[0] || "").charAt(0);
+      if (!lastName || !initial) { stats.rcrStatus = "done"; return; }
+
+      const term = encodeURIComponent(`${lastName} ${initial}[Author]`);
+      const esearchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${term}&retmax=200&retmode=json`;
+      const es = await fetchExternalJson(esearchUrl, { timeoutMs: 15000 });
+      const pmids = es?.esearchresult?.idlist || [];
+      if (pmids.length === 0) { stats.rcrStatus = "done"; return; }
+
+      const icite = await fetchExternalJson(
+        `https://icite.od.nih.gov/api/pubs?pmids=${pmids.slice(0, 200).join(",")}&fl=pmid,title,relative_citation_ratio,nih_percentile`,
+        { timeoutMs: 20000 }
+      );
+      const pubs = Array.isArray(icite?.data) ? icite.data : [];
+      const profileTitles = new Set(papers.map((p) => normalizeTitleForMatch(p.title)).filter(Boolean));
+      const rcrs = pubs
+        .filter((p) => profileTitles.has(normalizeTitleForMatch(p?.title || "")))
+        .map((p) => Number(p.relative_citation_ratio))
+        .filter((v) => Number.isFinite(v) && v > 0);
+
+      if (rcrs.length >= 2) {
+        const mean = rcrs.reduce((a, b) => a + b, 0) / rcrs.length;
+        stats.rcrMean = Math.round(mean * 100) / 100;
+        stats.rcrMax = Math.round(Math.max(...rcrs) * 100) / 100;
+        stats.rcrPapers = rcrs.length;
+      }
+    } catch { /* leave nulls */ }
+    stats.rcrStatus = "done";
+  }
   function computePoPMetrics(stats) {
     const papers = Array.isArray(stats?.papers) ? stats.papers : [];
     if (!papers.length) return null;
@@ -7406,6 +7533,16 @@
         description: "Share of output that is openly accessible (gold, green, hybrid, or bronze).",
         good: "Higher = broader accessibility. Many funders now require OA."
       },
+      influential: {
+        formula: "Influential rate = influential citations / total citations (Semantic Scholar classifier).",
+        description: "Citations where the citing paper substantively used this work's methods or findings — not just a name-check.",
+        good: "Typical rates run 3–8%. Higher = work that others build on, not just mention."
+      },
+      rcr: {
+        formula: "RCR = citation rate / field-expected rate via co-citation network (NIH iCite).",
+        description: "Field-normalized article influence. 1.0 = median NIH-funded paper. PubMed-indexed works only.",
+        good: "Mean RCR &gt; 1.0 = above NIH median; &gt; 2.0 = strong. Complements FWCI."
+      },
       hIndexGrowth: {
         formula: "Δ<i>h</i> = current <i>h</i> − <i>h</i> from ~12 months ago.",
         description: "Change in <i>h</i>-index over the last year.",
@@ -7521,6 +7658,12 @@
       if (stats.pIndex != null) {
         bits.push(`The p-index of ${stats.pIndex}% indicates the papers ${stats.pIndex > 55 ? "consistently outperform" : stats.pIndex >= 45 ? "perform in line with" : "trail"} same-journal, same-year peers in citations.`);
       }
+      if (stats.influentialRate != null) {
+        bits.push(`Per Semantic Scholar's classifier, ${stats.influentialRate}% of citations are influential — the citing work substantively built on the paper.`);
+      }
+      if (stats.rcrMean != null) {
+        bits.push(`Among PubMed-indexed work (${stats.rcrPapers} papers), the mean Relative Citation Ratio is ${stats.rcrMean} (1.0 = median NIH-funded paper).`);
+      }
       if (stats.oaBreakdown) {
         const c = stats.oaBreakdown.counts;
         const detail = ["gold", "green", "hybrid", "bronze"].filter((k) => c[k]).map((k) => `${c[k]} ${k}`).join(", ");
@@ -7536,10 +7679,16 @@
     const growth = await getAuthorHIndexGrowth(window.location.href, fullStats.hIndex);
     if (growth != null) fullStats.hIndexGrowth = growth;
     renderAuthorStats(fullStats);
-    // Async p-index computation (Pham, Wu & Wang 2024)
+    // Async metric passes: p-index (OpenAlex), influential citations (S2), RCR (iCite)
     if (fullStats.pIndexStatus === "idle" && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
-      computePIndex(fullStats).then(() => {
-        renderAuthorStats(fullStats);
+      computePIndex(fullStats).then(() => renderAuthorStats(fullStats)).catch(() => {});
+    }
+    if (!fullStats.influentialStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 5) {
+      computeInfluentialCitations(fullStats).then(() => renderAuthorStats(fullStats)).catch(() => {});
+    }
+    if (!fullStats.rcrStatus && Array.isArray(fullStats.papers) && fullStats.papers.length >= 3) {
+      computeRcrMetrics(fullStats).then(() => {
+        if (fullStats.rcrMean != null) renderAuthorStats(fullStats);
       }).catch(() => {});
     }
   }
@@ -8375,6 +8524,15 @@
     if (stats.h5Index != null) {
       const h5Tip = getAuthorStatTooltipHtml("h5Index", stats);
       metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="h5Index"><span class="su-stat-label">h5 (5 yr):</span> <strong>${stats.h5Index}</strong><span class="su-author-stat-tooltip">${h5Tip}</span></span>`);
+    }
+    if (stats.influentialCitations != null) {
+      const iTip = getAuthorStatTooltipHtml("influential", stats);
+      const rate = stats.influentialRate != null ? ` (${stats.influentialRate}%)` : "";
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="influential"><span class="su-stat-label">Influential cites:</span> <strong>${stats.influentialCitations}${rate}</strong><span class="su-author-stat-tooltip">${iTip}</span></span>`);
+    }
+    if (stats.rcrMean != null) {
+      const rTip = getAuthorStatTooltipHtml("rcr", stats);
+      metricsItems.push(`<span class="${CLS_METRIC}" data-stat-tooltip="rcr"><span class="su-stat-label">RCR (mean):</span> <strong>${stats.rcrMean}</strong><span class="su-author-stat-tooltip">${rTip}</span></span>`);
     }
     if (stats.hIndexGrowth != null) {
       const tip = getAuthorStatTooltipHtml("hIndexGrowth", stats);
@@ -14643,6 +14801,52 @@
     el.style.display = "block";
     setTimeout(() => { el.style.display = "none"; }, 8000);
   }
+  /**
+   * Related-works panel: OpenAlex relevance search for the current query.
+   * Uses the documented search= endpoint (relevance_score ranked). OpenAlex's
+   * embedding-based semantic search is beta/undocumented; when its parameter
+   * ships, only RELATED_WORKS_URL needs updating.
+   */
+  async function toggleRelatedWorksPanel(btn) {
+    const existing = document.getElementById("su-related-works");
+    if (existing) {
+      existing.remove();
+      btn.textContent = "Related (OpenAlex)";
+      return;
+    }
+    const query = getScholarSearchQuery();
+    if (!query) return;
+    btn.disabled = true;
+    btn.textContent = "Loading\u2026";
+    const panel = document.createElement("div");
+    panel.id = "su-related-works";
+    panel.className = "su-related-works";
+    try {
+      const params = new URLSearchParams();
+      params.set("search", query);
+      params.set("per_page", "6");
+      params.set("select", "display_name,publication_year,cited_by_count,doi,id,primary_location");
+      const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
+      const data = await fetchExternalJson(url, { timeoutMs: 15000 });
+      const results = Array.isArray(data?.results) ? data.results : [];
+      if (!results.length) throw new Error("empty");
+      const items = results.map((w) => {
+        const href = w.doi ? `https://doi.org/${encodeURIComponent(String(w.doi).replace(/^https?:\/\/doi\.org\//, ""))}` : (w.id || "#");
+        const venue = w?.primary_location?.source?.display_name || "";
+        return `<div class="su-related-item"><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(w.display_name || "Untitled")}</a><span class="su-related-meta">${w.publication_year || ""}${venue ? ` \u00b7 ${escapeHtml(venue)}` : ""} \u00b7 ${Number(w.cited_by_count) || 0} cites</span></div>`;
+      }).join("");
+      panel.innerHTML = `<div class="su-related-title">Related works (OpenAlex relevance)</div>${items}`;
+      btn.textContent = "Hide related";
+    } catch {
+      panel.innerHTML = `<div class="su-related-title">Related works unavailable${window.suState?.settings?.openalexApiKey ? "" : " \u2014 add an OpenAlex API key in Options (required since Feb 2026)"}.</div>`;
+      btn.textContent = "Related (OpenAlex)";
+    }
+    btn.disabled = false;
+    const bar = document.querySelector(".su-within-results-filter") || document.getElementById("gs_res_ccl");
+    if (bar) bar.insertAdjacentElement("afterend", panel);
+    else document.body.appendChild(panel);
+  }
+
   function getScholarSearchQuery() {
     try {
       const url = new URL(window.location.href);
@@ -15757,6 +15961,15 @@
     triggerRow.className = "su-filter-trigger-row";
     triggerRow.appendChild(toggleBtn);
     triggerRow.appendChild(reviewBtn);
+    if (window.suState?.settings?.showRelatedWorks !== false) {
+      const relatedBtn = document.createElement("button");
+      relatedBtn.type = "button";
+      relatedBtn.className = "su-filter-clear su-related-works-btn";
+      relatedBtn.textContent = "Related (OpenAlex)";
+      relatedBtn.title = "Fetch conceptually related works for this query from OpenAlex.";
+      relatedBtn.addEventListener("click", () => toggleRelatedWorksPanel(relatedBtn));
+      triggerRow.appendChild(relatedBtn);
+    }
     bar.appendChild(triggerRow);
     bar.appendChild(body);
     const origUpdate = updateStateAndApply;

@@ -70,7 +70,8 @@
     "https://api.ror.org/*",
     "https://dblp.org/*",
     "https://sparql.dblp.org/*",
-    "https://api.semanticscholar.org/*"
+    "https://api.semanticscholar.org/*",
+    "https://icite.od.nih.gov/*"
   ],
   "optional_host_permissions": [
     "<all_urls>"

@@ -1116,6 +1116,38 @@ body[data-su-theme="light"] .su-has-fma .gs_fma * {
   cursor: help;
   margin-right: 8px;
 }
+.su-related-works {
+  margin: 8px 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  background: transparent;
+  font-size: 13px;
+}
+.su-related-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+.su-related-item { padding: 3px 0; line-height: 1.4; }
+.su-related-item a { color: #1a0dab; text-decoration: none; }
+.su-related-item a:hover { text-decoration: underline; }
+.su-related-meta { color: #64748b; font-size: 11px; margin-left: 6px; }
+body[data-su-theme="dark"] .su-related-works { border-color: rgba(148, 163, 184, 0.12); }
+body[data-su-theme="dark"] .su-related-item a { color: #8ab4f8; }
+.su-tortured-badge {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+body[data-su-theme="dark"] .su-tortured-badge {
+  background: rgba(249, 115, 22, 0.12);
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.3);
+}
 .su-retraction-tooltip {
   display: none;
   position: absolute;
