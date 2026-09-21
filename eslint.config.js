@@ -97,6 +97,7 @@ module.exports = [
       "src/content/content-author.js",
       "src/content/data-loader.js",
       "src/content/dom-cache.js",
+      "src/content/genealogy-lineage.js",
       "src/content/trend-methods.js",
       "src/content/trend-tracker.js",
       "src/library/library.js",

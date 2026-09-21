@@ -51,7 +51,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["dist/common/*.js", "dist/content/dom-cache.js", "dist/content/worker.js", "dist/content/content-author.js", "dist/content/data-loader.js", "dist/content/trend-tracker.js", "dist/content/trend-methods.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json", "src/data/*.gz", "src/data/*.bin"],
+      "resources": ["dist/common/*.js", "dist/content/dom-cache.js", "dist/content/worker.js", "dist/content/content-author.js", "dist/content/data-loader.js", "dist/content/trend-tracker.js", "dist/content/trend-methods.js", "dist/content/genealogy-lineage.js", "src/data/*.txt", "src/data/*.csv", "src/data/*.json", "src/data/*.gz", "src/data/*.bin"],
       "matches": ["$SCHOLAR_MATCHES"]
     }
   ],

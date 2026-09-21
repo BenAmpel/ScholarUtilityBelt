@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scholar Utility Belt",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
   "action": {
     "default_title": "Scholar Utility Belt",
@@ -196,6 +196,7 @@
         "dist/content/data-loader.js",
         "dist/content/trend-tracker.js",
         "dist/content/trend-methods.js",
+        "dist/content/genealogy-lineage.js",
         "src/data/*.txt",
         "src/data/*.csv",
         "src/data/*.json",
