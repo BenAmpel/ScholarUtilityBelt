@@ -601,6 +601,38 @@ el("grantOptionalPermission")?.addEventListener("click", async () => {
   }
 });
 
+// Mirrors QUALITY_DATASETS in src/sw.js. A field's saved value that no longer
+// matches the current bundled file(s) is a real hand-edit, so its "*Custom"
+// flag is set and the background auto-refresh will never overwrite it again;
+// a value that matches (untouched, or just reset via "Load built-in lists")
+// stays refreshable when the bundled data next changes.
+const QUALITY_CUSTOM_FLAG_SOURCES = [
+  { id: "qualityFt50List", customKey: "qualityFt50ListCustom", files: ["src/data/ft50.txt"] },
+  { id: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
+  { id: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2022.csv"] },
+  { id: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
+  { id: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
+    files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
+  { id: "qualityCcfRanks", customKey: "qualityCcfRanksCustom", files: ["src/data/ccf_ranks.csv"] }
+];
+
+async function computeQualityCustomFlags() {
+  const flags = {};
+  for (const { id, customKey, files } of QUALITY_CUSTOM_FLAG_SOURCES) {
+    const value = (el(id)?.value || "").trim();
+    if (!value) { flags[customKey] = false; continue; } // cleared — let auto-refresh reseed it
+    try {
+      const texts = await Promise.all(files.map(fetchExtText));
+      const bundled = texts.map((t) => t.trim()).filter(Boolean).join("\n");
+      flags[customKey] = value !== bundled;
+    } catch {
+      // Couldn't read the bundled file to compare — leave this flag as-is
+      // rather than guessing (key omitted; setSettings merges, not replaces).
+    }
+  }
+  return flags;
+}
+
 async function handleSave() {
   const qualityBadgeKinds = {};
   for (const [kind, id] of Object.entries(QUALITY_BADGE_IDS)) {
@@ -612,7 +644,9 @@ async function handleSave() {
     const input = el(id);
     authorStatsVisible[kind] = input ? input.checked : true;
   }
+  const qualityCustomFlags = await computeQualityCustomFlags();
   await setSettings({
+    ...qualityCustomFlags,
     theme: el("theme").value || "auto",
     badgePalette: el("badgePalette").value || "soft",
     viewMode: el("viewMode").value || "detailed",

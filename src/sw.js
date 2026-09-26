@@ -343,114 +343,54 @@ chrome.alarms?.onAlarm?.addListener?.((alarm) => {
   checkGraphMonitors().catch(() => {});
 });
 
+// Bundled reference datasets for venue-quality badges (FT50, UTD24, ABDC, VHB,
+// CORE, CCF). Each ships inside the extension and gets corrected/extended over
+// time (a new CORE edition, a fixed alias — see the 2026-09 NeurIPS fix, which
+// this refresh exists to keep from needing a manual "Clear + Load defaults"
+// click ever again). A field seeded from these files, and never hand-edited in
+// Options, should pick up an update on the next extension update; a field the
+// user customized in Options must never be silently overwritten. options.js
+// sets the paired "*Custom" flag only when a saved value stops matching the
+// bundled content, so untouched fields — including pre-existing installs from
+// before this flag existed, where it defaults to false — stay refreshable.
+const QUALITY_DATASETS = [
+  { key: "qualityFt50List", customKey: "qualityFt50ListCustom", files: ["src/data/ft50.txt"] },
+  { key: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
+  { key: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2022.csv"] },
+  { key: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
+  { key: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
+    files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
+  { key: "qualityCcfRanks", customKey: "qualityCcfRanksCustom", files: ["src/data/ccf_ranks.csv"] }
+];
+
+async function fetchBundledDataset(files) {
+  const texts = await Promise.all(
+    files.map((f) => fetch(chrome.runtime.getURL(f)).then((r) => (r.ok ? r.text() : "")).catch(() => ""))
+  );
+  const merged = texts.map((t) => (t || "").trim()).filter(Boolean).join("\n");
+  return merged ? merged + "\n" : "";
+}
+
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize storage keys if missing.
   const { savedPapers, settings } = await chrome.storage.local.get({ savedPapers: {}, settings: {} });
-
-  // Seed built-in quality lists once, if the user hasn't configured any yet.
   const s = settings || {};
-  const hasAnyQuality =
-    !!String(s.qualityFt50List || "").trim() ||
-    !!String(s.qualityUtd24List || "").trim() ||
-    !!String(s.qualityAbdcRanks || "").trim() ||
-    !!String(s.qualityVhbRanks || "").trim() ||
-    !!String(s.qualityQuartiles || "").trim() ||
-    !!String(s.qualityCoreRanks || "").trim() ||
-    !!String(s.qualityCcfRanks || "").trim();
-  
-  if (!hasAnyQuality) {
-    const fetchExtText = async (path) => {
-      const url = chrome.runtime.getURL(path);
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`Failed to load ${path}: ${r.status}`);
-      return await r.text();
-    };
+  const hadAnyQuality = QUALITY_DATASETS.some((d) => !!String(s[d.key] || "").trim());
+  const updatedSettings = { ...s };
 
+  for (const { key, customKey, files } of QUALITY_DATASETS) {
+    const current = String(updatedSettings[key] || "").trim();
+    if (current && updatedSettings[customKey] === true) continue; // hand-edited in Options — never overwrite
     try {
-      const updatedSettings = { ...s };
-      const [ft50, utd24, abdc, vhb, core, corePortal, ccf] = await Promise.all([
-        fetchExtText("src/data/ft50.txt"),
-        fetchExtText("src/data/utd24.txt"),
-        fetchExtText("src/data/abdc2022.csv"),
-        fetchExtText("src/data/vhb2024.csv"),
-        fetchExtText("src/data/core_icore2026.csv"),
-        fetchExtText("src/data/core_portal_ranks.csv"),
-        fetchExtText("src/data/ccf_ranks.csv")
-      ]);
-      updatedSettings.showQualityBadges = true;
-      updatedSettings.qualityFt50List = ft50.trim() + "\n";
-      updatedSettings.qualityUtd24List = utd24.trim() + "\n";
-      updatedSettings.qualityAbdcRanks = abdc.trim() + "\n";
-      updatedSettings.qualityVhbRanks = vhb.trim() + "\n";
-      updatedSettings.qualityCoreRanks = [core.trim(), (corePortal || "").trim()].filter(Boolean).join("\n") + "\n";
-      updatedSettings.qualityCcfRanks = (ccf && ccf.trim()) ? ccf.trim() + "\n" : "";
-      await chrome.storage.local.set({
-        savedPapers,
-        settings: updatedSettings
-      });
+      const bundled = await fetchBundledDataset(files);
+      if (bundled && bundled.trim() !== current) updatedSettings[key] = bundled;
     } catch {
-      // If seeding fails, continue with empty settings.
-      await chrome.storage.local.set({ savedPapers, settings: s });
+      // Ignore; user can reload from Options ("Load built-in lists").
     }
   }
+  if (!hadAnyQuality) updatedSettings.showQualityBadges = true;
 
-  // Seed CORE ranks from built-in CSVs if the user hasn't set any yet.
-  // Only runs when hasAnyQuality was true (main block already handled the all-empty case).
-  if (hasAnyQuality && !String(s.qualityCoreRanks || "").trim()) {
-    try {
-      const [core, corePortal] = await Promise.all([
-        fetch(chrome.runtime.getURL("src/data/core_icore2026.csv")).then((r) => (r.ok ? r.text() : "")),
-        fetch(chrome.runtime.getURL("src/data/core_portal_ranks.csv")).then((r) => (r.ok ? r.text() : ""))
-      ]);
-      const merged = [core?.trim(), corePortal?.trim()].filter(Boolean).join("\n");
-      if (merged.length > 10) {
-        const updated = await chrome.storage.local.get({ settings: {} });
-        const st = updated.settings || {};
-        st.qualityCoreRanks = merged + "\n";
-        await chrome.storage.local.set({ settings: st });
-      }
-    } catch {
-      // Ignore; user can paste CSV in Options.
-    }
-  }
-
-  // Seed VHB ranks from built-in CSV if the user hasn't set any yet.
-  if (hasAnyQuality && !String(s.qualityVhbRanks || "").trim()) {
-    try {
-      const url = chrome.runtime.getURL("src/data/vhb2024.csv");
-      const r = await fetch(url);
-      if (r.ok) {
-        const vhb = await r.text();
-        if (vhb && vhb.trim().length > 10) {
-          const updated = await chrome.storage.local.get({ settings: {} });
-          const st = updated.settings || {};
-          st.qualityVhbRanks = vhb.trim() + "\n";
-          await chrome.storage.local.set({ settings: st });
-        }
-      }
-    } catch {
-      // Ignore; user can paste CSV in Options.
-    }
-  }
-
-  // Seed CCF ranks from built-in CSV if the user hasn't set any yet.
-  if (hasAnyQuality && !String(s.qualityCcfRanks || "").trim()) {
-    try {
-      const url = chrome.runtime.getURL("src/data/ccf_ranks.csv");
-      const r = await fetch(url);
-      if (r.ok) {
-        const ccf = await r.text();
-        if (ccf && ccf.trim().length > 10) {
-          const updated = await chrome.storage.local.get({ settings: {} });
-          const st = updated.settings || {};
-          st.qualityCcfRanks = ccf.trim() + "\n";
-          await chrome.storage.local.set({ settings: st });
-        }
-      }
-    } catch {
-      // Ignore; user can paste CSV in Options.
-    }
-  }
+  await chrome.storage.local.set({ savedPapers, settings: updatedSettings });
 
   // Seed SJR quartiles snapshot if the user hasn't imported one yet.
   const { qualityQuartilesIndex } = await chrome.storage.local.get({ qualityQuartilesIndex: {} });

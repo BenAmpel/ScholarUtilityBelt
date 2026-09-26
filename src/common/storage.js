@@ -72,6 +72,17 @@ export const DEFAULT_SETTINGS = {
   qualityQuartiles: "",
   qualityCoreRanks: "",
   qualityCcfRanks: "",
+  // True once a field's saved value no longer matches the bundled default file(s)
+  // (a real hand-edit in Options). The background auto-refresh (src/sw.js) only
+  // ever overwrites a field whose flag is false, so a bundled dataset update
+  // (e.g. a corrected rank, a new alias) reaches everyone who never customized
+  // it, without clobbering anyone who did.
+  qualityFt50ListCustom: false,
+  qualityUtd24ListCustom: false,
+  qualityAbdcRanksCustom: false,
+  qualityVhbRanksCustom: false,
+  qualityCoreRanksCustom: false,
+  qualityCcfRanksCustom: false,
   showSemanticExpansion: true,
   showFundingTag: true,
   showReadingGuide: true,
