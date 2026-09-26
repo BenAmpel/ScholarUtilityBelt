@@ -53,6 +53,22 @@ describe("normalizeVenueName", () => {
     assert.equal(normalizeVenueName("1st International Workshop"), "international workshop");
   });
 
+  it("strips leading spelled-out ordinal + annual (NeurIPS-style proceedings titles)", () => {
+    assert.equal(
+      normalizeVenueName("The Fortieth Annual Conference on Neural Information Processing Systems (NeurIPS 2026), Evaluations & Datasets Track"),
+      "conference on neural information processing systems neurips 2026 evaluations and datasets track"
+    );
+    assert.equal(
+      normalizeVenueName("Thirty-Ninth Annual Conference on Neural Information Processing Systems"),
+      "conference on neural information processing systems"
+    );
+    assert.equal(normalizeVenueName("Twenty-First Annual Conference on X"), "conference on x");
+  });
+
+  it("does not touch a digit-ordinal + annual (unchanged existing behavior)", () => {
+    assert.equal(normalizeVenueName("3rd Annual Conference"), "annual conference");
+  });
+
   it("strips leading year", () => {
     assert.equal(normalizeVenueName("2019 IEEE International Conference"), "ieee international conference");
   });
@@ -285,5 +301,19 @@ describe("qualityBadgesForVenue", () => {
     const badges = qualityBadgesForVenue("Nature", idx);
     const ft50Badge = badges.find((b) => b.kind === "ft50");
     assert.ok(ft50Badge, "should have FT50 badge");
+  });
+
+  it("returns CORE A* badge for NeurIPS's official spelled-out-ordinal proceedings title", () => {
+    const idx = compileQualityIndex({
+      qualityCoreRanks:
+        "Advances in Neural Information Processing Systems (was NIPS)|NeurIPS|Conference on Neural Information Processing Systems,A*",
+    });
+    const badges = qualityBadgesForVenue(
+      "The Fortieth Annual Conference on Neural Information Processing Systems (NeurIPS 2026), Evaluations & Datasets Track",
+      idx
+    );
+    const coreBadge = badges.find((b) => b.kind === "core");
+    assert.ok(coreBadge, "should have a CORE badge");
+    assert.equal(coreBadge.metadata.rank, "A*");
   });
 });

@@ -1,6 +1,20 @@
 // Venue quality index helpers.
 // Everything here is local-only; no network calls.
 
+// Big annual CS/ML conferences (NeurIPS, ICML-style "Nth Annual Conference on X")
+// spell the ordinal out in their official proceedings title instead of using a
+// digit ("The Fortieth Annual Conference on..." not "The 40th Annual..."), and
+// it changes every year. Matched as a whole leading word (or "tens ones" pair,
+// since non-letters were already turned into spaces above) so it only strips
+// the ordinal itself, the same as the digit-ordinal rule below strips "30th".
+const ORDINAL_ONES = "first|second|third|fourth|fifth|sixth|seventh|eighth|ninth";
+const ORDINAL_TEENS = "tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth";
+const ORDINAL_TENS = "twentieth|thirtieth|fortieth|fiftieth|sixtieth|seventieth|eightieth|ninetieth";
+const ORDINAL_TENS_WORD = "twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety";
+const LEADING_WORD_ORDINAL_ANNUAL = new RegExp(
+  `^(?:${ORDINAL_ONES}|${ORDINAL_TEENS}|${ORDINAL_TENS}|(?:${ORDINAL_TENS_WORD}) (?:${ORDINAL_ONES}))\\s+annual\\s+`
+);
+
 export function normalizeVenueName(s) {
   let t = String(s || "")
     .toLowerCase()
@@ -14,6 +28,11 @@ export function normalizeVenueName(s) {
   t = t.replace(/^the\s+/, "").trim();
   // Strip leading ordinal (e.g. "30th ", "1st ") so "30th ACM SIGKDD Conference..." matches "ACM ... Conference..."
   t = t.replace(/^\d+(st|nd|rd|th)\s+/, "").trim();
+  // Strip a leading spelled-out ordinal + "annual" (e.g. "Fortieth Annual ", "Thirty Ninth Annual ")
+  // so "The Fortieth Annual Conference on Neural Information Processing Systems..." (NeurIPS's own
+  // official proceedings title, which spells the ordinal out and changes every year) matches
+  // "Conference on Neural Information Processing Systems".
+  t = t.replace(LEADING_WORD_ORDINAL_ANNUAL, "").trim();
   // Strip leading year so "2019 IEEE International Conference..." matches "IEEE International Conference..."
   t = t.replace(/^(19|20)\d{2}\s+/, "").trim();
   // Strip trailing page/date fragment ", N-N" or ", N N" so "Conference (AMCIS), 1-10" matches
