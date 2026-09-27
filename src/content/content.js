@@ -8365,6 +8365,14 @@
         filterBadgeCount += 1;
         filterParts.push(`<span class="su-stat-badge su-badge su-abs4star ${isActive ? 'su-filter-active' : ''}" data-filter="abs4star" title="Click to filter by ABS 4* papers"><span class="su-stat-label">ABS 4*:</span> <strong>${qc.abs4star}</strong></span>`);
       }
+      if (show("filterCore")) {
+        const coreAStar = (qc.core?.["A*"] || 0) + (qc.core?.["A"] || 0);
+        if (coreAStar > 0) {
+          const isActive = activeFilter === "core";
+          filterBadgeCount += 1;
+          filterParts.push(`<span class="su-stat-badge su-badge su-core ${isActive ? 'su-filter-active' : ''}" data-filter="core" title="Click to filter by CORE A/A*-ranked papers"><span class="su-stat-label">CORE A/A*:</span> <strong>${coreAStar}</strong></span>`);
+        }
+      }
       if (activeFilter && show("filterClear")) {
         filterParts.push(`<span class="su-stat-badge su-badge" style="cursor: pointer; opacity: 0.7;" data-filter="clear" title="Click to clear filter">Clear filter</span>`);
       }
@@ -12942,6 +12950,9 @@
       case "a":
         // Check for ABDC A* or A rank
         return has("abdc", /^ABDC\s+(A\*|A)$/i);
+      case "core":
+        // Check for CORE A* or A rank
+        return has("core", /^CORE\s+(A\*|A)$/i);
       case "abdc-a*":
         return has("abdc", /^ABDC\s+A\*/i);
       case "abdc-a":

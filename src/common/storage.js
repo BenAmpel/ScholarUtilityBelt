@@ -123,6 +123,7 @@ export const DEFAULT_SETTINGS = {
     filterFt50: true,
     filterUtd24: true,
     filterAbs4star: true,
+    filterCore: true,
     filterClear: true,
     sortToggle: true,
     positionFilters: true,

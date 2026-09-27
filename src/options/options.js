@@ -56,6 +56,7 @@ const AUTHOR_STATS_IDS = {
   filterFt50: "asFilterFt50",
   filterUtd24: "asFilterUtd24",
   filterAbs4star: "asFilterAbs4star",
+  filterCore: "asFilterCore",
   filterClear: "asFilterClear",
   sortToggle: "asSortToggle",
   positionFilters: "asPositionFilters",
