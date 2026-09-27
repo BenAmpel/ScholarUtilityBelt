@@ -522,8 +522,15 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (qIndex.era?.has?.(v)) {
     badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
   } else if (qIndex.era) {
+    // v.startsWith(entry + " ") is a prefix match against a ~26,000-entry list that includes
+    // many short, generic single-word titles ("Findings", "Analysis", "Test", "Order" — 1,000+
+    // entries under 12 chars with no space). Without a length/space guard, "Findings of the
+    // Conference on Empirical Methods in Natural Language Processing" (ACL's "Findings" track,
+    // not itself ERA-listed) false-matched the unrelated journal "Findings" this way. Same guard
+    // as findBestMatch's prefix matching above.
     for (const entry of qIndex.era) {
-      if (entry.startsWith(v + " ") || entry === v || v.startsWith(entry + " ") || v === entry) {
+      const entryIsSpecificEnough = entry.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || entry.includes(" ");
+      if (entry === v || (entryIsSpecificEnough && (entry.startsWith(v + " ") || v.startsWith(entry + " ")))) {
         badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
         break;
       }

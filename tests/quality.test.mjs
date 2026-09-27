@@ -316,4 +316,40 @@ describe("qualityBadgesForVenue", () => {
     assert.ok(coreBadge, "should have a CORE badge");
     assert.equal(coreBadge.metadata.rank, "A*");
   });
+
+  it("returns CORE A* badge for EMNLP's official 'Conference on...' proceedings title", () => {
+    const idx = compileQualityIndex({
+      qualityCoreRanks:
+        "Empirical Methods in Natural Language Processing|EMNLP|Conference on Empirical Methods in Natural Language Processing,A*",
+    });
+    const badges = qualityBadgesForVenue("Conference on Empirical Methods in Natural Language Processing (EMNLP)", idx);
+    const coreBadge = badges.find((b) => b.kind === "core");
+    assert.ok(coreBadge, "should have a CORE badge");
+    assert.equal(coreBadge.metadata.rank, "A*");
+  });
+
+  it("does not give a false-positive ERA badge from a short generic ERA entry", () => {
+    // era2023.txt genuinely lists a journal named just "Findings" (an unrelated
+    // transportation-research journal). Without a length/space guard on the ERA
+    // prefix match, any venue starting with "Findings " — like ACL's "Findings of
+    // EMNLP" track, itself not ERA-listed — false-matched it.
+    const idx = compileQualityIndex({}, { eraSet: new Set(["findings"]) });
+    const badges = qualityBadgesForVenue(
+      "Findings of the Conference on Empirical Methods in Natural Language Processing",
+      idx
+    );
+    assert.ok(!badges.some((b) => b.kind === "era"), "should not have an ERA badge");
+  });
+
+  it("still matches a real multi-word ERA entry by prefix", () => {
+    const idx = compileQualityIndex({}, { eraSet: new Set(["mis quarterly management information systems"]) });
+    const badges = qualityBadgesForVenue("MIS Quarterly", idx);
+    assert.ok(badges.some((b) => b.kind === "era"), "should have an ERA badge");
+  });
+
+  it("still matches when the paper's venue is the longer side of a real multi-word ERA entry", () => {
+    const idx = compileQualityIndex({}, { eraSet: new Set(["academy of management review"]) });
+    const badges = qualityBadgesForVenue("Academy of Management Review, Special Issue", idx);
+    assert.ok(badges.some((b) => b.kind === "era"), "should have an ERA badge");
+  });
 });
