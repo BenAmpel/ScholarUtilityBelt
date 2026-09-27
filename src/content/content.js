@@ -4202,7 +4202,8 @@
       era: "Excellence in Research for Australia 2023 listed venue.",
       norwegian: "Norwegian Register: Level 1 or 2 journal.",
       preprint: "Pre-print server (e.g. arXiv, SSRN); not peer-reviewed journal.",
-      h5: "Google Scholar 5-year h-index for this venue (from Scholar Metrics)."
+      h5: "Google Scholar 5-year h-index for this venue (from Scholar Metrics).",
+      findings: "ACL Anthology Findings volume (ACL/EMNLP/NAACL/EACL): peer-reviewed and archival, but a companion track, not the main conference program."
     };
     const isValidBadgeText = (b) => {
       const t = String(b.text || "").trim();
@@ -4221,6 +4222,7 @@
         case "era": return t === "ERA 2023";
         case "preprint": return /^(SSRN|arXiv|bioRxiv|medRxiv|Research Square|SocArXiv|PsyArXiv|ChemRxiv|EdArXiv|OSF Preprints|Preprints\.org|Zenodo)$/i.test(t);
         case "h5": return /^h5:\s*\d+$/i.test(t);
+        case "findings": return t === "ACL Findings";
         default: return true;
       }
     };
@@ -13004,6 +13006,8 @@
         return has("if");
       case "h5":
         return has("h5");
+      case "findings":
+        return has("findings");
       default:
         return true;
     }
@@ -13744,6 +13748,7 @@
         <option value="if">Impact Factor (IF)</option>
         <option value="h5">Google Scholar h5</option>
         <option value="preprint">Preprint</option>
+        <option value="findings">ACL Findings</option>
       </optgroup>
     `;
     qualitySelect.value = f.qualityFilter || "";

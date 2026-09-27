@@ -59,7 +59,8 @@ export const DEFAULT_SETTINGS = {
     era: true,
     norwegian: true,
     preprint: true,
-    h5: true
+    h5: true,
+    findings: true
   },
 
   // Quality index: user-pasted lists. Newline separated for lists, CSV for ranks.

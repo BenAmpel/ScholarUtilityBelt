@@ -45,7 +45,8 @@ const QUALITY_BADGE_IDS = {
   era: "qbEra",
   norwegian: "qbNorwegian",
   preprint: "qbPreprint",
-  h5: "qbH5"
+  h5: "qbH5",
+  findings: "qbFindings"
 };
 
 const AUTHOR_STATS_IDS = {
@@ -121,6 +122,7 @@ const BADGE_SAMPLES = [
   { cls: "su-h5",            text: "h5 50"    },
   { cls: "su-preprint",      text: "arXiv"    },
   { cls: "su-abs",           text: "ABS 4*"   },
+  { cls: "su-findings",      text: "ACL Findings" },
 ];
 
 function badgePreviewHTML(palette) {

@@ -352,4 +352,39 @@ describe("qualityBadgesForVenue", () => {
     const badges = qualityBadgesForVenue("Academy of Management Review, Special Issue", idx);
     assert.ok(badges.some((b) => b.kind === "era"), "should have an ERA badge");
   });
+
+  it("returns an ACL Findings badge for Findings of EMNLP/ACL/NAACL/EACL", () => {
+    const idx = compileQualityIndex({});
+    for (const venue of [
+      "Findings of the Association for Computational Linguistics: EMNLP 2026",
+      "Findings of the Conference on Empirical Methods in Natural Language Processing",
+      "Findings of ACL 2026",
+      "Findings of NAACL 2026",
+      "Findings of EACL 2026",
+    ]) {
+      const badges = qualityBadgesForVenue(venue, idx);
+      const findingsBadge = badges.find((b) => b.kind === "findings");
+      assert.ok(findingsBadge, `should have a findings badge for "${venue}"`);
+      assert.equal(findingsBadge.text, "ACL Findings");
+    }
+  });
+
+  it("does not give an ACL Findings badge to an unrelated 'Findings' venue", () => {
+    const idx = compileQualityIndex({});
+    const badges = qualityBadgesForVenue("Findings (transportation research journal)", idx);
+    assert.ok(!badges.some((b) => b.kind === "findings"));
+  });
+
+  it("does not give the main-conference CORE badge to a Findings track paper", () => {
+    const idx = compileQualityIndex({
+      qualityCoreRanks:
+        "Empirical Methods in Natural Language Processing|EMNLP|Conference on Empirical Methods in Natural Language Processing,A*",
+    });
+    const badges = qualityBadgesForVenue(
+      "Findings of the Conference on Empirical Methods in Natural Language Processing",
+      idx
+    );
+    assert.ok(!badges.some((b) => b.kind === "core"), "Findings should not inherit the main track's CORE rank");
+    assert.ok(badges.some((b) => b.kind === "findings"), "but should still get the informational Findings badge");
+  });
 });

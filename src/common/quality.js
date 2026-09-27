@@ -376,6 +376,21 @@ export function isPreprintVenue(venue) {
   return PREPRINT_PATTERNS.some(({ pattern }) => pattern.test(s));
 }
 
+// The ACL, EMNLP, NAACL and EACL "Findings" volumes are a real, peer-reviewed, ACL
+// Anthology-indexed companion track for papers that cleared review but didn't get a
+// main-conference presentation slot -- not a preprint, but also not the main-track
+// bar the CORE/CCF rank on that conference's name describes. No ranking body scores
+// Findings itself, so this is informational only, not a rank claim (same spirit as
+// the preprint badge above).
+const FINDINGS_PATTERN = /\bfindings of (?:the )?(?:association for computational linguistics|conference on empirical methods in natural language processing|(?:north american|european) chapter of the association for computational linguistics|acl|emnlp|naacl|eacl)\b/i;
+
+function getFindingsBadge(venue) {
+  if (!FINDINGS_PATTERN.test(String(venue || ""))) return null;
+  return { kind: "findings", text: "ACL Findings", metadata: {
+    system: "ACL Anthology Findings volume: peer-reviewed and archival, but a companion track, not the main conference program."
+  } };
+}
+
 export function qualityBadgesForVenue(venue, qIndex) {
   const v = normalizeVenueName(venue);
   if (!v) return [];
@@ -386,6 +401,9 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // Pre-print badge first so it's clearly visible
   const preprint = getPreprintBadge(venue);
   if (preprint) badges.push(preprint);
+
+  const findings = getFindingsBadge(venue);
+  if (findings) badges.push(findings);
 
   // Try exact match first, then fuzzy match for ABDC
   let abdc = qIndex.abdc.get(v);
@@ -564,7 +582,8 @@ const VENUE_WEIGHT_MAP = {
   ccf: { "a": 0.85, "b": 0.6, "c": 0.4 },
   era: 0.75,
   norwegian: { "1": 0.8, "2": 0.6 },
-  preprint: 0.15
+  preprint: 0.15,
+  findings: 0.3
 };
 
 export function venueWeightForVenue(venue, qIndex) {
@@ -574,6 +593,7 @@ export function venueWeightForVenue(venue, qIndex) {
   for (const b of badges) {
     if (b.kind === "ft50" || b.kind === "utd24") w = Math.max(w, VENUE_WEIGHT_MAP[b.kind]);
     else if (b.kind === "preprint") w = Math.max(w, VENUE_WEIGHT_MAP.preprint);
+    else if (b.kind === "findings") w = Math.max(w, VENUE_WEIGHT_MAP.findings);
     else if (b.kind === "abdc" && b.metadata?.rank) {
       const r = String(b.metadata.rank).toLowerCase().replace(/\s/g, "");
       w = Math.max(w, VENUE_WEIGHT_MAP.abdc[r] ?? 0.4);

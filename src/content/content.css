@@ -1403,6 +1403,7 @@ body[data-su-theme="dark"] .su-apikey-banner-dismiss {
 .su-badge.su-ccf { background: #fef3c7; border-color: rgba(217,119,6,0.28); }
 .su-badge.su-jcr { background: #fdf2f8; border-color: rgba(190,24,93,0.22); }
 .su-badge.su-preprint { background: #f1f5f9; border-color: rgba(71,85,105,0.35); color: #475569; font-weight: 500; }
+.su-badge.su-findings { background: #f1f5f9; border-color: rgba(71,85,105,0.35); color: #475569; font-weight: 500; }
 .su-badge.su-era { background: #eff6ff; border-color: rgba(29,78,216,0.28); }
 .su-badge.su-norwegian { background: #ecfdf5; border-color: rgba(5,150,105,0.28); }
 .su-badge.su-h5 { background: #e0f2fe; border-color: rgba(6,182,212,0.28); }
@@ -1424,6 +1425,7 @@ body[data-su-badge-palette="bold"] .su-badge.su-norwegian { background: #bbf7d0;
 body[data-su-badge-palette="bold"] .su-badge.su-h5 { background: #bae6fd; border-color: #06b6d4; color: #0e7490; }
 body[data-su-badge-palette="bold"] .su-badge.su-emerging { background: #a7f3d0; border-color: #10b981; color: #065f46; }
 body[data-su-badge-palette="bold"] .su-badge.su-preprint { background: #e2e8f0; border-color: #94a3b8; color: #334155; }
+body[data-su-badge-palette="bold"] .su-badge.su-findings { background: #e2e8f0; border-color: #94a3b8; color: #334155; }
 body[data-su-badge-palette="bold"] .su-badge.su-abs,
 body[data-su-badge-palette="bold"] .su-badge.su-abs4star { background: #fde68a; border-color: #f59e0b; color: #78350f; }
 /* Colorblind-safe badge palette (light mode) */
@@ -1440,6 +1442,7 @@ body[data-su-badge-palette="colorblind"] .su-badge.su-norwegian { background: #d
 body[data-su-badge-palette="colorblind"] .su-badge.su-h5 { background: #cffafe; border-color: #06b6d4; color: #0e7490; }
 body[data-su-badge-palette="colorblind"] .su-badge.su-emerging { background: #dcfce7; border-color: #16a34a; color: #14532d; }
 body[data-su-badge-palette="colorblind"] .su-badge.su-preprint { background: #e2e8f0; border-color: #94a3b8; color: #334155; }
+body[data-su-badge-palette="colorblind"] .su-badge.su-findings { background: #e2e8f0; border-color: #94a3b8; color: #334155; }
 body[data-su-badge-palette="colorblind"] .su-badge.su-abs,
 body[data-su-badge-palette="colorblind"] .su-badge.su-abs4star { background: #fef3c7; border-color: #d97706; color: #78350f; }
 /* Monochrome badge palette (light mode) */
@@ -1455,6 +1458,7 @@ body[data-su-badge-palette="mono"] .su-badge.su-era,
 body[data-su-badge-palette="mono"] .su-badge.su-norwegian,
 body[data-su-badge-palette="mono"] .su-badge.su-h5,
 body[data-su-badge-palette="mono"] .su-badge.su-preprint,
+body[data-su-badge-palette="mono"] .su-badge.su-findings,
 body[data-su-badge-palette="mono"] .su-badge.su-abs,
 body[data-su-badge-palette="mono"] .su-badge.su-abs4star {
   background: #f3f4f6;
@@ -1474,6 +1478,7 @@ body[data-su-badge-palette="material"] .su-badge.su-era { background: #e8f0fe; b
 body[data-su-badge-palette="material"] .su-badge.su-norwegian { background: #e6f4ea; border-color: #34a853; color: #0d652d; }
 body[data-su-badge-palette="material"] .su-badge.su-h5 { background: #e0f7fa; border-color: #00acc1; color: #0b5563; }
 body[data-su-badge-palette="material"] .su-badge.su-preprint { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+body[data-su-badge-palette="material"] .su-badge.su-findings { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
 body[data-su-badge-palette="material"] .su-badge.su-abs,
 body[data-su-badge-palette="material"] .su-badge.su-abs4star { background: #fef7e0; border-color: #fbbc05; color: #8d4b00; }
 /* Fluent Soft badge palette (light mode) */
@@ -1489,6 +1494,7 @@ body[data-su-badge-palette="fluent"] .su-badge.su-era { background: #e7f0fb; bor
 body[data-su-badge-palette="fluent"] .su-badge.su-norwegian { background: #e6f5ec; border-color: #107c10; color: #0b3d0b; }
 body[data-su-badge-palette="fluent"] .su-badge.su-h5 { background: #e6f7f6; border-color: #038387; color: #0b3a3b; }
 body[data-su-badge-palette="fluent"] .su-badge.su-preprint { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+body[data-su-badge-palette="fluent"] .su-badge.su-findings { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
 body[data-su-badge-palette="fluent"] .su-badge.su-abs,
 body[data-su-badge-palette="fluent"] .su-badge.su-abs4star { background: #fdf2f2; border-color: #c239b3; color: #6b1b61; }
 /* Nord badge palette (light mode) */
@@ -1504,6 +1510,7 @@ body[data-su-badge-palette="nord"] .su-badge.su-era { background: #e5e9f0; borde
 body[data-su-badge-palette="nord"] .su-badge.su-norwegian { background: #e6f1ef; border-color: #8fbcbb; color: #365e5c; }
 body[data-su-badge-palette="nord"] .su-badge.su-h5 { background: #e8eef5; border-color: #81a1c1; color: #3b566e; }
 body[data-su-badge-palette="nord"] .su-badge.su-preprint { background: #eceff4; border-color: #a3b1c2; color: #4c566a; }
+body[data-su-badge-palette="nord"] .su-badge.su-findings { background: #eceff4; border-color: #a3b1c2; color: #4c566a; }
 body[data-su-badge-palette="nord"] .su-badge.su-abs,
 body[data-su-badge-palette="nord"] .su-badge.su-abs4star { background: #f3e8e8; border-color: #bf616a; color: #6d2f36; }
 /* Solarized badge palette (light mode) */
@@ -1519,6 +1526,7 @@ body[data-su-badge-palette="solarized"] .su-badge.su-era { background: #e3f2fd; 
 body[data-su-badge-palette="solarized"] .su-badge.su-norwegian { background: #f1f7e7; border-color: #859900; color: #3b4a00; }
 body[data-su-badge-palette="solarized"] .su-badge.su-h5 { background: #e6f6f4; border-color: #2aa198; color: #0b5a55; }
 body[data-su-badge-palette="solarized"] .su-badge.su-preprint { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+body[data-su-badge-palette="solarized"] .su-badge.su-findings { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
 body[data-su-badge-palette="solarized"] .su-badge.su-abs,
 body[data-su-badge-palette="solarized"] .su-badge.su-abs4star { background: #fde8f2; border-color: #d33682; color: #7b1b48; }
 /* Mono + Accent badge palette (light mode) */
@@ -1534,6 +1542,7 @@ body[data-su-badge-palette="monoAccent"] .su-badge.su-era,
 body[data-su-badge-palette="monoAccent"] .su-badge.su-norwegian,
 body[data-su-badge-palette="monoAccent"] .su-badge.su-h5,
 body[data-su-badge-palette="monoAccent"] .su-badge.su-preprint,
+body[data-su-badge-palette="monoAccent"] .su-badge.su-findings,
 body[data-su-badge-palette="monoAccent"] .su-badge.su-abs,
 body[data-su-badge-palette="monoAccent"] .su-badge.su-abs4star {
   background: #f3f4f6;
@@ -1553,6 +1562,7 @@ body[data-su-badge-palette="highContrast"] .su-badge.su-era { background: #dbeaf
 body[data-su-badge-palette="highContrast"] .su-badge.su-norwegian { background: #dcfce7; border-color: #15803d; color: #14532d; }
 body[data-su-badge-palette="highContrast"] .su-badge.su-h5 { background: #cffafe; border-color: #0e7490; color: #164e63; }
 body[data-su-badge-palette="highContrast"] .su-badge.su-preprint { background: #e2e8f0; border-color: #475569; color: #1f2937; }
+body[data-su-badge-palette="highContrast"] .su-badge.su-findings { background: #e2e8f0; border-color: #475569; color: #1f2937; }
 body[data-su-badge-palette="highContrast"] .su-badge.su-abs,
 body[data-su-badge-palette="highContrast"] .su-badge.su-abs4star { background: #fef3c7; border-color: #b45309; color: #78350f; }
 /* Inverted badge palette (light mode) */
@@ -1568,6 +1578,7 @@ body[data-su-badge-palette="inverted"] .su-badge.su-era { background: #0f172a; b
 body[data-su-badge-palette="inverted"] .su-badge.su-norwegian { background: #0b1f1a; border-color: #a7f3d0; color: #d1fae5; }
 body[data-su-badge-palette="inverted"] .su-badge.su-h5 { background: #0b1e2a; border-color: #7dd3fc; color: #e0f2fe; }
 body[data-su-badge-palette="inverted"] .su-badge.su-preprint { background: #111827; border-color: #9ca3af; color: #e5e7eb; }
+body[data-su-badge-palette="inverted"] .su-badge.su-findings { background: #111827; border-color: #9ca3af; color: #e5e7eb; }
 body[data-su-badge-palette="inverted"] .su-badge.su-abs,
 body[data-su-badge-palette="inverted"] .su-badge.su-abs4star { background: #2a200b; border-color: #fde68a; color: #fef3c7; }
 /* Warm badge palette (light mode) */
@@ -1583,6 +1594,7 @@ body[data-su-badge-palette="warm"] .su-badge.su-era { background: #fff1e6; borde
 body[data-su-badge-palette="warm"] .su-badge.su-norwegian { background: #fff7e6; border-color: #f59e0b; color: #7c2d12; }
 body[data-su-badge-palette="warm"] .su-badge.su-h5 { background: #ffe4e6; border-color: #fb7185; color: #7f1d1d; }
 body[data-su-badge-palette="warm"] .su-badge.su-preprint { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
+body[data-su-badge-palette="warm"] .su-badge.su-findings { background: #f1f5f9; border-color: #94a3b8; color: #334155; }
 body[data-su-badge-palette="warm"] .su-badge.su-abs,
 body[data-su-badge-palette="warm"] .su-badge.su-abs4star { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
 .su-badge-tooltip {
@@ -3282,6 +3294,7 @@ body[data-su-theme="dark"] .su-badge.su-era { background: #1a2d4d; border-color:
 body[data-su-theme="dark"] .su-badge.su-norwegian { background: #1a3d2d; border-color: #2d5c47; }
 body[data-su-theme="dark"] .su-badge.su-h5 { background: #1a2d3d; border-color: #2d4a60; }
 body[data-su-theme="dark"] .su-badge.su-preprint { background: #2d2d2d; border-color: #5f6368; color: #bdc1c6; }
+body[data-su-theme="dark"] .su-badge.su-findings { background: #2d2d2d; border-color: #5f6368; color: #bdc1c6; }
 body[data-su-theme="dark"] .su-badge.su-fnege { background: #3d3320; border-color: #5c4a28; }
 /* Bold badge palette in dark mode */
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-quartile { background: #0f4d2d; border-color: #22c55e; color: #bbf7d0; }
@@ -3296,6 +3309,7 @@ body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-era { back
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-norwegian { background: #0f4d2d; border-color: #22c55e; color: #bbf7d0; }
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-h5 { background: #0f3340; border-color: #06b6d4; color: #bae6fd; }
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-preprint { background: #3a3f45; border-color: #9aa0a6; color: #e2e8f0; }
+body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-findings { background: #3a3f45; border-color: #9aa0a6; color: #e2e8f0; }
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="bold"] .su-badge.su-abs4star { background: #4a3a0f; border-color: #f59e0b; color: #fde68a; }
 /* Colorblind-safe badge palette (dark mode) */
@@ -3311,6 +3325,7 @@ body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-era 
 body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-norwegian { background: #0f3a26; border-color: #16a34a; color: #dcfce7; }
 body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-h5 { background: #0f3340; border-color: #06b6d4; color: #cffafe; }
 body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-preprint { background: #3a3f45; border-color: #9aa0a6; color: #e2e8f0; }
+body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-findings { background: #3a3f45; border-color: #9aa0a6; color: #e2e8f0; }
 body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="colorblind"] .su-badge.su-abs4star { background: #4a3a0f; border-color: #d97706; color: #fef3c7; }
 /* Monochrome badge palette (dark mode) */
@@ -3326,6 +3341,7 @@ body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-era,
 body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-norwegian,
 body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-h5,
 body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-preprint,
+body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-findings,
 body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="mono"] .su-badge.su-abs4star {
   background: #2b2f33;
@@ -3345,6 +3361,7 @@ body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-era { 
 body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-norwegian { background: #0f3a24; border-color: #34a853; color: #e6f4ea; }
 body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-h5 { background: #0b3440; border-color: #00acc1; color: #e0f7fa; }
 body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-preprint { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
+body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-findings { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
 body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="material"] .su-badge.su-abs4star { background: #4a3a0f; border-color: #fbbc05; color: #fef7e0; }
 /* Fluent Soft badge palette (dark mode) */
@@ -3360,6 +3377,7 @@ body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-era { ba
 body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-norwegian { background: #0f3a24; border-color: #107c10; color: #e6f5ec; }
 body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-h5 { background: #0b3440; border-color: #038387; color: #e6f7f6; }
 body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-preprint { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
+body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-findings { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
 body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="fluent"] .su-badge.su-abs4star { background: #4a1f33; border-color: #c239b3; color: #fdf2f2; }
 /* Nord badge palette (dark mode) */
@@ -3375,6 +3393,7 @@ body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-era { back
 body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-norwegian { background: #2f3a3f; border-color: #8fbcbb; color: #e6f1ef; }
 body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-h5 { background: #2f3743; border-color: #81a1c1; color: #e8eef5; }
 body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-preprint { background: #3b3f45; border-color: #8a8f95; color: #eceff4; }
+body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-findings { background: #3b3f45; border-color: #8a8f95; color: #eceff4; }
 body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="nord"] .su-badge.su-abs4star { background: #3a2427; border-color: #bf616a; color: #f3e8e8; }
 /* Solarized badge palette (dark mode) */
@@ -3390,6 +3409,7 @@ body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-era {
 body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-norwegian { background: #2a3319; border-color: #859900; color: #f1f7e7; }
 body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-h5 { background: #1d3a3a; border-color: #2aa198; color: #e6f6f4; }
 body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-preprint { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
+body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-findings { background: #2b2f33; border-color: #8a8f95; color: #e8eaed; }
 body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="solarized"] .su-badge.su-abs4star { background: #4a1f33; border-color: #d33682; color: #fde8f2; }
 /* Mono + Accent badge palette (dark mode) */
@@ -3405,6 +3425,7 @@ body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-era,
 body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-norwegian,
 body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-h5,
 body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-preprint,
+body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-findings,
 body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="monoAccent"] .su-badge.su-abs4star {
   background: #2b2f33;
@@ -3424,6 +3445,7 @@ body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-er
 body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-norwegian { background: #0f3a24; border-color: #15803d; color: #dcfce7; }
 body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-h5 { background: #0b3340; border-color: #0e7490; color: #cffafe; }
 body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-preprint { background: #2b2f33; border-color: #9aa0a6; color: #e2e8f0; }
+body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-findings { background: #2b2f33; border-color: #9aa0a6; color: #e2e8f0; }
 body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="highContrast"] .su-badge.su-abs4star { background: #4a3a0f; border-color: #b45309; color: #fef3c7; }
 /* Inverted badge palette (dark mode) */
@@ -3439,6 +3461,7 @@ body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-era { 
 body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-norwegian { background: #d1fae5; border-color: #065f46; color: #0b1f1a; }
 body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-h5 { background: #e0f2fe; border-color: #0e7490; color: #0b1e2a; }
 body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-preprint { background: #e5e7eb; border-color: #6b7280; color: #111827; }
+body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-findings { background: #e5e7eb; border-color: #6b7280; color: #111827; }
 body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="inverted"] .su-badge.su-abs4star { background: #fef3c7; border-color: #78350f; color: #2a200b; }
 /* Warm badge palette (dark mode) */
@@ -3454,6 +3477,7 @@ body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-era { back
 body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-norwegian { background: #4a2f0f; border-color: #f59e0b; color: #fff7e6; }
 body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-h5 { background: #4a1f27; border-color: #fb7185; color: #ffe4e6; }
 body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-preprint { background: #2b2f33; border-color: #9aa0a6; color: #e2e8f0; }
+body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-findings { background: #2b2f33; border-color: #9aa0a6; color: #e2e8f0; }
 body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="warm"] .su-badge.su-abs4star { background: #4a3a0f; border-color: #f59e0b; color: #fef3c7; }
 body[data-su-theme="dark"] .su-author-stats,
@@ -4932,6 +4956,7 @@ body[data-su-badge-palette="refined"] .su-badge.su-norwegian { background: #edf9
 body[data-su-badge-palette="refined"] .su-badge.su-h5 { background: #f0f9ff; border-color: #a8d8f0; color: #0c5e8a; }
 body[data-su-badge-palette="refined"] .su-badge.su-emerging { background: #edf9f0; border-color: #a3dfb8; color: #1a5c2e; }
 body[data-su-badge-palette="refined"] .su-badge.su-preprint { background: #f5f6f8; border-color: #c8cdd5; color: #4a5060; }
+body[data-su-badge-palette="refined"] .su-badge.su-findings { background: #f5f6f8; border-color: #c8cdd5; color: #4a5060; }
 body[data-su-badge-palette="refined"] .su-badge.su-abs,
 body[data-su-badge-palette="refined"] .su-badge.su-abs4star { background: #f0f4ff; border-color: #b4c6fc; color: #2d3a8c; }
 body[data-su-badge-palette="refined"] .su-badge.su-fnege { background: #f0f4ff; border-color: #b4c6fc; color: #2d3a8c; }
@@ -4949,6 +4974,7 @@ body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-norwegi
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-h5 { background: #0e2a3a; border-color: #1a4a6a; color: #7ac0e8; }
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-emerging { background: #162e1e; border-color: #2a5a3a; color: #7ed89a; }
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-preprint { background: #1e2024; border-color: #3a3e46; color: #9ca3af; }
+body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-findings { background: #1e2024; border-color: #3a3e46; color: #9ca3af; }
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-abs4star { background: #1e2340; border-color: #3d4a7a; color: #a8b8f0; }
 body[data-su-theme="dark"][data-su-badge-palette="refined"] .su-badge.su-fnege { background: #1e2340; border-color: #3d4a7a; color: #a8b8f0; }
@@ -4970,6 +4996,7 @@ body[data-su-badge-palette="inkPaper"] .su-badge.su-norwegian { background: tran
 body[data-su-badge-palette="inkPaper"] .su-badge.su-h5 { background: transparent; border-color: #ddd; color: #666; }
 body[data-su-badge-palette="inkPaper"] .su-badge.su-emerging { background: transparent; border-color: #ccc; color: #555; }
 body[data-su-badge-palette="inkPaper"] .su-badge.su-preprint { background: transparent; border-color: #ddd; color: #888; }
+body[data-su-badge-palette="inkPaper"] .su-badge.su-findings { background: transparent; border-color: #ddd; color: #888; }
 body[data-su-badge-palette="inkPaper"] .su-badge.su-abs,
 body[data-su-badge-palette="inkPaper"] .su-badge.su-abs4star { background: transparent; border-color: #888; color: #111; }
 body[data-su-badge-palette="inkPaper"] .su-badge.su-fnege { background: transparent; border-color: #aaa; color: #333; }
@@ -4987,6 +5014,7 @@ body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-norweg
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-h5 { background: transparent; border-color: #444; color: #888; }
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-emerging { background: transparent; border-color: #555; color: #999; }
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-preprint { background: transparent; border-color: #3a3a3a; color: #777; }
+body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-findings { background: transparent; border-color: #3a3a3a; color: #777; }
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-abs,
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-abs4star { background: transparent; border-color: #888; color: #e0e0e0; }
 body[data-su-theme="dark"][data-su-badge-palette="inkPaper"] .su-badge.su-fnege { background: transparent; border-color: #666; color: #bbb; }
@@ -5011,6 +5039,7 @@ body[data-su-badge-palette="signal"] .su-badge.su-norwegian { background: #f1f5f
 body[data-su-badge-palette="signal"] .su-badge.su-h5 { background: #fff; border-color: #e2e8f0; color: #94a3b8; }
 body[data-su-badge-palette="signal"] .su-badge.su-emerging { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
 body[data-su-badge-palette="signal"] .su-badge.su-preprint { background: #fff; border-color: #e2e8f0; color: #94a3b8; }
+body[data-su-badge-palette="signal"] .su-badge.su-findings { background: #fff; border-color: #e2e8f0; color: #94a3b8; }
 /* Dark mode */
 body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-abdc { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-ft50 { background: #3b82f6; border-color: #3b82f6; color: #fff; }
@@ -5028,6 +5057,7 @@ body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-norwegia
 body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-h5 { background: #0f172a; border-color: #1e293b; color: #64748b; }
 body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-emerging { background: #1e3a5f; border-color: #2563eb; color: #93c5fd; }
 body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-preprint { background: #0f172a; border-color: #1e293b; color: #64748b; }
+body[data-su-theme="dark"][data-su-badge-palette="signal"] .su-badge.su-findings { background: #0f172a; border-color: #1e293b; color: #64748b; }
 /* ── Per-palette shape overrides ──────────────────────────────────── */
 body[data-su-badge-palette="refined"] .su-badge {
   border-radius: 4px;
