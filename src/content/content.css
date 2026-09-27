@@ -1331,6 +1331,26 @@ body[data-su-theme="dark"] .su-apikey-banner-dismiss {
   background: #f1f3f4;
   color: #202124;
 }
+.su-settings-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: #5f6368;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+.su-settings-toggle:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
 .su-reading-guide-toggle.su-reading-guide-on {
   background: #e8f0fe;
   color: #1967d2;
@@ -3911,7 +3931,8 @@ body[data-su-theme="dark"] .su-author-compare-actions button:first-of-type { bac
 body[data-su-theme="dark"] .su-compare-authors-btn { color: #8ab4f8; border-color: #5f6368; }
 body[data-su-theme="dark"] .su-compare-authors-btn:hover { background: #35363a; }
 body[data-su-theme="dark"] .su-theme-toggle,
-body[data-su-theme="dark"] .su-reading-guide-toggle {
+body[data-su-theme="dark"] .su-reading-guide-toggle,
+body[data-su-theme="dark"] .su-settings-toggle {
   background: #35363a;
   color: #e8eaed;
   border-color: #5f6368;
@@ -4048,7 +4069,8 @@ body[data-su-theme="dark"] .su-pop-peers-input {
   color: #e8eaed;
 }
 body[data-su-theme="dark"] .su-theme-toggle:hover,
-body[data-su-theme="dark"] .su-reading-guide-toggle:hover {
+body[data-su-theme="dark"] .su-reading-guide-toggle:hover,
+body[data-su-theme="dark"] .su-settings-toggle:hover {
   background: #5f6368;
   color: #e8eaed;
 }

@@ -15518,6 +15518,20 @@
       toolbarEl.appendChild(themeToggleEl);
     }
     themeToggleEl.textContent = themeLabel(state.settings.theme);
+    let settingsToggleEl = document.getElementById("su-settings-toggle");
+    if (!settingsToggleEl) {
+      settingsToggleEl = document.createElement("button");
+      settingsToggleEl.id = "su-settings-toggle";
+      settingsToggleEl.className = "su-settings-toggle";
+      settingsToggleEl.type = "button";
+      settingsToggleEl.title = "Scholar Utility Belt settings";
+      settingsToggleEl.setAttribute("aria-label", "Scholar Utility Belt settings");
+      settingsToggleEl.textContent = "⚙";
+      settingsToggleEl.addEventListener("click", () => {
+        chrome.runtime.sendMessage({ action: "openOptionsPage" });
+      });
+      toolbarEl.appendChild(settingsToggleEl);
+    }
     // Reading guide button removed per request; ensure any existing instance is removed.
     let guideToggleEl = document.getElementById("su-reading-guide-toggle");
     if (guideToggleEl) {
