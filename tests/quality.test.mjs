@@ -317,6 +317,32 @@ describe("qualityBadgesForVenue", () => {
     assert.equal(coreBadge.metadata.rank, "A*");
   });
 
+  it("does not give ICIS's CORE A* rank to a TREO extended abstract", () => {
+    const idx = compileQualityIndex({
+      qualityCoreRanks: "International Conference on Information Systems|ICIS,A*",
+    });
+    const treo = qualityBadgesForVenue("ICIS 2025 TREOS, 98", idx);
+    assert.ok(!treo.some((b) => b.kind === "core"), "a TREO abstract should not inherit ICIS's main-track CORE rank");
+    const main = qualityBadgesForVenue("42nd International Conference on Information Systems (ICIS), 1-8", idx);
+    const coreBadge = main.find((b) => b.kind === "core");
+    assert.ok(coreBadge, "a real ICIS paper should still get the CORE badge");
+    assert.equal(coreBadge.metadata.rank, "A*");
+  });
+
+  it("returns CORE A* badge for KDD's official 'ACM SIGKDD Conference...' title", () => {
+    const idx = compileQualityIndex({
+      qualityCoreRanks:
+        "ACM International Conference on Knowledge Discovery and Data Mining|KDD|ACM SIGKDD Conference on Knowledge Discovery and Data Mining,A*",
+    });
+    const badges = qualityBadgesForVenue(
+      "Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining",
+      idx
+    );
+    const coreBadge = badges.find((b) => b.kind === "core");
+    assert.ok(coreBadge, "should have a CORE badge");
+    assert.equal(coreBadge.metadata.rank, "A*");
+  });
+
   it("returns CORE A* badge for EMNLP's official 'Conference on...' proceedings title", () => {
     const idx = compileQualityIndex({
       qualityCoreRanks:
@@ -361,6 +387,8 @@ describe("qualityBadgesForVenue", () => {
       "Findings of ACL 2026",
       "Findings of NAACL 2026",
       "Findings of EACL 2026",
+      // Google Scholar's own truncation: cuts mid-phrase, before "Processing" ever appears.
+      "Findings of the Conference on Empirical Methods in Natural Language …",
     ]) {
       const badges = qualityBadgesForVenue(venue, idx);
       const findingsBadge = badges.find((b) => b.kind === "findings");

@@ -382,10 +382,31 @@ export function isPreprintVenue(venue) {
 // bar the CORE/CCF rank on that conference's name describes. No ranking body scores
 // Findings itself, so this is informational only, not a rank claim (same spirit as
 // the preprint badge above).
-const FINDINGS_PATTERN = /\bfindings of (?:the )?(?:association for computational linguistics|conference on empirical methods in natural language processing|(?:north american|european) chapter of the association for computational linguistics|acl|emnlp|naacl|eacl)\b/i;
+const FINDINGS_LEAD = /^\s*findings of (?:the )?/i;
+const FINDINGS_ABBR = /^(?:acl|emnlp|naacl|eacl)\b/i;
+// Google Scholar truncates long venue strings to a fixed length with "…", and it
+// cuts wherever that budget runs out -- for one paper "Conference on Empirical
+// Methods in Natural Language Processing" survives intact, for another ("Findings
+// of...", which eats extra characters on "Findings of the ") it's chopped down to
+// "Natural Language …" before "Processing" ever appears. So the spelled-out names
+// are matched by prefix, the same tolerance findBestMatch uses elsewhere in this
+// file, instead of requiring the full phrase.
+const FINDINGS_FULL_NAMES = [
+  "association for computational linguistics",
+  "conference on empirical methods in natural language processing",
+  "north american chapter of the association for computational linguistics",
+  "european chapter of the association for computational linguistics"
+];
 
 function getFindingsBadge(venue) {
-  if (!FINDINGS_PATTERN.test(String(venue || ""))) return null;
+  const s = String(venue || "");
+  const m = s.match(FINDINGS_LEAD);
+  if (!m) return null;
+  const rest = normalizeVenueName(s.slice(m[0].length));
+  if (!rest) return null;
+  const isKnown = FINDINGS_ABBR.test(rest)
+    || FINDINGS_FULL_NAMES.some((full) => full.startsWith(rest) || rest.startsWith(full + " ") || rest === full);
+  if (!isKnown) return null;
   return { kind: "findings", text: "ACL Findings", metadata: {
     system: "ACL Anthology Findings volume: peer-reviewed and archival, but a companion track, not the main conference program."
   } };
@@ -460,7 +481,10 @@ export function qualityBadgesForVenue(venue, qIndex) {
 
   // Resolve CORE and CCF first so we can treat venue as conference when present
   let core = qIndex.core.get(v);
-  if (!core && (v.startsWith("icis ") || v === "icis")) {
+  // TREOs ("Technology, Research, Education, and Opinion") are ICIS's own separate,
+  // non-archival 1-2 page extended-abstract track -- not the peer-reviewed main
+  // proceedings the CORE A* rank below describes, e.g. "ICIS 2025 TREOS, 98".
+  if (!core && (v.startsWith("icis ") || v === "icis") && !/\btreos?\b/.test(v)) {
     core = qIndex.core.get("international conference on information systems");
   }
   // "42nd International Conference on Information Systems (ICIS), 1-8" → ICIS (avoid matching ISD/other "International Conference on Information Systems *")
