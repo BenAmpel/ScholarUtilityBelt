@@ -807,3 +807,24 @@ a:focus-visible {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── More from Purplelink (plain outbound links, no remote assets) ── */
+.more-links {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.more-links li {
+  margin: 4px 0;
+}
+
+.more-links a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.more-links a:hover {
+  color: var(--accent-hover);
+}

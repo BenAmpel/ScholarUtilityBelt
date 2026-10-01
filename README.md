@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-4285F4?logo=googlechrome&logoColor=white"></a>
   <a href="https://github.com/BenAmpel/ScholarUtilityBelt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BenAmpel/ScholarUtilityBelt?style=flat"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.6.1-2f855a">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.6.2-2f855a">
   <a href="https://doi.org/10.5281/zenodo.18645552"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-ISC-black"></a>
   <a href="https://buymeacoffee.com/bampel"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00"></a>
@@ -202,6 +202,7 @@ src/
   library/     local saved-paper library UI
   options/     settings page for feature toggles and data management
   popup/       browser action popup
+  whatsnew/    local what's-new page, opened once after an update
   sw.js        MV3 background service worker
 
 scripts/
@@ -220,6 +221,18 @@ Representative validation tasks include:
 - content-script smoke tests on Scholar result pages and author pages
 - release-candidate browser checks for first-load rendering and major workflows
 - data-refresh scripts with row-count sanity checks for packaged rank sources
+
+## Free tools from the same studio
+
+Scholar Utility Belt is built by [Purplelink](https://purplelink.llc/?ref=scholar-utility-belt), which also runs a set of free web tools for academic writing. They are separate from the extension: nothing below is injected into Google Scholar pages, and the extension does not contact purplelink.llc.
+
+- [BibTeX Validator](https://purplelink.llc/tools/bib-validator/?ref=scholar-utility-belt): checks a `.bib` file for syntax errors, dead DOIs, and wrong authors or years, and gives back a corrected file.
+- [Citation Generator](https://purplelink.llc/tools/citation-generator/?ref=scholar-utility-belt): turns a DOI, arXiv ID, or ISBN into a formatted citation in APA, MLA, Chicago, or IEEE.
+- [LaTeX to Word](https://purplelink.llc/tools/latex-to-word/?ref=scholar-utility-belt): converts a `.tex` file or project `.zip` into a double-spaced manuscript `.docx`.
+- [Thesis Format Checker](https://purplelink.llc/tools/thesis-format-checker/?ref=scholar-utility-belt): checks a thesis or dissertation PDF for margins, font size, embedded fonts, page numbers, line spacing, and front matter, in your browser.
+- [Replication Package Checker](https://purplelink.llc/tools/reproducibility-checker/?ref=scholar-utility-belt): checks a replication package zip for a README, license, pinned dependencies, a main script, absolute paths, random seeds, and missing data files, in your browser.
+- [Guides](https://purplelink.llc/guides/?ref=scholar-utility-belt): how-to guides for LaTeX and academic writing, such as converting to Word, fixing BibTeX, citation styles, and word counts.
+- [Paper Review](https://purplelink.llc/tools/paper-review/?ref=scholar-utility-belt): pre-submission review of a manuscript by four AI reviewers, from $9. The references are checked for free first.
 
 ## Citation
 

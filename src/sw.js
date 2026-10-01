@@ -422,3 +422,26 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await chrome.storage.local.set({ grandfathered: decided });
   }
 });
+
+// What's-new page: a local extension page (src/whatsnew/whatsnew.html) opened
+// at most once, and only when an update lands on WHATS_NEW_VERSION. It never
+// opens on a fresh install, on browser start, or on a reload of the same
+// version, and the stored flag stops a repeat. Bump WHATS_NEW_VERSION only
+// when a release ships a new what's-new page; otherwise leave it and nothing
+// opens. No network request is involved.
+const WHATS_NEW_VERSION = "0.6.2";
+const WHATS_NEW_FLAG = "whatsNewShownVersion";
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  try {
+    if (details?.reason !== "update") return;
+    const current = chrome.runtime.getManifest().version;
+    if (current !== WHATS_NEW_VERSION || details.previousVersion === current) return;
+    const stored = await chrome.storage.local.get(WHATS_NEW_FLAG);
+    if (stored[WHATS_NEW_FLAG] === current) return;
+    await chrome.storage.local.set({ [WHATS_NEW_FLAG]: current });
+    chrome.tabs.create({ url: chrome.runtime.getURL("src/whatsnew/whatsnew.html") });
+  } catch {
+    // Never let the what's-new page break install/update handling.
+  }
+});

@@ -1,0 +1,15 @@
+/* What's-new page. Tokens, .card, .sub and .more-links come from ../options/options.css. */
+.whatsnew-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.whatsnew-list li {
+  margin: 6px 0;
+}
+
+.whatsnew-foot {
+  margin-top: 14px;
+}
