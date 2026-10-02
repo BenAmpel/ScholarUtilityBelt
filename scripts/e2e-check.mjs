@@ -27,6 +27,7 @@
  *
  * Usage:
  *   npm run build && node scripts/e2e-check.mjs
+ *   (On a heavily loaded machine: E2E_TIMEOUT_MS=900000 E2E_SLOW_FACTOR=3 node scripts/e2e-check.mjs)
  *
  * Exits non-zero if any check fails.
  */
@@ -53,6 +54,9 @@ const AUTHOR_FIXTURE = fs.readFileSync(path.join(FIXTURES_DIR, "scholar-author.h
 
 const SEARCH_URL = "https://scholar.google.com/scholar?q=convolutional+neural+network+image+classification";
 const AUTHOR_URL = "https://scholar.google.com/citations?user=JicYPdAAAAAJ";
+
+// Fixed settle times and selector timeouts were tuned on an idle machine; multiply them on a loaded one.
+const SLOW = Number(process.env.E2E_SLOW_FACTOR) || 1;
 
 const results = [];
 let consoleErrors = [];
@@ -191,7 +195,7 @@ async function main() {
     const searchPage = await context.newPage();
     recordConsole(searchPage);
     await searchPage.goto(SEARCH_URL, { waitUntil: "domcontentloaded" });
-    await searchPage.waitForTimeout(3000);
+    await searchPage.waitForTimeout(3000 * SLOW);
 
     await check("badges/action-grid rendered on at least one result", async () => {
       const count = await searchPage.evaluate(() => document.querySelectorAll(".su-quality, .su-related-works-btn, [data-act]").length);
@@ -211,7 +215,7 @@ async function main() {
 
     await check("Related (OpenAlex) panel opens and shows content", async () => {
       await searchPage.click(".su-related-works-btn");
-      await searchPage.waitForSelector("#su-related-works", { timeout: 20000 });
+      await searchPage.waitForSelector("#su-related-works", { timeout: 20000 * SLOW });
       const hasContent = await searchPage.evaluate(() => (document.getElementById("su-related-works")?.textContent || "").trim().length > 0);
       assert.equal(hasContent, true);
     });
@@ -229,7 +233,7 @@ async function main() {
     await check("Review workspace lazy module loads and opens", async () => {
       await sw.evaluate(() => chrome.storage.local.set({ grandfathered: true }));
       await searchPage.click(".su-review-workspace");
-      await searchPage.waitForSelector("#su-review-overlay.su-visible", { timeout: 20000 });
+      await searchPage.waitForSelector("#su-review-overlay.su-visible", { timeout: 20000 * SLOW });
     });
 
     await check("no console errors on the search-results fixture", async () => {
@@ -243,7 +247,8 @@ async function main() {
     const authorPage = await context.newPage();
     recordConsole(authorPage);
     await authorPage.goto(AUTHOR_URL, { waitUntil: "domcontentloaded" });
-    await authorPage.waitForTimeout(5000);
+    // Wait for the paid-only control rather than a fixed delay (checks below report what is missing).
+    await authorPage.waitForSelector("[data-narrative-toggle]", { timeout: 30000 * SLOW }).catch(() => {});
 
     await check("author stats render", async () => {
       const present = await authorPage.evaluate(() => !!document.getElementById("su-author-stats"));
@@ -274,7 +279,7 @@ async function main() {
     consoleErrors = [];
     await sw.evaluate(() => chrome.storage.local.set({ grandfathered: false }));
     await authorPage.reload({ waitUntil: "domcontentloaded" });
-    await authorPage.waitForTimeout(5000);
+    await authorPage.waitForSelector(".su-locked-feature", { timeout: 30000 * SLOW }).catch(() => {});
 
     await check("free user sees the Pro locked-feature block", async () => {
       const state = await authorPage.evaluate(() => ({
@@ -420,6 +425,119 @@ async function main() {
 
     // Restore the normal profile state for manual testing after this run.
     await sw.evaluate(() => chrome.storage.local.set({ grandfathered: true, appPassOptIn: false }));
+
+    // ── Free trial + grandfathering scope ─────────────────────────────────
+    // ExtensionPay is replaced inside the service worker with a stub for this
+    // section: a real trial can't be started or aged on demand, and the point
+    // here is how our code reads the user ExtPay reports, not ExtPay itself.
+    console.log("\nFree trial and grandfathering scope (ExtensionPay stubbed in the service worker)");
+    consoleErrors = [];
+    const DAY = 24 * 60 * 60 * 1000;
+    const stubExtPay = (user) =>
+      sw.evaluate((u) => {
+        globalThis.__realExtPay ||= globalThis.ExtPay;
+        globalThis.__extpayCalls = 0;
+        globalThis.__trialPeriod = null;
+        globalThis.ExtPay = () => ({
+          getUser: async () => {
+            globalThis.__extpayCalls++;
+            return { paid: false, ...u, trialStartedAt: u.trialStartedAt ? new Date(u.trialStartedAt) : null };
+          },
+          openTrialPage: async (period) => { globalThis.__trialPeriod = period; },
+          openPaymentPage: async () => {},
+          openLoginPage: async () => {},
+        });
+      }, user);
+    const swState = () => sw.evaluate(() => ({ calls: globalThis.__extpayCalls, period: globalThis.__trialPeriod }));
+    const askEntitlement = (needPurchased) =>
+      optionsPage.evaluate(
+        (n) => new Promise((resolve) => chrome.runtime.sendMessage({ action: "getEntitlementStatus", needPurchased: n }, resolve)),
+        needPurchased
+      );
+    const reloadAuthor = async () => {
+      await authorPage.reload({ waitUntil: "domcontentloaded" });
+    };
+
+    await sw.evaluate(() => chrome.storage.local.set({ grandfathered: false }));
+
+    await check("a free user's locked feature offers the 14-day trial", async () => {
+      await stubExtPay({ paid: false });
+      await reloadAuthor();
+      await authorPage.waitForSelector(".su-locked-feature [data-start-trial]", { timeout: 25000 });
+      const text = await authorPage.evaluate(() => document.querySelector("[data-start-trial]").textContent.trim());
+      assert.equal(text, "Try free for 14 days");
+    });
+
+    await check("Options' trial button opens ExtensionPay's trial page with the 14-day period", async () => {
+      await optionsPage.reload({ waitUntil: "domcontentloaded" });
+      await optionsPage.waitForSelector("#su-pro-actions button", { timeout: 15000 });
+      await optionsPage.evaluate(() => {
+        const b = [...document.querySelectorAll("#su-pro-actions button")].find((x) => /free trial/.test(x.textContent));
+        if (!b) throw new Error("no trial button");
+        b.click();
+      });
+      await optionsPage.waitForTimeout(1000);
+      assert.equal((await swState()).period, "14-day");
+    });
+
+    await check("a trial already used is reported, not reopened", async () => {
+      await stubExtPay({ paid: false, trialStartedAt: Date.now() - 30 * DAY });
+      await optionsPage.reload({ waitUntil: "domcontentloaded" });
+      await optionsPage.waitForSelector("#su-pro-actions button", { timeout: 15000 });
+      await optionsPage.evaluate(() => {
+        [...document.querySelectorAll("#su-pro-actions button")].find((x) => /free trial/.test(x.textContent)).click();
+      });
+      await optionsPage.waitForTimeout(1000);
+      assert.match(await optionsPage.evaluate(() => document.getElementById("su-pro-status").textContent), /already used your free trial/);
+      assert.equal((await swState()).period, null);
+    });
+
+    await check("an active trial unlocks Pro and says when it ends", async () => {
+      await stubExtPay({ paid: false, trialStartedAt: Date.now() - DAY });
+      await reloadAuthor();
+      await authorPage.waitForSelector("[data-narrative-toggle]", { timeout: 25000 });
+      assert.equal(await authorPage.evaluate(() => !!document.querySelector(".su-locked-feature")), false);
+      await optionsPage.reload({ waitUntil: "domcontentloaded" });
+      await optionsPage.waitForTimeout(1500);
+      assert.match(await optionsPage.evaluate(() => document.getElementById("su-pro-status").textContent), /free trial, ends/);
+    });
+
+    await check("an expired trial locks Pro again", async () => {
+      await stubExtPay({ paid: false, trialStartedAt: Date.now() - 20 * DAY });
+      await reloadAuthor();
+      await authorPage.waitForSelector(".su-locked-feature", { timeout: 25000 });
+    });
+
+    await check("grandfathered users are answered offline unless a purchase check is asked for", async () => {
+      await sw.evaluate(() => chrome.storage.local.set({ grandfathered: true }));
+      await stubExtPay({ paid: false });
+      const fast = await askEntitlement(false);
+      assert.deepEqual(fast, { paid: true, tier: "grandfathered", purchased: false });
+      assert.equal((await swState()).calls, 0, "default path must not call ExtensionPay for a grandfathered user");
+    });
+
+    await check("a grandfathered user without a purchase is NOT purchased (new Pro features stay locked)", async () => {
+      const res = await askEntitlement(true);
+      assert.deepEqual(res, { paid: true, tier: "grandfathered", purchased: false });
+      assert.equal((await swState()).calls, 1);
+    });
+
+    await check("a grandfathered user who bought Pro or is in a trial counts as purchased", async () => {
+      await stubExtPay({ paid: true, plan: { nickname: "lifetime" } });
+      assert.deepEqual(await askEntitlement(true), { paid: true, tier: "grandfathered", purchased: true });
+      await stubExtPay({ paid: false, trialStartedAt: Date.now() - DAY });
+      assert.equal((await askEntitlement(true)).purchased, true);
+    });
+
+    await check("no console errors across the trial flow", async () => {
+      assert.deepEqual(consoleErrors, []);
+    });
+
+    // Put the real ExtensionPay and the normal profile state back.
+    await sw.evaluate(() => {
+      if (globalThis.__realExtPay) globalThis.ExtPay = globalThis.__realExtPay;
+      return chrome.storage.local.set({ grandfathered: true, appPassOptIn: false });
+    });
   } finally {
     await context.close().catch(() => {});
     fs.rmSync(USER_DATA_DIR, { recursive: true, force: true });
@@ -439,7 +557,7 @@ async function main() {
 // A hard ceiling so a stuck browser/profile (seen once in practice — a
 // corrupted persistent-profile lock hung indefinitely) fails loudly within
 // two minutes instead of hanging a CI job or this script forever.
-const OVERALL_TIMEOUT_MS = 120000;
+const OVERALL_TIMEOUT_MS = Number(process.env.E2E_TIMEOUT_MS) || 120000;
 const timeout = new Promise((_, reject) =>
   setTimeout(() => reject(new Error(`E2E battery exceeded ${OVERALL_TIMEOUT_MS}ms overall timeout`)), OVERALL_TIMEOUT_MS)
 );

@@ -1195,6 +1195,15 @@ body[data-su-theme="dark"] .su-tortured-badge {
   background: var(--su-accent, #6d28d9);
   color: #fff;
 }
+.su-locked-feature-trial {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--su-accent, #6d28d9);
+  text-decoration: underline;
+  cursor: pointer;
+}
 body[data-su-theme="dark"] .su-locked-feature {
   background: rgba(148, 163, 184, 0.12);
 }

@@ -18,7 +18,7 @@ import {
   setSettings
 } from "../common/storage.js";
 import { normalizeVenueName } from "../common/quality.js";
-import { getEntitlementStatus } from "../common/entitlement.js";
+import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -1086,14 +1086,16 @@ async function renderProStatus() {
 
   const entitlement = await getEntitlementStatus();
   const labels = {
-    grandfathered: "Free forever (existing user) — all features unlocked.",
+    grandfathered: "Free forever (existing user): every Pro feature that existed when you installed stays unlocked. Features added later may need Pro.",
     lifetime: "Pro — Lifetime unlock.",
     monthly: "Pro — Monthly subscription.",
     yearly: "Pro — Annual subscription.",
     "app-pass": "Pro — unlocked through your App Pass.",
     free: "Free plan — compare authors, citation lineage, narrative CV, the review workspace, the citation graph, and the Publish-or-Perish report are part of Pro.",
   };
-  statusEl.textContent = labels[entitlement.tier] || labels.free;
+  statusEl.textContent = entitlement.tier === "trial"
+    ? `Pro — free trial, ends ${new Date(entitlement.trialEndsAt).toLocaleDateString()}.`
+    : labels[entitlement.tier] || labels.free;
 
   actionsEl.innerHTML = "";
   if (!entitlement.paid) {
@@ -1103,6 +1105,23 @@ async function renderProStatus() {
     unlockBtn.textContent = "Unlock Pro";
     unlockBtn.addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
     actionsEl.appendChild(unlockBtn);
+
+    const trialBtn = document.createElement("button");
+    trialBtn.type = "button";
+    trialBtn.textContent = `Start ${TRIAL_DAYS}-day free trial`;
+    trialBtn.addEventListener("click", async () => {
+      const res = await sendBg({ action: "startTrial" });
+      if (res.ok) {
+        proAwaitingTrial = true;
+      } else if (res.reason === "already_used") {
+        statusEl.textContent = "You've already used your free trial. Unlock Pro to keep going.";
+      } else if (res.reason === "already_paid") {
+        renderProStatus();
+      } else {
+        statusEl.textContent = "Couldn't open the trial page. Check your connection and try again.";
+      }
+    });
+    actionsEl.appendChild(trialBtn);
   }
   const loginBtn = document.createElement("button");
   loginBtn.type = "button";
@@ -1125,6 +1144,8 @@ function sendBg(message) {
 // After "Activate", the user finishes on joinapppass.com in another tab; re-check once
 // when they come back here, instead of making them find the "Check again" button.
 let appPassAwaitingActivation = false;
+// Same idea for the free-trial popup: refresh the plan line when the user comes back.
+let proAwaitingTrial = false;
 
 async function renderAppPass(entitlement) {
   const root = document.getElementById("su-apppass");
@@ -1188,7 +1209,12 @@ async function renderAppPass(entitlement) {
 }
 
 document.addEventListener("visibilitychange", async () => {
-  if (document.visibilityState !== "visible" || !appPassAwaitingActivation) return;
+  if (document.visibilityState !== "visible") return;
+  if (proAwaitingTrial) {
+    proAwaitingTrial = false;
+    renderProStatus();
+  }
+  if (!appPassAwaitingActivation) return;
   appPassAwaitingActivation = false;
   await sendBg({ action: "appPassRefresh" });
   renderProStatus();

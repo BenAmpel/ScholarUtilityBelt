@@ -215,20 +215,38 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.action === "getEntitlementStatus") {
     (async () => {
-      const { describeEntitlement } = SUEntitlement;
+      const { describeEntitlement, isTrialActive } = SUEntitlement;
       const { grandfathered } = await chrome.storage.local.get("grandfathered");
-      if (grandfathered) {
+      // Grandfathered users are answered offline (no ExtensionPay call) unless the
+      // caller is gating a "new" Pro feature and needs to know if they truly purchased.
+      if (grandfathered && msg.needPurchased !== true) {
         sendResponse(describeEntitlement({ grandfathered: true, extpayUser: null }));
         return;
       }
-      // Re-declare extpay locally: per ExtPay's Manifest V3 documentation,
-      // the outer `extpay` const can be undefined inside message callbacks.
+      try {
+        // Re-declare extpay locally: per ExtPay's Manifest V3 documentation,
+        // the outer `extpay` const can be undefined inside message callbacks.
+        const localExtpay = ExtPay(EXTPAY_ID);
+        const user = await localExtpay.getUser();
+        // Someone who already paid, or is mid-trial, never triggers an App Pass check.
+        const appPass = user?.paid || isTrialActive(user) ? null : await resolveAppPass().catch(() => null);
+        sendResponse(describeEntitlement({ grandfathered: !!grandfathered, extpayUser: user, appPass }));
+      } catch {
+        // ExtensionPay unreachable: fall back to what we know offline rather than hang the caller.
+        sendResponse(describeEntitlement({ grandfathered: !!grandfathered, extpayUser: null }));
+      }
+    })();
+    return true;
+  }
+  if (msg?.action === "startTrial") {
+    (async () => {
       const localExtpay = ExtPay(EXTPAY_ID);
       const user = await localExtpay.getUser();
-      // Someone who already paid directly never triggers an App Pass check.
-      const appPass = user?.paid ? null : await resolveAppPass().catch(() => null);
-      sendResponse(describeEntitlement({ grandfathered: false, extpayUser: user, appPass }));
-    })();
+      if (user?.paid) { sendResponse({ ok: false, reason: "already_paid" }); return; }
+      if (user?.trialStartedAt) { sendResponse({ ok: false, reason: "already_used" }); return; }
+      await localExtpay.openTrialPage(`${SUEntitlement.TRIAL_DAYS}-day`);
+      sendResponse({ ok: true });
+    })().catch(() => sendResponse({ ok: false, reason: "error" }));
     return true;
   }
   if (msg?.action === "appPassState") {
@@ -495,7 +513,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // version, and the stored flag stops a repeat. Bump WHATS_NEW_VERSION only
 // when a release ships a new what's-new page; otherwise leave it and nothing
 // opens. No network request is involved.
-const WHATS_NEW_VERSION = "0.6.2";
+const WHATS_NEW_VERSION = "0.7.0";
 const WHATS_NEW_FLAG = "whatsNewShownVersion";
 
 chrome.runtime.onInstalled.addListener(async (details) => {

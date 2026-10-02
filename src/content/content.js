@@ -65,6 +65,7 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   async function refreshEntitlementCache() {
     cachedEntitlement = await getEntitlementStatus();
@@ -155,6 +156,7 @@
       loadTorturedPhrases
     } = dataLoader);
     ({ getEntitlementStatus } = entitlement);
+    if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
     modulesLoaded = true;
   }
@@ -3627,6 +3629,7 @@
       <div class="su-locked-feature">
         <div class="su-locked-feature-badge">Pro</div>
         <div class="su-locked-feature-desc">${description}</div>
+        <button type="button" class="su-locked-feature-trial" data-start-trial="1">Try free for ${trialDays} days</button>
         <button type="button" class="su-locked-feature-unlock" data-unlock-feature="${featureName}">Unlock</button>
       </div>
     `;
@@ -7818,6 +7821,17 @@
           const panel = document.getElementById("su-narrative");
           if (panel) panel.classList.toggle("su-narrative-hidden", !window.suNarrativeOpen);
           narrativeToggle.textContent = window.suNarrativeOpen ? "Hide narrative" : "Narrative";
+          return;
+        }
+        const trialBtn = e.target.closest("[data-start-trial]");
+        if (trialBtn) {
+          e.stopPropagation();
+          e.preventDefault();
+          chrome.runtime.sendMessage({ action: "startTrial" }, (res) => {
+            void chrome.runtime.lastError;
+            // Already used a trial (or something failed): the payment page is the useful next step.
+            if (!res?.ok && res?.reason !== "already_paid") chrome.runtime.sendMessage({ action: "openUpsellModal" });
+          });
           return;
         }
         const unlockBtn = e.target.closest("[data-unlock-feature]");
