@@ -140,6 +140,8 @@ The extension is built to minimize those calls and to make their effects legible
 
 Scholar Utility Belt Pro (author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report) is licensed through [ExtensionPay](https://extensionpay.com), which makes a network request to `extensionpay.com` to check your entitlement status. This is the one exception to the "no backend, no telemetry" design above — everything else in the extension still runs entirely from data already on the page or packaged with the extension. If you installed Scholar Utility Belt before this tier shipped, nothing changes for you: every one of these features stays free, permanently.
 
+**App Pass (optional, off by default).** If you already subscribe to [App Pass](https://joinapppass.com), a single subscription that covers many browser extensions, you can turn it on in Options to unlock Pro with it. Nothing contacts `joinapppass.com` until you do. Once on, the extension asks `joinapppass.com` whether your pass is active (about every 6 hours once it is, or about every 10 minutes while you browse Scholar if no pass is found yet, so a new activation shows up quickly), sending this extension's ID and your `joinapppass.com` login cookie; App Pass uses those checks to share revenue between extensions. The answer, never your email, is cached locally. Turning it off in Options stops all contact. Anyone who bought Pro directly, or is grandfathered, is never checked.
+
 ## Packaged data sources
 
 The repository includes local snapshots under [`src/data/`](src/data):

@@ -1090,6 +1090,7 @@ async function renderProStatus() {
     lifetime: "Pro — Lifetime unlock.",
     monthly: "Pro — Monthly subscription.",
     yearly: "Pro — Annual subscription.",
+    "app-pass": "Pro — unlocked through your App Pass.",
     free: "Free plan — compare authors, citation lineage, narrative CV, the review workspace, the citation graph, and the Publish-or-Perish report are part of Pro.",
   };
   statusEl.textContent = labels[entitlement.tier] || labels.free;
@@ -1108,7 +1109,90 @@ async function renderProStatus() {
   loginBtn.textContent = "Already purchased on another device?";
   loginBtn.addEventListener("click", () => chrome.runtime.sendMessage({ action: "openLoginPage" }));
   actionsEl.appendChild(loginBtn);
+
+  await renderAppPass(entitlement);
 }
+
+function sendBg(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      void chrome.runtime.lastError;
+      resolve(response || {});
+    });
+  });
+}
+
+// After "Activate", the user finishes on joinapppass.com in another tab; re-check once
+// when they come back here, instead of making them find the "Check again" button.
+let appPassAwaitingActivation = false;
+
+async function renderAppPass(entitlement) {
+  const root = document.getElementById("su-apppass");
+  const statusEl = document.getElementById("su-apppass-status");
+  const actionsEl = document.getElementById("su-apppass-actions");
+  if (!root || !statusEl || !actionsEl) return;
+
+  // Direct purchasers and grandfathered users have nothing to gain from it.
+  const relevant = !entitlement.paid || entitlement.tier === "app-pass";
+  root.hidden = !relevant;
+  if (!relevant) return;
+
+  const { optedIn, status } = await sendBg({ action: "appPassState" });
+  const rerender = () => renderProStatus();
+  const button = (label, onClick, primary = false) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (primary) b.className = "primary";
+    b.textContent = label;
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      await onClick();
+      await rerender();
+    });
+    actionsEl.appendChild(b);
+  };
+
+  actionsEl.innerHTML = "";
+  if (!optedIn) {
+    statusEl.textContent = "App Pass is off. Nothing contacts joinapppass.com.";
+    button("Use App Pass", async () => {
+      await sendBg({ action: "appPassSetOptIn", enabled: true });
+      await sendBg({ action: "appPassRefresh" });
+    }, true);
+    return;
+  }
+
+  const messages = {
+    ok: "App Pass is active. Pro is unlocked.",
+    no_apppass: "No active App Pass found for Scholar Utility Belt yet.",
+    rate_limited: "joinapppass.com is rate limiting this network. Try again in a minute.",
+    unknown_error: "Could not reach joinapppass.com. Check your connection and try again.",
+  };
+  statusEl.textContent = messages[status] || "Checking App Pass…";
+
+  if (status === "ok") {
+    button("Manage App Pass", () => sendBg({ action: "appPassManage" }));
+  } else {
+    if (status === "no_apppass" || !status) {
+      button("Activate App Pass", async () => {
+        appPassAwaitingActivation = true;
+        await sendBg({ action: "appPassActivate" });
+      }, true);
+    }
+    button("Check again", () => sendBg({ action: "appPassRefresh" }));
+  }
+  button("Turn off App Pass", async () => {
+    appPassAwaitingActivation = false;
+    await sendBg({ action: "appPassSetOptIn", enabled: false });
+  });
+}
+
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible" || !appPassAwaitingActivation) return;
+  appPassAwaitingActivation = false;
+  await sendBg({ action: "appPassRefresh" });
+  renderProStatus();
+});
 
 buildBadgePaletteMenu();
 initBadgePaletteDropdown();

@@ -23,10 +23,35 @@ export function decideGrandfathered(reason, existingValue) {
  * still just "grandfathered" for display purposes — they don't need to
  * see a subscription status for a purchase they didn't need to make).
  */
-export function describeEntitlement({ grandfathered, extpayUser }) {
+export function describeEntitlement({ grandfathered, extpayUser, appPass }) {
   if (grandfathered) return { paid: true, tier: "grandfathered" };
   if (extpayUser?.paid) return { paid: true, tier: extpayUser.plan?.nickname || "paid" };
+  // App Pass is a third way to be entitled, only ever consulted for users who
+  // opted in (see sw.js). Anything but an explicit "ok" — including rate limits
+  // and network errors — leaves the user on the free plan.
+  if (appPass?.status === "ok") return { paid: true, tier: "app-pass" };
   return { paid: false, tier: "free" };
+}
+
+// How long a joinapppass.com answer is reused before asking again. getEntitlementStatus
+// runs on every Scholar page load, so without this every page would hit their server
+// (and their per-network rate limit). A valid pass is trusted for hours; "no pass" is
+// rechecked soon so a just-completed activation shows up quickly; errors back off briefly.
+const MINUTE = 60 * 1000;
+export const APP_PASS_TTL_MS = {
+  ok: 6 * 60 * MINUTE,
+  no_apppass: 10 * MINUTE,
+  rate_limited: MINUTE,
+  unknown_error: MINUTE,
+};
+
+/** `cached` is `{ status, checkedAt }` as stored by the service worker. */
+export function isAppPassCacheFresh(cached, now) {
+  if (!cached || typeof cached.checkedAt !== "number") return false;
+  const ttl = APP_PASS_TTL_MS[cached.status];
+  if (ttl === undefined) return false;
+  const age = now - cached.checkedAt;
+  return age >= 0 && age < ttl;
 }
 
 /**

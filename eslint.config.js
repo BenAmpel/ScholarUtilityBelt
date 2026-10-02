@@ -73,6 +73,7 @@ module.exports = [
         // Set by importScripts(...) in sw.js before use.
         ExtPay: "readonly",
         SUEntitlement: "readonly",
+        SUAppPass: "readonly",
         // Browser globals missing from the list above.
         prompt: "readonly",
         DecompressionStream: "readonly",
@@ -94,6 +95,7 @@ module.exports = [
       "src/common/storage.js",
       "src/common/quality.js",
       "src/common/entitlement.js",
+      "src/common/apppass.js",
       "src/content/content-author.js",
       "src/content/data-loader.js",
       "src/content/dom-cache.js",

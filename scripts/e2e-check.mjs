@@ -109,6 +109,28 @@ async function check(name, fn) {
   }
 }
 
+// App Pass (joinapppass.com) is mocked, not hit for real: this battery asserts how
+// often and when the extension contacts it (never, until the user opts in), which
+// needs a log of every request, plus a reply we can flip between "no pass" and "ok".
+const appPassRequests = [];
+let appPassReply = { status: "no_apppass" };
+
+async function routeAppPass(context) {
+  await context.route("https://joinapppass.com/**", (route) => {
+    const req = route.request();
+    appPassRequests.push({ url: req.url(), type: req.resourceType(), extensionid: req.headers()["extensionid"] });
+    if (req.resourceType() === "document") {
+      return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: "<title>App Pass (mock)</title>" });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": req.headers()["origin"] || "*", "access-control-allow-credentials": "true" },
+      body: JSON.stringify(appPassReply),
+    });
+  });
+}
+
 async function routeScholarToFixtures(context) {
   await context.route("https://scholar.google.com/**", (route) => {
     const url = route.request().url();
@@ -134,6 +156,7 @@ async function main() {
 
   try {
     await routeScholarToFixtures(context);
+    await routeAppPass(context);
 
     // ── Extension identity + service worker ──────────────────────────────
     let sw = context.serviceWorkers()[0];
@@ -299,6 +322,104 @@ async function main() {
     await check("no console errors on the options page", async () => {
       assert.deepEqual(consoleErrors, []);
     });
+
+    // ── App Pass (opt-in) ─────────────────────────────────────────────────
+    console.log("\nApp Pass (opt-in)");
+
+    await check("a default install never contacts joinapppass.com (incl. the free-user pages above)", async () => {
+      assert.deepEqual(appPassRequests, []);
+    });
+
+    await check("grandfathered users don't see the App Pass block", async () => {
+      const hidden = await optionsPage.evaluate(() => document.getElementById("su-apppass").hidden);
+      assert.equal(hidden, true);
+    });
+
+    consoleErrors = [];
+    await sw.evaluate(() => chrome.storage.local.set({ grandfathered: false }));
+    await optionsPage.reload({ waitUntil: "domcontentloaded" });
+    await optionsPage.waitForTimeout(1500);
+
+    const appPassText = () => optionsPage.evaluate(() => document.getElementById("su-apppass-status").textContent);
+    const proText = () => optionsPage.evaluate(() => document.getElementById("su-pro-status").textContent);
+    const clickButton = (label) =>
+      optionsPage.evaluate((l) => {
+        const b = [...document.querySelectorAll("#su-apppass-actions button")].find((x) => x.textContent.trim() === l);
+        if (!b) throw new Error(`no "${l}" button`);
+        b.click();
+      }, label);
+
+    await check("a free user sees App Pass offered but off, and nothing was sent", async () => {
+      const hidden = await optionsPage.evaluate(() => document.getElementById("su-apppass").hidden);
+      assert.equal(hidden, false);
+      assert.match(await appPassText(), /App Pass is off/);
+      assert.equal(appPassRequests.length, 0);
+    });
+
+    await check("Use App Pass opts in and asks joinapppass.com with this extension's id", async () => {
+      await clickButton("Use App Pass");
+      await optionsPage.waitForTimeout(2000);
+      assert.equal(appPassRequests.length, 1, JSON.stringify(appPassRequests));
+      assert.equal(appPassRequests[0].url, "https://joinapppass.com/api/check-app-pass");
+      assert.equal(appPassRequests[0].extensionid, extensionId);
+      assert.match(await appPassText(), /No active App Pass/);
+      assert.match(await proText(), /^Free plan/);
+    });
+
+    await check("Activate App Pass opens joinapppass.com/add/<extension id>", async () => {
+      const [tab] = await Promise.all([
+        context.waitForEvent("page", { timeout: 10000 }),
+        clickButton("Activate App Pass"),
+      ]);
+      await tab.waitForLoadState("domcontentloaded");
+      assert.equal(tab.url(), `https://joinapppass.com/add/${extensionId}`);
+      await tab.close();
+      await optionsPage.bringToFront();
+      await optionsPage.waitForTimeout(1500);
+    });
+
+    await check("an active App Pass unlocks Pro and is cached rather than re-checked", async () => {
+      appPassReply = { status: "ok", email: "test@example.com", appPassToken: "tok" };
+      await clickButton("Check again");
+      await optionsPage.waitForTimeout(1500);
+      assert.match(await appPassText(), /App Pass is active/);
+      assert.match(await proText(), /unlocked through your App Pass/);
+      const before = appPassRequests.length;
+      await optionsPage.reload({ waitUntil: "domcontentloaded" });
+      await optionsPage.waitForTimeout(1500);
+      assert.match(await proText(), /unlocked through your App Pass/);
+      assert.equal(appPassRequests.length, before, "a valid pass should be cached, not re-checked on every load");
+    });
+
+    await check("an active App Pass unlocks Pro features on an author page", async () => {
+      await authorPage.reload({ waitUntil: "domcontentloaded" });
+      // Wait for the paid-only control rather than a fixed delay: free users also have a
+      // Compare button, and entitlement resolution includes a real ExtensionPay round trip.
+      await authorPage.waitForSelector("[data-narrative-toggle]", { timeout: 25000 });
+      const locked = await authorPage.evaluate(() => !!document.querySelector(".su-locked-feature"));
+      assert.equal(locked, false, "Pro should be unlocked for an App Pass subscriber");
+    });
+
+    await check("Turn off App Pass stops all contact and returns to the free plan", async () => {
+      await clickButton("Turn off App Pass");
+      await optionsPage.waitForTimeout(1500);
+      assert.match(await appPassText(), /App Pass is off/);
+      assert.match(await proText(), /^Free plan/);
+      const stored = await sw.evaluate(() => chrome.storage.local.get(["appPassOptIn", "appPassCache"]));
+      assert.equal(stored.appPassOptIn, false);
+      assert.equal(stored.appPassCache, undefined);
+      const before = appPassRequests.length;
+      await authorPage.reload({ waitUntil: "domcontentloaded" });
+      await authorPage.waitForSelector(".su-locked-feature", { timeout: 25000 });
+      assert.equal(appPassRequests.length, before, "no joinapppass.com traffic once turned off");
+    });
+
+    await check("no console errors across the App Pass flow", async () => {
+      assert.deepEqual(consoleErrors, []);
+    });
+
+    // Restore the normal profile state for manual testing after this run.
+    await sw.evaluate(() => chrome.storage.local.set({ grandfathered: true, appPassOptIn: false }));
   } finally {
     await context.close().catch(() => {});
     fs.rmSync(USER_DATA_DIR, { recursive: true, force: true });

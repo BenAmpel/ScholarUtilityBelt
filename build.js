@@ -74,6 +74,12 @@ const TARGETS = [
     args: ['src/common/entitlement.js', '--bundle=true', '--format=iife', '--global-name=SUEntitlement', '--minify', '--outfile=dist/common/entitlement.sw.js', '--log-level=warning'],
   },
   {
+    // Official App Pass SDK (@chrome-stats/app-pass-sdk, pinned in package.json),
+    // bundled as a global for the classic service worker, same reason as above.
+    label: 'common/apppass.sw.js',
+    args: ['src/common/apppass.js', '--bundle=true', '--format=iife', '--global-name=SUAppPass', '--minify', '--outfile=dist/common/apppass.sw.js', '--log-level=warning'],
+  },
+  {
     // Third-party library — not minified, so the shipped bytes match what was audited.
     label: 'common/extpay.js',
     args: ['src/common/extpay.js', '--bundle=false', '--minify=false', '--outfile=dist/common/extpay.js', '--log-level=warning'],

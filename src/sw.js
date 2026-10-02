@@ -61,11 +61,40 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // (SUEntitlement), rather than via import().
 importScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
-  chrome.runtime.getURL("dist/common/entitlement.sw.js")
+  chrome.runtime.getURL("dist/common/entitlement.sw.js"),
+  chrome.runtime.getURL("dist/common/apppass.sw.js")
 );
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();
+
+// App Pass (joinapppass.com) is strictly opt-in: nothing below talks to it unless
+// the user turned it on from Options. The SDK's check sends this extension's id and
+// the user's joinapppass.com cookie, and the server counts those checks as "used
+// today" for revenue sharing, so it must never run for someone who didn't ask.
+let appPassInFlight = null;
+
+async function resolveAppPass({ force = false } = {}) {
+  const { appPassOptIn, appPassCache } = await chrome.storage.local.get(["appPassOptIn", "appPassCache"]);
+  if (appPassOptIn !== true) return null;
+  if (!force && SUEntitlement.isAppPassCacheFresh(appPassCache, Date.now())) return appPassCache;
+  // Every Scholar tab asks for entitlement on load; share one in-flight check.
+  if (!appPassInFlight) {
+    appPassInFlight = (async () => {
+      try {
+        const res = await SUAppPass.checkAppPass();
+        const fresh = { status: String(res?.status || "unknown_error"), checkedAt: Date.now() };
+        await chrome.storage.local.set({ appPassCache: fresh });
+        return fresh;
+      } catch {
+        return { status: "unknown_error", checkedAt: Date.now() };
+      } finally {
+        appPassInFlight = null;
+      }
+    })();
+  }
+  return appPassInFlight;
+}
 
 // Smart-rename PDF: when a PDF download matches a URL we have metadata for (from Scholar result), suggest [Author] - [Year] - [Title].pdf
 if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFilename) {
@@ -196,8 +225,45 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       // the outer `extpay` const can be undefined inside message callbacks.
       const localExtpay = ExtPay(EXTPAY_ID);
       const user = await localExtpay.getUser();
-      sendResponse(describeEntitlement({ grandfathered: false, extpayUser: user }));
+      // Someone who already paid directly never triggers an App Pass check.
+      const appPass = user?.paid ? null : await resolveAppPass().catch(() => null);
+      sendResponse(describeEntitlement({ grandfathered: false, extpayUser: user, appPass }));
     })();
+    return true;
+  }
+  if (msg?.action === "appPassState") {
+    // Local state only, no network.
+    chrome.storage.local.get(["appPassOptIn", "appPassCache"]).then(({ appPassOptIn, appPassCache }) => {
+      sendResponse({ optedIn: appPassOptIn === true, status: appPassCache?.status || null });
+    });
+    return true;
+  }
+  if (msg?.action === "appPassSetOptIn") {
+    const enabled = msg.enabled === true;
+    chrome.storage.local.set({ appPassOptIn: enabled }).then(async () => {
+      if (!enabled) await chrome.storage.local.remove("appPassCache");
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+  if (msg?.action === "appPassRefresh") {
+    resolveAppPass({ force: true })
+      .then((res) => sendResponse({ ok: true, status: res?.status || null }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg?.action === "appPassActivate") {
+    (async () => {
+      const { appPassOptIn } = await chrome.storage.local.get("appPassOptIn");
+      if (appPassOptIn !== true) { sendResponse({ ok: false }); return; }
+      await chrome.storage.local.remove("appPassCache"); // a stale "no pass" must not outlive activation
+      await SUAppPass.activateAppPass();
+      sendResponse({ ok: true });
+    })().catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg?.action === "appPassManage") {
+    SUAppPass.manageAppPass().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (msg?.action === "openUpsellModal") {

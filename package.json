@@ -20,5 +20,8 @@
     "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
     "playwright": "^1.58.2"
+  },
+  "dependencies": {
+    "@chrome-stats/app-pass-sdk": "2.0.5"
   }
 }
