@@ -74,6 +74,7 @@ module.exports = [
         ExtPay: "readonly",
         SUEntitlement: "readonly",
         SUAppPass: "readonly",
+        SUInstallPages: "readonly",
         // Browser globals missing from the list above.
         prompt: "readonly",
         DecompressionStream: "readonly",

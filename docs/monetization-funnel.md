@@ -1,6 +1,6 @@
 # Where each monetization number lives
 
-The extension has no telemetry by design, so the funnel is read from the services that already see each step. Nothing here needs code in the extension.
+The extension has no telemetry by design, so the funnel is read from the services that already see each step. Nothing here needs code in the extension. The one exception is installs and uninstalls, which are counted from visits to two pages on purplelink.llc (see [install-pages.md](install-pages.md)); the extension still sends nothing.
 
 | Step | Where to read it | Notes |
 |---|---|---|

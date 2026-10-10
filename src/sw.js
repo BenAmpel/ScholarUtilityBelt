@@ -62,7 +62,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 importScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
   chrome.runtime.getURL("dist/common/entitlement.sw.js"),
-  chrome.runtime.getURL("dist/common/apppass.sw.js")
+  chrome.runtime.getURL("dist/common/apppass.sw.js"),
+  chrome.runtime.getURL("dist/common/install-pages.sw.js")
 );
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
@@ -527,5 +528,36 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     chrome.tabs.create({ url: chrome.runtime.getURL("src/whatsnew/whatsnew.html") });
   } catch {
     // Never let the what's-new page break install/update handling.
+  }
+});
+
+// Install and uninstall pages on purplelink.llc (src/common/install-pages.js, docs/install-pages.md).
+// The extension itself sends nothing. On a fresh install it opens one getting-started tab, once; Chrome opens the
+// uninstall page after the extension is removed. Opening a tab on another site needs no extra permission. The site
+// counts the two visits like any other page, which is how installs and uninstalls get a daily count without telemetry.
+const START_SHOWN_FLAG = "startPageShown";
+
+function setUninstallPage() {
+  try {
+    chrome.runtime.setUninstallURL?.(SUInstallPages.uninstallPageUrl(chrome.runtime.getManifest().version));
+  } catch {
+    // Never let this break startup.
+  }
+}
+
+chrome.runtime.onStartup?.addListener?.(setUninstallPage);
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  try {
+    const version = chrome.runtime.getManifest().version;
+    const stored = await chrome.storage.local.get(START_SHOWN_FLAG);
+    const plan = SUInstallPages.onInstalledPlan(details?.reason, version, stored[START_SHOWN_FLAG] === true);
+    chrome.runtime.setUninstallURL?.(plan.uninstallUrl);
+    if (plan.startUrl) {
+      await chrome.storage.local.set({ [START_SHOWN_FLAG]: true });
+      chrome.tabs.create({ url: plan.startUrl });
+    }
+  } catch {
+    // Never let the install pages break install/update handling.
   }
 });
