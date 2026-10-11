@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Scholar Utility Belt v0.7.0
+# Chrome Web Store Listing — Scholar Utility Belt v0.7.1
 
 ## Extension Name (45 char max)
 Scholar Utility Belt — Journal Quality Badges
@@ -111,13 +111,14 @@ https://github.com/BenAmpel/ScholarUtilityBelt
 
 ---
 
-## Privacy tab: changes to re-check in the Web Store dashboard before submitting 0.7.0
+## Privacy tab: changes to re-check in the Web Store dashboard before submitting 0.7.0 or 0.7.1
 
-Version 0.7.0 adds two optional flows that touch user data. Review the dashboard's Privacy practices tab (the listing's existing answers stay unless they conflict):
+Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the install and uninstall pages. Review the dashboard's Privacy practices tab (the listing's existing answers stay unless they conflict):
 
 - **Personally identifiable information (email).** ExtensionPay collects an email address when a user starts the free trial or buys Pro. App Pass returns the signed-in user's email to the extension's service worker when they opt in; the extension does not store it (only a status and timestamp are cached locally).
 - **Authentication information.** The opt-in App Pass check sends the user's joinapppass.com login cookie to joinapppass.com with each check.
 - **Remote hosts contacted for these flows.** extensionpay.com (trial, purchase, entitlement check) and joinapppass.com (App Pass, opt-in only).
 - **Certifications.** None of this data is sold, used for purposes unrelated to the extension's single purpose, or used for creditworthiness or lending.
 - **Single purpose / permissions.** No manifest permission or host permission changed in 0.7.0.
+- **Install and uninstall pages (0.7.1).** The extension opens one getting-started page on purplelink.llc once, on a fresh install, and sets Chrome's uninstall page to a short page there. The extension sends no data and the data-collection answers do not change; the two page visits are counted by the site's first-party, cookieless analytics (docs/install-pages.md). The site's privacy page and the listing text must say the same.
 - **Privacy policy URL.** It must describe the two flows above; the README's "A note on the Pro tier" section has the wording.

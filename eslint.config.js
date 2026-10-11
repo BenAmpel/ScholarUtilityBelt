@@ -97,6 +97,7 @@ module.exports = [
       "src/common/quality.js",
       "src/common/entitlement.js",
       "src/common/apppass.js",
+      "src/common/install-pages.js",
       "src/content/content-author.js",
       "src/content/data-loader.js",
       "src/content/dom-cache.js",
