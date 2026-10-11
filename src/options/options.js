@@ -19,6 +19,7 @@ import {
 } from "../common/storage.js";
 import { normalizeVenueName } from "../common/quality.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
+import { initPromoCard } from "../common/promo-card.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -1226,3 +1227,4 @@ initCollapsibleSections();
 initSettingsFilter();
 load();
 renderProStatus();
+initPromoCard();
