@@ -10,6 +10,7 @@ import {
   uniqTags,
   upsertPaper
 } from "../common/storage.js";
+import { initPromoCard } from "../common/promo-card.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -1070,3 +1071,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 render();
+initPromoCard();

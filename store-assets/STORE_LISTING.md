@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Scholar Utility Belt v0.7.1
+# Chrome Web Store Listing — Scholar Utility Belt v0.7.2
 
 ## Extension Name (45 char max)
 Scholar Utility Belt — Journal Quality Badges
@@ -120,5 +120,6 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 - **Remote hosts contacted for these flows.** extensionpay.com (trial, purchase, entitlement check) and joinapppass.com (App Pass, opt-in only).
 - **Certifications.** None of this data is sold, used for purposes unrelated to the extension's single purpose, or used for creditworthiness or lending.
 - **Single purpose / permissions.** No manifest permission or host permission changed in 0.7.0.
+- **Promo card (0.7.2).** The settings page and the library page show a dismissible card, on macOS only, that links to purplelink.llc/moderntex/ (a plain link with utm tags; the extension makes no request and sends nothing). The only thing stored is one flag in chrome.storage.local that the card was dismissed. It never appears on Google Scholar pages. No manifest permission or host permission changed. In the Privacy practices tab nothing new is collected; no change is needed.
 - **Install and uninstall pages (0.7.1).** The extension opens one getting-started page on purplelink.llc once, on a fresh install, and sets Chrome's uninstall page to a short page there. The extension sends no data and the data-collection answers do not change; the two page visits are counted by the site's first-party, cookieless analytics (docs/install-pages.md). The site's privacy page and the listing text must say the same.
 - **Privacy policy URL.** It must describe the two flows above; the README's "A note on the Pro tier" section has the wording.
