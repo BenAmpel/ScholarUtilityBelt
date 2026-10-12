@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Scholar Utility Belt v0.7.2
+# Chrome Web Store Listing — Scholar Utility Belt v0.8.0
 
 ## Extension Name (45 char max)
 Scholar Utility Belt — Journal Quality Badges
