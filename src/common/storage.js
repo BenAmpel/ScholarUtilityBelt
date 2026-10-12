@@ -93,6 +93,11 @@ export const DEFAULT_SETTINGS = {
   openalexApiKey: "",
   showHoverSummary: true,
   showArtifactBadge: true,
+  // Pro features added after launch: each can be switched off here even when unlocked.
+  showClaimEvidenceChips: true,
+  claimChipMinN: 30, // stated sample sizes below this get a chip
+  showReproSignals: true,
+  showReadingOrder: true,
   showCSS: true,
   showAgeBiasHeatmap: true,
   showAuthorshipHeatmap: true,

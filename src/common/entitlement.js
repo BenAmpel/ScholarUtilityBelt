@@ -92,6 +92,9 @@ export const PRO_FEATURES = {
   screeningAgreement: "new",
   evidenceMatrix: "new",
   reviewSnapshots: "new",
+  claimEvidenceChips: "new",
+  reproSignals: "new",
+  readingOrder: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

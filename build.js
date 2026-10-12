@@ -83,6 +83,12 @@ const TARGETS = [
   {
     label: 'common/review-snapshots.js',
     args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
+    label: 'common/claim-signals.js',
+    args: ['src/common/claim-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/claim-signals.js', '--log-level=warning'],
+    label: 'common/repro-signals.js',
+    args: ['src/common/repro-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/repro-signals.js', '--log-level=warning'],
+    label: 'common/reading-order.js',
+    args: ['src/common/reading-order.js', '--bundle=false', '--minify', '--outfile=dist/common/reading-order.js', '--log-level=warning'],
   },
   {
     label: 'common/quality.js',
@@ -126,6 +132,10 @@ const TARGETS = [
   {
     label: 'content/review-workspace.js',
     args: ['src/content/review-workspace.js', '--bundle=false', '--minify', '--outfile=dist/content/review-workspace.js', '--log-level=warning'],
+  },
+  {
+    label: 'content/signals-ui.js',
+    args: ['src/content/signals-ui.js', '--bundle=false', '--minify', '--outfile=dist/content/signals-ui.js', '--log-level=warning'],
   },
   {
     label: 'content/content-author.js',

@@ -198,6 +198,7 @@
         "dist/content/trend-methods.js",
         "dist/content/genealogy-lineage.js",
         "dist/content/review-workspace.js",
+        "dist/content/signals-ui.js",
         "src/data/*.txt",
         "src/data/*.csv",
         "src/data/*.json",
