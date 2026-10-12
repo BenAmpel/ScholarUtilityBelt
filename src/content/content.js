@@ -51,6 +51,8 @@
   let normalizeVenueName;
   let normalizeVhbRank;
   let qualityBadgesForVenue;
+  let customBadgeForVenue;
+  let compileCustomVenueIndex;
   let venueWeightForVenue;
   let getCachedElement;
   let getCachedElements;
@@ -89,14 +91,16 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
       importModuleWithRetry("dist/content/data-loader.js"),
       importModuleWithRetry("dist/common/entitlement.js"),
       importModuleWithRetry("dist/common/scholar-links.js"),
+      importModuleWithRetry("dist/common/custom-venues.js"),
     ]);
+    ({ compileCustomVenueIndex } = customVenues);
     ({ isQuickReadLink, firstFileColumnLink } = scholarLinks);
     ({
       addHiddenAuthor,
@@ -147,6 +151,7 @@
       normalizeVenueName,
       normalizeVhbRank,
       qualityBadgesForVenue,
+      customBadgeForVenue,
       venueWeightForVenue
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
@@ -4126,6 +4131,8 @@
         rawBadges = qualityBadgesForVenue(venueKey, state.qIndex) || [];
         if (state.venueQualityCache) state.venueQualityCache.set(venueKey, rawBadges);
       }
+      const customBadge = customBadgeForVenue(venueKey, state.customVenue);
+      if (customBadge) rawBadges = [customBadge, ...rawBadges];
     }
     const allowedKinds = state.settings.qualityBadgeKinds;
     const badges = allowedKinds && typeof allowedKinds === "object"
@@ -5422,12 +5429,18 @@
         trajectoryVenueExpected: {},
         hiddenPapers: [],
         hiddenVenues: [],
-        hiddenAuthors: []
+        hiddenAuthors: [],
+        customVenueList: null
       }),
       getLocalCohortCache()
     ]);
     const saved = storageData.savedPapers || {};
     const settings = { ...DEFAULT_SETTINGS, ...(storageData.settings || {}) };
+    // The user's own venue list (options page). Kept apart from the quality index so changing it never rebuilds that cache.
+    const customList = storageData.customVenueList;
+    state.customVenue = customList && Array.isArray(customList.entries) && customList.entries.length
+      ? { name: customList.name || "My list", map: compileCustomVenueIndex(customList.entries) }
+      : null;
     const quartiles = {
       index: storageData.qualityQuartilesIndex || {},
       meta: storageData.qualityQuartilesMeta || null
@@ -15169,7 +15182,7 @@
               if (area !== "local") return;
               if (changes.readingQueue) await ensureReadingQueueSidebar();
               const hiddenChanged = changes.hiddenPapers || changes.hiddenVenues || changes.hiddenAuthors;
-              if (!changes.savedPapers && !changes.settings && !hiddenChanged) return;
+              if (!changes.savedPapers && !changes.settings && !changes.customVenueList && !hiddenChanged) return;
               await refreshState(state);
               if (changes.savedPapers || changes.settings) await ensureSemanticExpansionPanel(state);
               scheduleProcess({ full: true });

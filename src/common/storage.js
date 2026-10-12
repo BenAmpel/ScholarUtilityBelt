@@ -199,6 +199,26 @@ export async function getSavedPapers() {
   }
 }
 
+/** The user's own venue list: { name, uploadedAt, entries: [[venue, label], ...] } or null. */
+export async function getCustomVenueList() {
+  try {
+    const { customVenueList } = await chrome.storage.local.get({ customVenueList: null });
+    const list = customVenueList;
+    return list && Array.isArray(list.entries) && list.entries.length ? list : null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+export async function setCustomVenueList(list) {
+  await chrome.storage.local.set({ customVenueList: list });
+}
+
+export async function clearCustomVenueList() {
+  await chrome.storage.local.remove("customVenueList");
+}
+
 export async function getLibraryState() {
   try {
     const { libraryState } = await chrome.storage.local.get({ libraryState: DEFAULT_LIBRARY_STATE });

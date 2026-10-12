@@ -63,6 +63,10 @@ const TARGETS = [
     args: ['src/common/scholar-links.js', '--bundle=false', '--minify', '--outfile=dist/common/scholar-links.js', '--log-level=warning'],
   },
   {
+    label: 'common/custom-venues.js',
+    args: ['src/common/custom-venues.js', '--bundle=false', '--minify', '--outfile=dist/common/custom-venues.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },

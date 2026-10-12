@@ -1,4 +1,5 @@
 import {
+  clearCustomVenueList,
   clearHiddenAuthors,
   clearHiddenPapers,
   clearHiddenVenues,
@@ -6,6 +7,7 @@ import {
   clearQualityJcrIndex,
   getHiddenAuthors,
   getHiddenPapers,
+  getCustomVenueList,
   getHiddenVenues,
   getQualityJcrIndex,
   getQualityQuartilesIndex,
@@ -13,11 +15,13 @@ import {
   removeHiddenAuthor,
   removeHiddenPaper,
   removeHiddenVenue,
+  setCustomVenueList,
   setQualityJcrIndex,
   setQualityQuartilesIndex,
   setSettings
 } from "../common/storage.js";
 import { normalizeVenueName } from "../common/quality.js";
+import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
 
@@ -1221,10 +1225,83 @@ document.addEventListener("visibilitychange", async () => {
   renderProStatus();
 });
 
+// ── Your own journal list ───────────────────────────────────────────────────
+function describeCustomList(list) {
+  const n = list.entries.length;
+  const labels = new Set(list.entries.map((e) => e[1])).size;
+  return `Using "${list.name}": ${n} venue${n === 1 ? "" : "s"}, ${labels} tier label${labels === 1 ? "" : "s"}. Added ${new Date(list.uploadedAt).toLocaleDateString()}.`;
+}
+
+async function initCustomList() {
+  const nameEl = document.getElementById("customListName");
+  const fileEl = document.getElementById("customListFile");
+  const statusEl = document.getElementById("customListStatus");
+  const clearBtn = document.getElementById("customListClear");
+  if (!nameEl || !fileEl || !statusEl || !clearBtn) return;
+
+  const show = (list) => {
+    clearBtn.hidden = !list;
+    if (list) {
+      nameEl.value = list.name;
+      statusEl.textContent = describeCustomList(list);
+    } else {
+      statusEl.textContent = "No list uploaded.";
+    }
+  };
+  show(await getCustomVenueList());
+
+  fileEl.addEventListener("change", async () => {
+    const file = fileEl.files && fileEl.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      statusEl.textContent = "That file is over 2 MB. A list of 5,000 venues is far smaller; check it is a CSV.";
+      fileEl.value = "";
+      return;
+    }
+    try {
+      const parsed = parseCustomVenueCsv(await file.text());
+      if (parsed.error) {
+        statusEl.textContent = parsed.error;
+        return;
+      }
+      const list = {
+        name: cleanListName(nameEl.value || file.name.replace(/\.[^.]+$/, "")),
+        uploadedAt: new Date().toISOString(),
+        entries: parsed.entries
+      };
+      await setCustomVenueList(list);
+      show(list);
+      const notes = [];
+      if (parsed.skipped) notes.push(`${parsed.skipped} row${parsed.skipped === 1 ? "" : "s"} skipped (missing venue or tier, or a repeated venue)`);
+      if (parsed.truncated) notes.push("only the first 5,000 rows were used");
+      if (notes.length) statusEl.textContent += ` ${notes.join("; ")}.`;
+    } catch (e) {
+      statusEl.textContent = "Couldn't read that file.";
+    } finally {
+      fileEl.value = "";
+    }
+  });
+
+  nameEl.addEventListener("change", async () => {
+    const list = await getCustomVenueList();
+    if (!list) return;
+    list.name = cleanListName(nameEl.value);
+    await setCustomVenueList(list);
+    show(list);
+  });
+
+  clearBtn.addEventListener("click", async () => {
+    await clearCustomVenueList();
+    nameEl.value = "";
+    show(null);
+  });
+}
+
 buildBadgePaletteMenu();
 initBadgePaletteDropdown();
 initCollapsibleSections();
 initSettingsFilter();
+initCustomList();
 load();
 renderProStatus();
 initPromoCard();

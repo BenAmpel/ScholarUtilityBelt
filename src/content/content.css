@@ -1438,6 +1438,7 @@ body[data-su-theme="dark"] .su-apikey-banner-dismiss {
   opacity: 0.7;
   cursor: wait;
 }
+.su-badge.su-custom { background: #faf5ff; border-color: rgba(126,34,206,0.32); color: #581c87; }
 .su-badge.su-abdc { background: #ecfeff; border-color: rgba(14,116,144,0.28); }
 .su-badge.su-vhb { background: #f0f9ff; border-color: rgba(7,89,133,0.28); }
 .su-badge.su-quartile { background: #f0fdf4; border-color: rgba(21,128,61,0.28); }
