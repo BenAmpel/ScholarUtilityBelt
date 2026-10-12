@@ -1,0 +1,58 @@
+/* Pro prompt dialog. Keep in sync with the same block at the end of src/content/content.css. */
+.su-pro-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.5);
+}
+.su-pro-prompt {
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  padding: 20px 22px;
+  border: 1px solid #d7dbe0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.35);
+}
+.su-pro-prompt-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.su-pro-prompt-body { margin: 0 0 8px; }
+.su-pro-prompt-note { margin: 0 0 16px; font-size: 12px; color: #475569; min-height: 1.4em; }
+.su-pro-prompt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.su-pro-prompt-btn {
+  padding: 8px 14px;
+  border: 1px solid #c4c9d1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.su-pro-prompt-btn[hidden] { display: none; }
+.su-pro-prompt-btn:hover { background: #eef2f7; }
+.su-pro-prompt-btn:disabled { opacity: 0.6; cursor: wait; }
+.su-pro-prompt-btn:focus-visible { outline: 2px solid #6d28d9; outline-offset: 2px; }
+.su-pro-prompt-primary { background: #6d28d9; border-color: #6d28d9; color: #ffffff; font-weight: 600; }
+.su-pro-prompt-primary:hover { background: #5b21b6; }
+@media (prefers-color-scheme: dark) {
+  .su-pro-prompt { background: #202124; border-color: #5f6368; color: #e8eaed; }
+  .su-pro-prompt-note { color: #bdc1c6; }
+  .su-pro-prompt-btn { background: #2d2e31; border-color: #5f6368; color: #e8eaed; }
+  .su-pro-prompt-btn:hover { background: #3c4043; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .su-pro-prompt { animation: su-pro-prompt-in 120ms ease-out; }
+}
+@keyframes su-pro-prompt-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

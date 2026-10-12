@@ -6,6 +6,7 @@
  * label and opens the upsell modal instead of exporting.
  */
 
+import { showProPrompt } from "../common/pro-prompt.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import { selectPapers, sortRecords } from "../common/export-model.js";
 import { buildVaultFiles } from "../common/obsidian-export.js";
@@ -112,8 +113,8 @@ export function createExportUi(deps) {
   async function requirePro(featureId) {
     await refreshLocks();
     if (proAllowed[featureId]) return true;
-    chrome.runtime.sendMessage({ action: "openUpsellModal" });
-    setStatus("This export is part of Pro. The unlock options opened in a new tab.");
+    showProPrompt({ featureId });
+    setStatus("This export is part of Pro.");
     return false;
   }
 

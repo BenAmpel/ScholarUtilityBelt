@@ -95,6 +95,13 @@
     }
     throw lastError;
   }
+  // Every click that would lead to the payment page goes through this dialog first
+  // ("This is a Pro feature ..."), so nobody lands on a checkout without being told why.
+  function promptPro(opts) {
+    importModuleWithRetry("dist/common/pro-prompt.js")
+      .then((m) => m.showProPrompt(opts || {}))
+      .catch(() => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+  }
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
@@ -3691,7 +3698,7 @@
       e.stopPropagation();
       const entitlement = await getEntitlementStatus();
       if (!entitlement.paid) {
-        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        promptPro({ featureId: "citationLineage" });
         return;
       }
       const p = getCachedAuthorPaper(container) || extractPaperFromResult(container);
@@ -5888,7 +5895,7 @@
         } else if (act === "idealineage") {
           const entitlement = await getEntitlementStatus();
           if (!entitlement.paid) {
-            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            promptPro({ featureId: "citationLineage" });
             return;
           }
           const p = isAuthorProfile
@@ -7874,7 +7881,7 @@
           e.preventDefault();
           const entitlement = await getEntitlementStatus();
           if (!entitlement.paid) {
-            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            promptPro({ featureId: "popReport" });
             return;
           }
           openPoPOverlay();
@@ -7886,7 +7893,7 @@
           e.preventDefault();
           const entitlement = await getEntitlementStatus({ needPurchased: true });
           if (!canUseFeature("tenurePacket", entitlement)) {
-            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            promptPro({ featureId: "tenurePacket" });
             return;
           }
           await openTenurePacket();
@@ -7909,7 +7916,7 @@
           chrome.runtime.sendMessage({ action: "startTrial" }, (res) => {
             void chrome.runtime.lastError;
             // Already used a trial (or something failed): the payment page is the useful next step.
-            if (!res?.ok && res?.reason !== "already_paid") chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            if (!res?.ok && res?.reason !== "already_paid") promptPro({ trialUsed: res?.reason === "already_used" });
           });
           return;
         }
@@ -7917,7 +7924,7 @@
         if (unlockBtn) {
           e.stopPropagation();
           e.preventDefault();
-          chrome.runtime.sendMessage({ action: "openUpsellModal" });
+          promptPro({ feature: unlockBtn.dataset.unlockFeature });
           return;
         }
         const compareBtn = e.target.closest(".su-compare-authors-btn");
@@ -7926,7 +7933,7 @@
           e.preventDefault();
           const entitlement = await getEntitlementStatus();
           if (!entitlement.paid) {
-            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            promptPro({ featureId: "compareAuthors" });
             return;
           }
           openAuthorCompareOverlay(window.suState);
@@ -8213,7 +8220,7 @@
             e.preventDefault();
             const entitlement = await getEntitlementStatus();
             if (!entitlement.paid) {
-              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              promptPro({ featureId: "citationGraph" });
               return;
             }
             await openGraphOverlay();
@@ -8224,7 +8231,7 @@
             e.preventDefault();
             const entitlement = await getEntitlementStatus();
             if (!entitlement.paid) {
-              chrome.runtime.sendMessage({ action: "openUpsellModal" });
+              promptPro({ featureId: "citationGraph" });
               return;
             }
             const count = Math.min(50, Math.max(3, Number(buildBtn.dataset.graphBuildCount) || 10));
@@ -13283,7 +13290,7 @@
     }
     const entitlement = await getEntitlementStatus({ needPurchased: true });
     if (!canUseFeature("triageCard", entitlement)) {
-      chrome.runtime.sendMessage({ action: "openUpsellModal" });
+      promptPro({ featureId: "triageCard" });
       return;
     }
     const LM = globalThis.LanguageModel || window.LanguageModel;
@@ -14181,7 +14188,7 @@
     reviewBtn.addEventListener("click", async () => {
       const entitlement = await getEntitlementStatus();
       if (!entitlement.paid) {
-        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        promptPro({ featureId: "reviewWorkspace" });
         return;
       }
       openReviewOverlay();
@@ -14623,7 +14630,7 @@
       const signalsToolbarRow = signalsUi.buildSignalsToolbarRow({
         settings: state.settings,
         allowed: signalsAllowed,
-        onUnlock: () => chrome.runtime.sendMessage({ action: "openUpsellModal" }),
+        onUnlock: () => promptPro({ feature: "The result signals" }),
         isAllowed: async () => !!(await refreshSignalsAllowed()).readingOrder
       });
       if (signalsToolbarRow) body.appendChild(signalsToolbarRow);

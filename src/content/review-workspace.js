@@ -13,6 +13,7 @@
  * constants moved in here too, since they're used exclusively by this
  * feature — no other call sites existed in content.js.
  */
+import { showProPrompt } from "../common/pro-prompt.js";
 import {
   MAX_FILE_BYTES,
   hashId,
@@ -629,7 +630,7 @@ export function createReviewWorkspace(deps) {
           <h3>Import references <span class="su-review-pro-tag">Pro</span></h3>
           <p class="su-review-muted">Import RIS or BibTeX exports from PubMed, Scopus, Web of Science, Embase or a reference manager, match them against the records already in this project, and keep a search log for your PRISMA-S methods section. It is part of the extension and unlocked with a free trial, a purchase or App Pass.</p>
           <div class="su-review-actions">
-            <button type="button" class="su-graph-btn" data-review-unlock="1">Unlock Pro</button>
+            <button type="button" class="su-graph-btn" data-review-unlock="1" data-feature="referenceImport">Unlock Pro</button>
           </div>
         </div>
       `;
@@ -764,7 +765,7 @@ export function createReviewWorkspace(deps) {
         <h3>${escapeHtml(title)} <span class="su-review-pro-tag">Pro</span></h3>
         <p class="su-review-muted">${escapeHtml(blurb)} It is unlocked with a free trial, a purchase or App Pass.</p>
         <div class="su-review-actions">
-          <button type="button" class="su-graph-btn" data-review-unlock="1">Unlock Pro</button>
+          <button type="button" class="su-graph-btn" data-review-unlock="1" data-feature="${escapeHtml(featureId)}">Unlock Pro</button>
         </div>
       </div>`;
   }
@@ -1846,7 +1847,7 @@ export function createReviewWorkspace(deps) {
       }
       const unlockBtn = e.target.closest("[data-review-unlock]");
       if (unlockBtn) {
-        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        showProPrompt({ featureId: unlockBtn.dataset.feature || "" });
         return;
       }
       const runImport = e.target.closest("[data-review-run-import]");
