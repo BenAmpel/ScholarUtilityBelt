@@ -65,6 +65,7 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let canUseFeature;
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
@@ -160,7 +161,7 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
-    ({ getEntitlementStatus } = entitlement);
+    ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
     modulesLoaded = true;
@@ -10823,7 +10824,9 @@
         downloadBlob,
         getStorageMap,
         setStorageMap,
-        CLS_BTN_SEC
+        CLS_BTN_SEC,
+        getEntitlementStatus,
+        canUseFeature
       });
     }
     return reviewWorkspaceInstance;

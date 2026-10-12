@@ -13,6 +13,15 @@
  * constants moved in here too, since they're used exclusively by this
  * feature — no other call sites existed in content.js.
  */
+import {
+  MAX_FILE_BYTES,
+  hashId,
+  parseReferences,
+  searchLogToCsv,
+  searchLogToMarkdown,
+  totalRecordsFromSearchLog
+} from "../common/reference-import.js";
+
 export function createReviewWorkspace(deps) {
   const {
     escapeHtml,
@@ -35,6 +44,8 @@ export function createReviewWorkspace(deps) {
     getStorageMap,
     setStorageMap,
     CLS_BTN_SEC,
+    getEntitlementStatus,
+    canUseFeature,
   } = deps;
 
   const REVIEW_PROJECTS_KEY = "reviewProjects";
@@ -83,6 +94,7 @@ export function createReviewWorkspace(deps) {
     project.blindMode = !!project.blindMode;
     project.updates = Array.isArray(project.updates) ? project.updates : [];
     project.lastUpdateCheck = project.lastUpdateCheck || null;
+    project.searchLog = Array.isArray(project.searchLog) ? project.searchLog : [];
     return project;
   }
   function createReviewProject(name, query) {
@@ -110,7 +122,8 @@ export function createReviewWorkspace(deps) {
       activeReviewerId: "you",
       blindMode: false,
       lastUpdateCheck: null,
-      updates: []
+      updates: [],
+      searchLog: []
     };
   }
   async function ensureReviewState() {
@@ -507,7 +520,8 @@ export function createReviewWorkspace(deps) {
       `Conflicts: ${stats.conflicts}`,
       "",
       "## Included papers",
-      ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`)
+      ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`),
+        ...searchLogReportLines(project)
     ];
     downloadBlob(`${project.name}-report.md`.replace(/\s+/g, "-").toLowerCase(), "text/markdown;charset=utf-8", lines.join("\n"));
   }
@@ -542,6 +556,148 @@ export function createReviewWorkspace(deps) {
     project.updates = [...newUpdates.filter((u) => !existingIds.has(u.id)), ...existing].slice(0, 50);
     project.lastUpdateCheck = new Date().toISOString();
   }
+  // ── Reference import (RIS / BibTeX) and the PRISMA-S search log ────────────
+  const IMPORT_DATABASES = ["PubMed", "Scopus", "Web of Science", "Embase", "PsycINFO", "CINAHL", "IEEE Xplore", "ACM Digital Library", "Cochrane Library", "Zotero or other reference manager"];
+  function searchLogReportLines(project) {
+    const table = searchLogToMarkdown(project.searchLog);
+    if (!table) return [];
+    return ["", "## Search log", "", table, "", `Records in imported files: ${totalRecordsFromSearchLog(project.searchLog)}`];
+  }
+  function recordToPaper(project, rec, database) {
+    const fpSeed = rec.doi ? `doi:${rec.doi}` : `${normalizeTitleForMatch(rec.title)}|${rec.year}`;
+    let id = `imp_${hashId(fpSeed)}`;
+    while (project.papers[id]) id += "x";
+    return {
+      id,
+      title: rec.title,
+      year: rec.year,
+      authors: rec.authors,
+      venue: rec.venue,
+      url: rec.url,
+      citedByUrl: "",
+      pdfUrl: "",
+      pdfLabel: "",
+      doi: rec.doi,
+      citations: 0,
+      abstract: rec.abstract,
+      source: "import",
+      importDb: database
+    };
+  }
+  async function refreshImportEntitlement(state) {
+    try {
+      const ent = await getEntitlementStatus({ needPurchased: true });
+      state.refImportAllowed = !!canUseFeature("referenceImport", ent);
+    } catch {
+      state.refImportAllowed = false;
+    }
+    return state.refImportAllowed;
+  }
+  function renderImportTab(project, state) {
+    if (state.refImportAllowed !== true) {
+      return `
+        <div class="su-review-import">
+          <h3>Import references <span class="su-review-pro-tag">Pro</span></h3>
+          <p class="su-review-muted">Import RIS or BibTeX exports from PubMed, Scopus, Web of Science, Embase or a reference manager, match them against the records already in this project, and keep a search log for your PRISMA-S methods section. It is part of the extension and unlocked with a free trial, a purchase or App Pass.</p>
+          <div class="su-review-actions">
+            <button type="button" class="su-graph-btn" data-review-unlock="1">Unlock Pro</button>
+          </div>
+        </div>
+      `;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const log = project.searchLog || [];
+    const rows = log.map((e) => `
+      <tr>
+        <td>${escapeHtml(e.database || "")}</td>
+        <td>${escapeHtml(e.searchedOn || "")}</td>
+        <td>${escapeHtml(e.query || "")}</td>
+        <td>${escapeHtml(e.fileName || "")}</td>
+        <td>${Number(e.recordsInFile) || 0}</td>
+        <td>${Number(e.added) || 0}</td>
+        <td>${Number(e.duplicates) || 0}</td>
+      </tr>`).join("");
+    return `
+      <div class="su-review-import">
+        <p class="su-review-muted">Import a RIS or BibTeX export from a database or reference manager. Records are matched to this project by DOI, then by title, so papers already added from Google Scholar are not repeated. Each import is added to the search log below. Files are read in your browser and nothing is uploaded.</p>
+        <div class="su-review-import-form">
+          <label>Database or source
+            <input type="text" id="su-review-imp-db" class="su-review-input" list="su-review-imp-dbs" maxlength="80" autocomplete="off" />
+            <datalist id="su-review-imp-dbs">${IMPORT_DATABASES.map((d) => `<option value="${escapeHtml(d)}"></option>`).join("")}</datalist>
+          </label>
+          <label>Date searched
+            <input type="date" id="su-review-imp-date" class="su-review-input" value="${today}" />
+          </label>
+          <label>Search string, exactly as run
+            <textarea id="su-review-imp-query" class="su-review-input" rows="3" maxlength="4000"></textarea>
+          </label>
+          <label>File (.ris, .bib)
+            <input type="file" id="su-review-ref-file" accept=".ris,.bib,.bibtex,.txt,text/plain" />
+          </label>
+          <div class="su-review-actions">
+            <button type="button" class="su-graph-btn" data-review-run-import="1">Import references</button>
+          </div>
+        </div>
+        <div class="su-review-import-status" role="status" aria-live="polite">${escapeHtml(state.importStatus || "")}</div>
+        <h3>Search log</h3>
+        ${log.length ? `
+          <div class="su-review-extract-table">
+            <table>
+              <thead><tr><th>Database</th><th>Date</th><th>Search string</th><th>File</th><th>In file</th><th>New</th><th>Duplicates</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <div class="su-review-actions">
+            <button type="button" class="${CLS_BTN_SEC}" data-review-export-searchlog="1">Export search log CSV</button>
+          </div>
+        ` : '<div class="su-review-muted">Nothing imported yet.</div>'}
+      </div>
+    `;
+  }
+  async function runReferenceImport(overlay, project, state) {
+    const setStatus = (msg) => { state.importStatus = msg; renderReviewOverlay(project); };
+    if (!(await refreshImportEntitlement(state))) { renderReviewOverlay(project); return; }
+    const database = String(overlay.querySelector("#su-review-imp-db")?.value || "").trim();
+    const searchedOn = String(overlay.querySelector("#su-review-imp-date")?.value || "").trim();
+    const query = String(overlay.querySelector("#su-review-imp-query")?.value || "").trim();
+    const file = overlay.querySelector("#su-review-ref-file")?.files?.[0];
+    if (!file) return setStatus("Choose a RIS or BibTeX file first.");
+    if (!database) return setStatus("Say which database or source this file came from. It goes in the search log.");
+    if (file.size > MAX_FILE_BYTES) return setStatus("That file is over 25 MB. Export it in smaller batches.");
+    let parsed;
+    try {
+      parsed = parseReferences(await file.text(), file.name);
+    } catch {
+      return setStatus("Couldn't read that file.");
+    }
+    if (parsed.error) return setStatus(parsed.error);
+    const papers = parsed.records.map((rec) => recordToPaper(project, rec, database));
+    // Ids must stay unique within this batch too: recordToPaper only sees what is already saved.
+    const seen = new Set();
+    for (const paper of papers) {
+      while (seen.has(paper.id) || project.papers[paper.id]) paper.id += "x";
+      seen.add(paper.id);
+    }
+    const { added, duplicates } = addPapersToProject(project, papers);
+    project.searchLog.push({
+      id: `log_${Date.now().toString(36)}`,
+      database,
+      searchedOn,
+      query,
+      fileName: file.name,
+      format: parsed.format,
+      recordsInFile: parsed.records.length,
+      added,
+      duplicates,
+      importedAt: new Date().toISOString()
+    });
+    await saveReviewProject(project);
+    const notes = [];
+    if (parsed.skipped) notes.push(`${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} without a title skipped`);
+    if (parsed.truncated) notes.push("only the first 20,000 records were read");
+    setStatus(`Added ${added} new record${added === 1 ? "" : "s"} from ${file.name} (${duplicates} already in the project). Logged as ${database}.${notes.length ? ` ${notes.join("; ")}.` : ""}`);
+  }
+
   function renderReviewOverlay(project) {
     const overlay = ensureReviewOverlay();
     const content = overlay.querySelector("#su-review-content");
@@ -933,6 +1089,7 @@ export function createReviewWorkspace(deps) {
         <div class="su-review-prisma-wrap">
           ${renderPrismaDiagram(stats)}
         </div>
+        ${totalRecordsFromSearchLog(project.searchLog) ? `<p class="su-review-muted">Records in imported database files (see the Import tab search log): ${totalRecordsFromSearchLog(project.searchLog)}. The diagram above counts records in this project.</p>` : ""}
         <div class="su-review-actions">
           <button type="button" class="${CLS_BTN_SEC}" data-review-export-prisma="1">Download PRISMA SVG</button>
         </div>
@@ -1023,6 +1180,10 @@ export function createReviewWorkspace(deps) {
       `;
       return;
     }
+    if (tab === "import") {
+      content.innerHTML = renderImportTab(project, state);
+      return;
+    }
     if (tab === "report") {
       const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
       const lines = [
@@ -1038,7 +1199,8 @@ export function createReviewWorkspace(deps) {
         `Conflicts: ${stats.conflicts}`,
         "",
         "## Included papers",
-        ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`)
+        ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`),
+        ...searchLogReportLines(project)
       ];
       const reportText = lines.join("\n");
       content.innerHTML = `
@@ -1083,6 +1245,7 @@ export function createReviewWorkspace(deps) {
         </div>
         <div class="su-review-tabs">
           <button type="button" class="su-review-tab" data-review-tab="overview">Overview</button>
+          <button type="button" class="su-review-tab" data-review-tab="import">Import</button>
           <button type="button" class="su-review-tab" data-review-tab="screening">Screening</button>
           <button type="button" class="su-review-tab" data-review-tab="dedupe">Dedupe</button>
           <button type="button" class="su-review-tab" data-review-tab="extraction">Extraction</button>
@@ -1107,6 +1270,7 @@ export function createReviewWorkspace(deps) {
       if (tab) {
         const state = await ensureReviewState();
         state.tab = String(tab.dataset.reviewTab || "overview");
+        if (state.tab === "import") await refreshImportEntitlement(state);
         renderReviewOverlay(getActiveReviewProject());
         return;
       }
@@ -1156,6 +1320,31 @@ export function createReviewWorkspace(deps) {
       if (importBtn) {
         const fileInput = overlay.querySelector("#su-review-import-file");
         if (fileInput) fileInput.click();
+        return;
+      }
+      const unlockBtn = e.target.closest("[data-review-unlock]");
+      if (unlockBtn) {
+        chrome.runtime.sendMessage({ action: "openUpsellModal" });
+        return;
+      }
+      const runImport = e.target.closest("[data-review-run-import]");
+      if (runImport) {
+        const project = getActiveReviewProject();
+        const state = await ensureReviewState();
+        if (!project) return;
+        runImport.disabled = true;
+        try {
+          await runReferenceImport(overlay, project, state);
+        } finally {
+          runImport.disabled = false;
+        }
+        return;
+      }
+      const exportSearchLog = e.target.closest("[data-review-export-searchlog]");
+      if (exportSearchLog) {
+        const project = getActiveReviewProject();
+        if (!project) return;
+        downloadBlob(`${project.name}-search-log.csv`.replace(/\s+/g, "-").toLowerCase(), "text/csv;charset=utf-8", searchLogToCsv(project.searchLog, (v) => csvEscape(v)));
         return;
       }
       const addField = e.target.closest("[data-review-add-field]");

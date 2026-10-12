@@ -63,6 +63,10 @@ const TARGETS = [
     args: ['src/common/scholar-links.js', '--bundle=false', '--minify', '--outfile=dist/common/scholar-links.js', '--log-level=warning'],
   },
   {
+    label: 'common/reference-import.js',
+    args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },
