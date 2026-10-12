@@ -15,7 +15,7 @@ import { initPromoCard } from "../common/promo-card.js";
 import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
 import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
 import { getLibraryBackup } from "../common/storage.js";
-import { initLibraryTools } from "./library-tools.js";
+import { initLibraryTools, showSimilar } from "./library-tools.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -869,6 +869,10 @@ async function render() {
         }
         if (act === "collections") {
           await renderCollectionModal(p, state);
+          return;
+        }
+        if (act === "similar") {
+          await showSimilar(p);
           return;
         }
         if (act === "cite") {

@@ -2,9 +2,10 @@
 // Logic lives in ../common/*.js (pure, tested); this file only wires it to the page.
 
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
-import { importLibraryPayload } from "../common/library-import.js";
+import { importLibraryPayload, mergeDuplicatesInStorage } from "../common/library-import.js";
 import { describeImportSummary } from "../common/library-merge.js";
 import { buildPacket, packetFileName, packetToImport, validatePacketText } from "../common/library-packet.js";
+import { createSimilarityCache, similarTo } from "../common/similarity.js";
 import { getSavedPapers } from "../common/storage.js";
 
 const $ = (id) => document.getElementById(id);
@@ -149,6 +150,134 @@ async function importPacketFile(file) {
   ctx.refresh();
 }
 
+// ---------------------------------------------------------------------------
+// Similarity and possible duplicates (Pro: librarySimilarity)
+// ---------------------------------------------------------------------------
+
+const similarityCache = createSimilarityCache();
+const dismissedPairs = new Set();
+
+function progressTo(node) {
+  return (p) => {
+    node.textContent = `Reading the library: ${p.done} of ${p.total} papers (${p.phase}). The page stays usable while this runs.`;
+  };
+}
+
+function paperMeta(p) {
+  return [p.authorsVenue, p.year ? `(${p.year})` : "", p.citations ? `${p.citations} cites` : ""].filter(Boolean).join(" ");
+}
+
+function appendPaperLink(parent, p) {
+  const a = add(parent, "a", p.title || "(untitled)", "tool-row-title");
+  const href = p.url || p.sourcePageUrl;
+  if (href && /^https?:\/\//i.test(href)) {
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+  }
+  return a;
+}
+
+export async function showSimilar(paper) {
+  if (!(await requirePro("librarySimilarity", "Library similarity"))) return;
+  const body = openToolView(`Similar to: ${paper.title || "(untitled)"}`);
+  const progress = add(body, "p", "Reading the library...", "tool-progress");
+  const papers = Object.values(await getSavedPapers());
+  const index = await similarityCache.getIndex(papers, progressTo(progress));
+  const results = similarTo(index, paper.key, { limit: 10 });
+  progress.remove();
+  add(
+    body,
+    "p",
+    "Ranked by shared words in titles and abstracts or snippets, computed on this device. It does not read the papers themselves.",
+    "panel-note"
+  );
+  if (!results.length) {
+    add(body, "p", "No other saved paper shares enough words with this one.", "panel-note");
+    return;
+  }
+  for (const r of results) {
+    const row = add(body, "div", "", "tool-row");
+    const main = add(row, "div", "", "tool-row-main");
+    appendPaperLink(main, r.paper);
+    add(main, "div", paperMeta(r.paper), "tool-row-meta");
+    add(row, "span", `${Math.round(r.score * 100)}%`, "tool-row-meta");
+  }
+}
+
+function pairId(pair) {
+  return [pair.a, pair.b].sort().join("||");
+}
+
+function earlierFirst(a, b) {
+  return String(a.savedAt || "").localeCompare(String(b.savedAt || "")) <= 0 ? [a, b] : [b, a];
+}
+
+function renderPairSide(parent, p) {
+  const side = add(parent, "div", "", "tool-row-main");
+  appendPaperLink(side, p);
+  add(side, "div", paperMeta(p), "tool-row-meta");
+  const links = [p.url, p.pdfUrl, ...(p.altUrls || [])].filter(Boolean);
+  add(side, "div", `${links.length} link${links.length === 1 ? "" : "s"}${p.doi ? `, DOI ${p.doi}` : ", no DOI"}`, "tool-row-meta");
+}
+
+export async function showPossibleDuplicates() {
+  if (!(await requirePro("librarySimilarity", "Possible duplicates"))) return;
+  const body = openToolView("Possible duplicates");
+  const progress = add(body, "p", "Reading the library...", "tool-progress");
+  const papers = Object.values(await getSavedPapers());
+  const byKey = new Map(papers.map((p) => [p.key, p]));
+  const pairs = (await similarityCache.getPairs(papers, progressTo(progress))).filter((x) => !dismissedPairs.has(pairId(x)));
+  progress.remove();
+  add(
+    body,
+    "p",
+    "Pairs with similar titles, overlapping author surnames and years within three of each other, such as a preprint and its published version. These are guesses: check each pair before merging.",
+    "panel-note"
+  );
+  if (!pairs.length) {
+    add(body, "p", "No possible duplicates found.", "panel-note");
+    return;
+  }
+  const shown = pairs.slice(0, 50);
+  if (pairs.length > shown.length) add(body, "p", `Showing the 50 closest of ${pairs.length} pairs.`, "panel-note");
+  for (const pair of shown) {
+    const a = byKey.get(pair.a);
+    const b = byKey.get(pair.b);
+    if (!a || !b) continue;
+    const row = add(body, "div", "", "tool-row");
+    const grid = add(row, "div", "", "tool-pair");
+    renderPairSide(grid, a);
+    renderPairSide(grid, b);
+    const side = add(row, "div", "", "tool-row-main");
+    add(side, "div", pair.reasons.join("; "), "tool-row-meta");
+    const actions = add(side, "div", "", "tool-actions");
+    const merge = add(actions, "button", "Merge into one", "btn");
+    merge.type = "button";
+    merge.title = "Combines tags, notes and highlights into the earlier-saved record and keeps both links. The other record is removed. Undo restores the library from before.";
+    merge.addEventListener("click", async () => {
+      const [keep, drop] = earlierFirst(a, b);
+      merge.disabled = true;
+      const r = await mergeDuplicatesInStorage(keep.key, drop.key);
+      if (!r.ok) {
+        window.alert(r.error);
+        merge.disabled = false;
+        return;
+      }
+      ctx.setImportStatus(`Merged two records of "${keep.title || "(untitled)"}". Both links are kept.`, { showUndo: true });
+      await ctx.refresh();
+      await showPossibleDuplicates();
+    });
+    const dismiss = add(actions, "button", "Not a duplicate", "btn");
+    dismiss.type = "button";
+    dismiss.title = "Hide this pair until the page is reloaded.";
+    dismiss.addEventListener("click", () => {
+      dismissedPairs.add(pairId(pair));
+      row.remove();
+    });
+  }
+}
+
 export function initLibraryTools(context) {
   ctx = context;
   $("toolViewClose").addEventListener("click", closeToolView);
@@ -157,6 +286,7 @@ export function initLibraryTools(context) {
     b.addEventListener("click", () => ctx.closeModal(b.getAttribute("data-tool-modal-close")));
   });
 
+  $("findSimilarDuplicates").addEventListener("click", showPossibleDuplicates);
   $("exportPacket").addEventListener("click", openPacketExport);
   $("packetCollection").addEventListener("change", async () => {
     const state = await ctx.loadLibraryState();

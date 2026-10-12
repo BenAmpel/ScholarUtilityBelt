@@ -104,6 +104,7 @@ module.exports = [
       "src/common/library-merge.js",
       "src/common/library-import.js",
       "src/common/library-packet.js",
+      "src/common/similarity.js",
       "src/library/library-tools.js",
       "src/content/content-author.js",
       "src/content/data-loader.js",

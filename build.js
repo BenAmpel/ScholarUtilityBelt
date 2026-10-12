@@ -79,6 +79,10 @@ const TARGETS = [
     args: ['src/common/library-packet.js', '--bundle=false', '--minify', '--outfile=dist/common/library-packet.js', '--log-level=warning'],
   },
   {
+    label: 'common/similarity.js',
+    args: ['src/common/similarity.js', '--bundle=false', '--minify', '--outfile=dist/common/similarity.js', '--log-level=warning'],
+  },
+  {
     // Same source, built as a global for the classic (non-module) service
     // worker: dynamic import() is disallowed in ServiceWorkerGlobalScope
     // per the HTML spec, so sw.js loads this via importScripts() instead.
