@@ -1117,6 +1117,10 @@ initLibraryTools({
   closeModal,
   downloadText,
   setImportStatus,
+  getQualityBadges: async (venue) => {
+    const qs = await ensureQualityState();
+    return qs.show && venue ? qualityBadgesForVenue(venue, qs.qIndex).map((b) => b.text) : [];
+  },
   refresh: () => {
     qualityState = null;
     libraryState = null;

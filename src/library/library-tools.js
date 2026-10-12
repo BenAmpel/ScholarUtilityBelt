@@ -6,7 +6,16 @@ import { importLibraryPayload, mergeDuplicatesInStorage } from "../common/librar
 import { describeImportSummary } from "../common/library-merge.js";
 import { buildPacket, packetFileName, packetToImport, validatePacketText } from "../common/library-packet.js";
 import { createSimilarityCache, similarTo } from "../common/similarity.js";
-import { getSavedPapers } from "../common/storage.js";
+import { getSavedPapers, getWatchLists, setWatchLists } from "../common/storage.js";
+import {
+  WATCH_LIMITS,
+  addWatchItem,
+  markItemSeen,
+  normalizeWatchState,
+  removeWatchItem,
+  totalUnseen
+} from "../common/watchlist.js";
+import { maybeRunWatchCheck } from "../common/watchlist-runner.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -278,9 +287,138 @@ export async function showPossibleDuplicates() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Watch lists (Pro: watchLists)
+// ---------------------------------------------------------------------------
+
+async function loadWatchState() {
+  return normalizeWatchState(await getWatchLists());
+}
+
+async function updateWatchButton() {
+  const n = totalUnseen(await loadWatchState());
+  $("openWatchLists").textContent = n ? `Open watch lists (${n} new)` : "Open watch lists";
+}
+
+function fmtWhen(ms) {
+  return ms ? new Date(ms).toLocaleString() : "not yet";
+}
+
+async function renderWatchView() {
+  const state = await loadWatchState();
+  const body = openToolView("Watch lists");
+  add(
+    body,
+    "p",
+    "Searches and author names you add here are sent to OpenAlex, at most once a day per item, and only while this page or a Scholar page is open. Nothing else is sent, and Google Scholar is not contacted.",
+    "panel-note"
+  );
+
+  const form = add(body, "div", "", "tool-form");
+  const kind = document.createElement("select");
+  kind.setAttribute("aria-label", "What to watch");
+  [["query", "Search"], ["author", "Author"]].forEach(([v, t]) => {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = t;
+    kind.appendChild(o);
+  });
+  form.appendChild(kind);
+  const input = document.createElement("input");
+  input.type = "text";
+  input.maxLength = WATCH_LIMITS.maxValueLength;
+  input.placeholder = "Search words, or an author name";
+  input.setAttribute("aria-label", "Search words or author name");
+  form.appendChild(input);
+  const addBtn = add(form, "button", "Add", "btn");
+  addBtn.type = "button";
+  const msg = add(body, "p", "", "panel-note");
+  msg.setAttribute("role", "alert");
+  addBtn.addEventListener("click", async () => {
+    const latest = await loadWatchState();
+    const r = addWatchItem(latest, { type: kind.value, value: input.value });
+    if (!r.ok) {
+      msg.textContent = r.error;
+      return;
+    }
+    await setWatchLists(r.state);
+    msg.textContent = "Added. The first lookup runs now if none ran in the last 24 hours.";
+    maybeRunWatchCheck().then(() => renderWatchView()).catch(() => {});
+    await renderWatchView();
+  });
+
+  add(body, "p", `${state.items.length} of ${WATCH_LIMITS.maxItems} items. Up to ${WATCH_LIMITS.maxResultsPerItem} works are kept per item.`, "tool-progress");
+  if (state.backoffUntil > Date.now()) {
+    add(body, "p", `OpenAlex lookups are paused until ${fmtWhen(state.backoffUntil)} after an error.`, "panel-note");
+  }
+
+  for (const item of state.items) {
+    const block = add(body, "div", "", "tool-row");
+    const main = add(block, "div", "", "tool-row-main");
+    add(main, "div", `${item.type === "author" ? "Author" : "Search"}: ${item.value}`, "tool-row-title");
+    const bits = [`last lookup ${fmtWhen(item.lastCheckedAt)}`];
+    if (item.matchedName) bits.push(`matched ${item.matchedName}`);
+    add(main, "div", bits.join("; "), "tool-row-meta");
+    if (item.lastError) add(main, "div", item.lastError, "tool-row-meta");
+    if (!item.unseen.length) {
+      add(main, "div", item.lastCheckedAt ? "Nothing new since you last looked." : "Waiting for the first lookup.", "tool-row-meta");
+    }
+    for (const w of item.unseen) {
+      const row = add(main, "div", "", "tool-row");
+      const m = add(row, "div", "", "tool-row-main");
+      appendPaperLink(m, w);
+      const authors = w.authors?.length ? `${w.authors.join(", ")}${w.authorCount > w.authors.length ? " et al." : ""}` : "";
+      add(m, "div", [authors, w.venue, w.date || w.year].filter(Boolean).join(" | "), "tool-row-meta");
+      const badges = await ctx.getQualityBadges(w.venue);
+      if (badges.length) add(m, "div", `Quality: ${badges.join(", ")}`, "tool-row-meta");
+    }
+    const actions = add(block, "div", "", "tool-actions");
+    if (item.unseen.length) {
+      const seen = add(actions, "button", "Mark all seen", "btn");
+      seen.type = "button";
+      seen.addEventListener("click", async () => {
+        await setWatchLists(markItemSeen(await loadWatchState(), item.id));
+        await renderWatchView();
+      });
+    }
+    const rm = add(actions, "button", "Remove", "btn danger");
+    rm.type = "button";
+    rm.addEventListener("click", async () => {
+      await setWatchLists(removeWatchItem(await loadWatchState(), item.id));
+      await renderWatchView();
+    });
+  }
+  updateWatchButton();
+}
+
+async function openWatchLists() {
+  if (!(await requirePro("watchLists", "Watch lists"))) return;
+  await renderWatchView();
+  maybeRunWatchCheck().then((r) => r.ran && renderWatchView()).catch(() => {});
+}
+
+/** Called once when the library page opens: runs a due check quietly and shows the unread count. */
+async function backgroundWatchCheck() {
+  const state = await loadWatchState();
+  if (!state.items.length) return;
+  await updateWatchButton();
+  try {
+    const r = await maybeRunWatchCheck();
+    if (r.ran) await updateWatchButton();
+  } catch {
+    // a failed lookup must never break the library page
+  }
+}
+
 export function initLibraryTools(context) {
   ctx = context;
   $("toolViewClose").addEventListener("click", closeToolView);
+  $("openWatchLists").addEventListener("click", openWatchLists);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes.watchLists) return;
+    updateWatchButton();
+  });
+  setTimeout(backgroundWatchCheck, 1500);
 
   document.querySelectorAll("[data-tool-modal-close]").forEach((b) => {
     b.addEventListener("click", () => ctx.closeModal(b.getAttribute("data-tool-modal-close")));

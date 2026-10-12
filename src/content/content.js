@@ -15627,6 +15627,32 @@
       document.removeEventListener("keydown", onVisorKeyDown);
     }
   }
+  // Watch lists (Pro). On a Scholar page visit, and only if the user saved at least one watch item, ask
+  // OpenAlex for recent works, at most once per item per 24 hours. Goes through the service worker like the
+  // other OpenAlex calls. Never fetches Scholar. The gate and the 24-hour rule live in watchlist-runner.js.
+  let watchCheckScheduled = false;
+  async function watchFetchJson(url) {
+    try {
+      const res = await chrome.runtime.sendMessage({ action: "fetchExternal", url, responseType: "json", timeoutMs: 10000 });
+      if (res?.ok) return { ok: true, status: 200, body: res.body };
+      const m = /HTTP (\d{3})/.exec(String(res?.error || ""));
+      return { ok: false, status: m ? Number(m[1]) : 0 };
+    } catch (_) {
+      return { ok: false, status: 0 };
+    }
+  }
+  function scheduleWatchListCheck() {
+    if (watchCheckScheduled) return;
+    watchCheckScheduled = true;
+    setTimeout(async () => {
+      try {
+        const { watchLists } = await chrome.storage.local.get({ watchLists: null });
+        if (!watchLists || !Array.isArray(watchLists.items) || !watchLists.items.length) return;
+        const runner = await importModuleWithRetry("dist/common/watchlist-runner.js");
+        await runner.maybeRunWatchCheck({ fetchJson: watchFetchJson });
+      } catch (_) {}
+    }, 8000);
+  }
   let bootAttempts = 0;
   let bootInFlight = false;
   function scheduleBoot(reason) {
@@ -15636,6 +15662,7 @@
     Promise.resolve()
       .then(() => ensureModulesLoaded())
       .then(() => run())
+      .then(() => scheduleWatchListCheck())
       .catch((e) => {
         console.warn(`[SU] bootstrap attempt ${attempt} failed (${reason})`, e);
         if (attempt >= 2) return;

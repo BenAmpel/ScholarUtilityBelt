@@ -242,6 +242,28 @@ export async function upsertPaper(paper) {
   }
 }
 
+const WATCH_LISTS_KEY = "watchLists";
+
+/** Raw watch-list state (items, last-seen state, backoff). Callers pass it through normalizeWatchState. */
+export async function getWatchLists() {
+  try {
+    const { [WATCH_LISTS_KEY]: state } = await chrome.storage.local.get({ [WATCH_LISTS_KEY]: null });
+    return state || null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+export async function setWatchLists(state) {
+  try {
+    await chrome.storage.local.set({ [WATCH_LISTS_KEY]: state });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
 const LIBRARY_BACKUP_KEY = "libraryImportBackup";
 
 /** The single pre-import (or pre-merge) backup, or null. Shape: { at, reason, summary, savedPapers, libraryState }. */
