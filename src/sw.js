@@ -620,7 +620,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // version, and the stored flag stops a repeat. Bump WHATS_NEW_VERSION only
 // when a release ships a new what's-new page; otherwise leave it and nothing
 // opens. No network request is involved.
-const WHATS_NEW_VERSION = "0.7.0";
+const WHATS_NEW_VERSION = "1.0.0";
 const WHATS_NEW_FLAG = "whatsNewShownVersion";
 
 chrome.runtime.onInstalled.addListener(async (details) => {

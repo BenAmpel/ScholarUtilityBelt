@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-4285F4?logo=googlechrome&logoColor=white"></a>
   <a href="https://github.com/BenAmpel/ScholarUtilityBelt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BenAmpel/ScholarUtilityBelt?style=flat"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-2f855a">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-2f855a">
   <a href="https://doi.org/10.5281/zenodo.18645552"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-ISC-black"></a>
   <a href="https://buymeacoffee.com/bampel"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00"></a>
@@ -49,7 +49,7 @@ The extension layers paper triage, venue quality signals, lightweight bibliometr
 - [x] Local saved-paper library with notes, tags, collections, export/import
 - [x] Configurable options page for feature toggles, quality sources, and enrichment behavior
 
-Author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report are part of **Scholar Utility Belt Pro** for new installs — see [A note on the Pro tier](#a-note-on-the-pro-tier). If you installed the extension before this tier shipped, every one of these stays free for you, permanently. Pro features added in later versions are not covered by that promise. New installs can start a 14-day free trial.
+Author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report are part of **Scholar Utility Belt Pro** for new installs — see [A note on the Pro tier](#a-note-on-the-pro-tier). If you installed the extension before this tier shipped, every one of these stays free for you, permanently. Pro features added in later versions are not covered by that promise. New installs can start a 14-day free trial. Version 1.0.0 added a set of newer Pro features (reference import and review tools, result signals, Zotero, Obsidian, LaTeX and Word exports, library tools, a bibliography checker, a tenure packet and optional AI features); those need a trial, a purchase or App Pass for everyone.
 
 ## Links
 
