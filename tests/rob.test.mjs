@@ -164,7 +164,10 @@ describe("JBI-style checklist templates", () => {
     }
     const all = Object.values(ROB_TEMPLATES).flatMap((t) => t.domains);
     assert.equal(new Set(all.map((d) => d.key)).size, all.length);
-    assert.equal(new Set(all.map((d) => d.label)).size, all.length, "labels are CSV column names, so they must not collide");
+    for (const id of Object.keys(ids)) {
+      const labels = ROB_TEMPLATES[id].domains.map((d) => d.label);
+      assert.equal(new Set(labels).size, labels.length);
+    }
   });
   it("accept yes, no, unclear and na per reviewer and reject anything else", () => {
     const rob = normalizeRob({ defaultTemplate: "jbi_cohort" });
@@ -208,16 +211,24 @@ describe("JBI-style checklist templates", () => {
     const csv = robToCsv(input);
     const lines = csv.split("\n");
     assert.equal(lines.length, 3);
-    assert.match(lines[0], /Yes count \(a count, not a judgement\)/);
+    assert.match(lines[0], /Yes count \(a count only\)/);
     const header = lines[0].split(",");
     const row = lines[1].split(",");
-    assert.equal(row[header.indexOf("Yes count (a count, not a judgement)")], "1");
+    assert.equal(row[header.indexOf("Yes count (a count only)")], "1");
     assert.match(lines[1], /Not applicable/);
     const md = robToMarkdown({ ...input, title: "Quality" });
     assert.match(md, /## JBI-style checklist: analytical cross-sectional/);
     assert.match(md, /- Q1: Inclusion criteria/);
     assert.match(md, /\| Q1 \| Q2 /);
     assert.ok(md.includes(ROB_NOTICE));
+  });
+  it("keep CSV columns apart when two designs share item wording", () => {
+    const rob = normalizeRob({});
+    setPaperTemplate(rob, "p1", "jbi_xs");
+    setPaperTemplate(rob, "p2", "jbi_cohort");
+    const header = robToCsv({ rob, paperIds: ["p1", "p2"], papers: {}, reviewers: [reviewers[0]] }).split("\n")[0];
+    assert.match(header, /Cross-sectional: 3\. Exposure/);
+    assert.match(header, /Cohort: 3\. Exposure/);
   });
   it("leave the CSV of a project with no checklist papers unchanged", () => {
     const rob = normalizeRob({});
