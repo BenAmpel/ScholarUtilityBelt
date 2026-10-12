@@ -142,6 +142,11 @@ const TARGETS = [
     args: ['src/common/entitlement.js', '--bundle=true', '--format=iife', '--global-name=SUEntitlement', '--minify', '--outfile=dist/common/entitlement.sw.js', '--log-level=warning'],
   },
   {
+    // Which URLs and callers the service worker will act for, as a global (same reason as above).
+    label: 'common/url-policy.sw.js',
+    args: ['src/common/url-policy.js', '--bundle=true', '--format=iife', '--global-name=SUUrlPolicy', '--minify', '--outfile=dist/common/url-policy.sw.js', '--log-level=warning'],
+  },
+  {
     // The install and uninstall page URLs, as a global for the classic service worker (same reason as above).
     label: 'common/install-pages.sw.js',
     args: ['src/common/install-pages.js', '--bundle=true', '--format=iife', '--global-name=SUInstallPages', '--minify', '--outfile=dist/common/install-pages.sw.js', '--log-level=warning'],

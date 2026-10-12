@@ -1,5 +1,7 @@
-// Service worker kept intentionally minimal.
-// We avoid extra network requests to Scholar by default.
+// Service worker. It does the work content scripts cannot: ExtensionPay and App Pass, downloads,
+// and cross-origin fetches on their behalf (public scholarly APIs, publisher pages the user opens).
+// It makes no request of its own to any host except ExtensionPay, and every fetch it makes for a
+// page is checked against src/common/url-policy.js first.
 
 function sanitizeFilenameSegment(s, maxLen) {
   let t = s.replace(/[/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
@@ -7,24 +9,11 @@ function sanitizeFilenameSegment(s, maxLen) {
   return t || "Unknown";
 }
 
-function isFetchableUrl(url) {
-  try {
-    const u = new URL(url);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isScholarUrl(url) {
-  try {
-    const u = new URL(url);
-    const host = String(u.hostname || "").toLowerCase();
-    return host === "scholar.google.com" || host.startsWith("scholar.google.");
-  } catch {
-    return false;
-  }
-}
+// URL and caller rules live in src/common/url-policy.js (loaded below as SUUrlPolicy, with tests).
+const isFetchableUrl = (url) => SUUrlPolicy.isFetchableUrl(url);
+const isScholarUrl = (url) => SUUrlPolicy.isScholarUrl(url);
+const isAllowedApiUrl = (url) => SUUrlPolicy.isAllowedApiUrl(url);
+const fromOwnContext = (sender) => SUUrlPolicy.isOwnContext(sender, chrome.runtime.id, chrome.runtime.getURL(""));
 
 function normalizeFetchHeaders(headers) {
   if (!headers || typeof headers !== "object") return undefined;
@@ -65,7 +54,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // from registering any handler at all.
 importScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
-  chrome.runtime.getURL("dist/common/entitlement.sw.js")
+  chrome.runtime.getURL("dist/common/entitlement.sw.js"),
+  chrome.runtime.getURL("dist/common/url-policy.sw.js")
 );
 for (const optional of ["apppass.sw.js", "install-pages.sw.js", "ask-sw.js"]) {
   try {
@@ -167,7 +157,15 @@ if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFil
   });
 }
 
+// Messages that make the worker fetch or open something for the caller. Anything that is not from this
+// extension (its pages, or its content script on a Scholar page) is refused.
+const CALLER_CHECKED_ACTIONS = new Set(["openTabs", "fetchBib", "fetchSnippet", "fetchExternal", "fetchPdfPageCount"]);
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (CALLER_CHECKED_ACTIONS.has(msg?.action) && !fromOwnContext(sender)) {
+    sendResponse({ ok: false, error: "not_allowed" });
+    return false;
+  }
   if (msg?.action === "openTabs" && Array.isArray(msg.urls)) {
     (async () => {
       let opened = 0;
@@ -205,7 +203,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg?.action === "fetchExternal" && typeof msg.url === "string") {
-    if (!isFetchableUrl(msg.url)) {
+    // Only the public scholarly APIs the extension documents (see ALLOWED_API_HOSTS), over https.
+    if (!isAllowedApiUrl(msg.url)) {
       sendResponse({ ok: false, error: "unsupported_url" });
       return true;
     }

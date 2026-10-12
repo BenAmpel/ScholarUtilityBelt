@@ -127,16 +127,29 @@ Local-only or packaged-data features include:
 - cached page-visit and reading-load metadata
 - many DOM-derived result annotations
 
-Optional external enrichment can use public APIs such as:
+### Every host the extension contacts
 
-- [OpenAlex](https://openalex.org/) (a free API key, added in Options, is recommended — see note below)
-- [Crossref](https://www.crossref.org/)
-- [Unpaywall](https://unpaywall.org/)
-- [OpenCitations](https://opencitations.net/)
-- [Semantic Scholar](https://www.semanticscholar.org/product/api)
-- [DBLP](https://dblp.org/)
-- [NIH iCite](https://icite.od.nih.gov/) (Relative Citation Ratio, PubMed-indexed works only)
-- selected metadata services such as PubMed, Europe PMC, and ROR
+Nothing is sent to a server run by the project. These are all the places the extension talks to, what each receives, and when. Every request goes straight from your browser to the service, which handles it under its own policy.
+
+| Service (host) | What is sent | When |
+|---|---|---|
+| [OpenAlex](https://openalex.org/) (`api.openalex.org`) | DOI, title, author name or search text; your optional API key and a placeholder `mailto` | Citation metrics, p-index and FWCI, the trend panel, related works, the citation graph, and watch lists (only if you add watch items) |
+| [Crossref](https://www.crossref.org/) (`api.crossref.org`) | DOI or a reference title | Per-result details and update status in the detailed view; the bibliography checker's "Check DOIs" button |
+| [Unpaywall](https://unpaywall.org/) (`api.unpaywall.org`) | DOI and a placeholder email | Open-access status, per result in the detailed view |
+| [OpenCitations](https://opencitations.net/) (`opencitations.net`) | DOI | Citing-works counts, per result in the detailed view |
+| [DataCite](https://datacite.org/) (`api.datacite.org`) | DOI | Dataset and software links, per result in the detailed view |
+| [Semantic Scholar](https://www.semanticscholar.org/product/api) (`api.semanticscholar.org`) | DOI; author name | Influential citations per result in the detailed view; author-profile metrics |
+| [arXiv](https://arxiv.org/) (`export.arxiv.org`) | arXiv id | arXiv-listed results in the detailed view |
+| [Europe PMC](https://europepmc.org/) (`www.ebi.ac.uk`), [NCBI E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25501/) (`eutils.ncbi.nlm.nih.gov`) | DOI, PubMed id or PMC id | PubMed-indexed results in the detailed view |
+| [NIH iCite](https://icite.od.nih.gov/) (`icite.od.nih.gov`) | PubMed ids | Relative Citation Ratio on author profiles (PubMed-indexed works only) |
+| [ROR](https://ror.org/) (`api.ror.org`) and [DBLP](https://dblp.org/) (`dblp.org`, `sparql.dblp.org`) | Affiliation text; co-author name | Co-author and affiliation insights, when that panel is open on an author profile |
+| [SCImago](https://www.scimagojr.com/) (`www.scimagojr.com`) | The year you picked, nothing else | Only when you press the download button for rankings in Options |
+| [ExtensionPay](https://extensionpay.com/) (`extensionpay.com`) | A random per-install key | Pro checks, after you start a trial or unlock (see the Pro note below) |
+| joinapppass.com | Your joinapppass.com login cookie | Only if you opt in to App Pass in Options |
+| An AI provider you choose (Anthropic, OpenAI or Google Gemini) | Your question and the saved text of the papers you select | Only "Ask my shortlist", after you confirm what will be sent |
+| Publisher sites (any host) | The paper's URL, no cookies | PDF page counts, hover summaries and "Copy BibTeX from publisher". These need the optional all-sites permission you grant in Options, and run only on your click or hover |
+
+The services in the first nine rows are queried automatically for results in the **detailed** view, using the result's DOI (or arXiv or PubMed id). **Options, Display Features, "Look up extra signals"** turns that off: with it off, nothing is sent for any result. Switching the view to minimal also stops them. Several of the other lookups run only on an author profile or only when you click.
 
 The extension is built to minimize those calls and to make their effects legible in the UI.
 
