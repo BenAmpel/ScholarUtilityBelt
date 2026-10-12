@@ -101,6 +101,8 @@ module.exports = [
       "src/common/apppass.js",
       "src/common/install-pages.js",
       "src/common/promo-card.js",
+      "src/common/library-merge.js",
+      "src/common/library-import.js",
       "src/content/content-author.js",
       "src/content/data-loader.js",
       "src/content/dom-cache.js",

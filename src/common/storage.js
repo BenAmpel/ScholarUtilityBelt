@@ -242,6 +242,54 @@ export async function upsertPaper(paper) {
   }
 }
 
+const LIBRARY_BACKUP_KEY = "libraryImportBackup";
+
+/** The single pre-import (or pre-merge) backup, or null. Shape: { at, reason, summary, savedPapers, libraryState }. */
+export async function getLibraryBackup() {
+  try {
+    const { [LIBRARY_BACKUP_KEY]: backup } = await chrome.storage.local.get({ [LIBRARY_BACKUP_KEY]: null });
+    return backup && typeof backup === "object" && backup.savedPapers ? backup : null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+/** Replace the backup with a copy of the current library. Only one backup is kept. */
+export async function saveLibraryBackup(reason, summary) {
+  try {
+    const savedPapers = await getSavedPapers();
+    const libraryState = await getLibraryState();
+    const backup = { at: new Date().toISOString(), reason: String(reason || "import"), summary: summary || null, savedPapers, libraryState };
+    await chrome.storage.local.set({ [LIBRARY_BACKUP_KEY]: backup });
+    return backup;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+/** Write papers and library state in one call (used by merge-safe import and by undo). */
+export async function replaceLibrary(savedPapers, libraryState) {
+  try {
+    const items = { savedPapers: savedPapers || {} };
+    if (libraryState) items.libraryState = { ...DEFAULT_LIBRARY_STATE, ...libraryState };
+    await chrome.storage.local.set(items);
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function clearLibraryBackup() {
+  try {
+    await chrome.storage.local.remove(LIBRARY_BACKUP_KEY);
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
 export async function removePaper(key) {
   try {
     const savedPapers = await getSavedPapers();
