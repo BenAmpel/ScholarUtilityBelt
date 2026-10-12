@@ -67,6 +67,12 @@
           </div>
           <p class="export-note">One note per paper with YAML properties, your notes, PDF highlights as quoted bullets, and an index note with [[links]] grouped by collection. File names come from the DOI, or from author, year and title, so exporting again overwrites the same files. Editing a title changes that paper's file name.</p>
 
+          <h3 class="export-heading">LaTeX</h3>
+          <div class="export-row">
+            <button class="btn" data-export="latexPack" data-pro="latexPack">Citation pack <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A .bib with citation keys that stay the same on every export, a copy-able \cite list, and a check of your .tex text against your saved papers.</p>
+
           <h3 class="export-heading">Lists</h3>
           <div class="export-row">
             <button id="exportCsv" class="btn">CSV</button>
@@ -168,6 +174,27 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="latexModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="latexModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="latexModalTitle">LaTeX citation pack</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="latexScope" class="export-note"></p>
+        <p class="export-note">Each paper gets a citation key the first time you export. The key is saved on the paper and never changes, so a .bib exported later still matches your .tex. Your private notes are not written to the .bib.</p>
+        <div class="export-row export-row-spaced">
+          <button id="latexBib" class="btn">Download .bib</button>
+          <button id="latexCopy" class="btn">Copy \cite list</button>
+        </div>
+        <label class="export-label" for="latexInput">Check your document against your saved papers</label>
+        <textarea id="latexInput" class="export-textarea" rows="8" spellcheck="false" placeholder="Paste .tex text, or a list of cite keys separated by commas or lines"></textarea>
+        <div class="export-row export-row-spaced"><button id="latexCheck" class="btn">Check</button></div>
+        <div id="latexResult" class="export-result" aria-live="polite"></div>
+        <p id="latexPromo" class="export-note" hidden><a id="latexPromoLink" href="https://purplelink.llc/moderntex/" target="_blank" rel="noopener noreferrer">Check a .bib or write in LaTeX with ModernTex</a> <button type="button" id="latexPromoDismiss" class="promo-dismiss">Dismiss</button></p>
       </div>
     </div>
 

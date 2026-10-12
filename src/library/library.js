@@ -7,13 +7,15 @@ import {
   getSavedPapers,
   getSettings,
   removePaper,
+  saveCitekeys,
   setLibraryState,
   uniqTags,
   upsertPaper
 } from "../common/storage.js";
-import { initPromoCard } from "../common/promo-card.js";
+import { initLatexLink, initPromoCard } from "../common/promo-card.js";
 import { parseAuthors as parseAuthorsShared, toRecord } from "../common/export-model.js";
 import { createExportUi, downloadText } from "./export-ui.js";
+import { initLatexDialog } from "./export-dialogs.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -922,6 +924,7 @@ document.querySelectorAll("[data-modal-close]").forEach((btn) => {
   btn.addEventListener("click", () => {
     closeModal("collectionModal");
     closeModal("pdfModal");
+    closeModal("latexModal");
   });
 });
 
@@ -1076,6 +1079,8 @@ exportUi = createExportUi({
     badgesOf: (venue) => (qualityState && qualityState.qIndex ? qualityBadgesForVenue(venue, qualityState.qIndex).map((b) => b.text) : [])
   })
 });
+initLatexDialog(exportUi, { el, openModal, getSavedPapers, saveCitekeys, copyText });
 exportUi.wire();
 render();
 initPromoCard();
+initLatexLink();

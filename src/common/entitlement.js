@@ -88,6 +88,7 @@ export const PRO_FEATURES = {
   popReport: "legacy",
   zoteroExport: "new",
   obsidianExport: "new",
+  latexPack: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

@@ -16,3 +16,7 @@ From the same studio: Purplelink runs free web tools for academic writing. BibTe
 ## Promo card (0.7.2)
 
 `src/common/promo-card.js` shows a dismissible "From the same developer" card for ModernTex on the settings page and the library page, on macOS only, never on Scholar pages. The link is https://purplelink.llc/moderntex/?utm_source=sub&utm_medium=extension&utm_campaign=promo-card (the `sub` channel in the site's first-touch funnel). Dismissal is stored as `promoModernTexDismissed` in chrome.storage.local. A storage error leaves the card hidden. Tests: `tests/promo-card.test.mjs`. Measure: the `sub` row in the site dashboard's funnel, and the Web Store rating must not fall.
+
+## LaTeX pack link line
+
+The library page's LaTeX citation pack dialog shows one plain line, "Check a .bib or write in LaTeX with ModernTex", linking to https://purplelink.llc/moderntex/?utm_source=sub&utm_medium=extension&utm_campaign=latex-pack (`initLatexLink` in `src/common/promo-card.js`). Same rules as the promo card: macOS only, never on Scholar pages, no request from the extension, dismissal stored as `promoLatexLinkDismissed` in chrome.storage.local (separate from the card's key). Measure: the `latex-pack` campaign under the `sub` row of the site dashboard's funnel. Tests: `tests/promo-card.test.mjs`.
