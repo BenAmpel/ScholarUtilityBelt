@@ -1098,7 +1098,10 @@ async function renderProStatus() {
   const actionsEl = document.getElementById("su-pro-actions");
   if (!statusEl || !actionsEl) return;
 
-  const entitlement = await getEntitlementStatus();
+  // needPurchased makes the service worker ask ExtensionPay even for existing users, who are
+  // otherwise answered offline. Pro features added after launch need a real trial, purchase or
+  // App Pass, so an existing user must be able to start a trial from here.
+  const entitlement = await getEntitlementStatus({ needPurchased: true });
   const labels = {
     grandfathered: "Free forever (existing user): every Pro feature that existed when you installed stays unlocked. Features added later may need Pro.",
     lifetime: "Pro — Lifetime unlock.",
@@ -1110,9 +1113,14 @@ async function renderProStatus() {
   statusEl.textContent = entitlement.tier === "trial"
     ? `Pro — free trial, ends ${new Date(entitlement.trialEndsAt).toLocaleDateString()}.`
     : labels[entitlement.tier] || labels.free;
+  if (entitlement.tier === "grandfathered") {
+    statusEl.textContent += entitlement.purchased
+      ? " Newer Pro features are unlocked too, through a trial, a purchase or App Pass."
+      : " Newer Pro features, such as reference import and the review tools, need a trial, a purchase or App Pass.";
+  }
 
   actionsEl.innerHTML = "";
-  if (!entitlement.paid) {
+  if (!entitlement.purchased) {
     const unlockBtn = document.createElement("button");
     unlockBtn.type = "button";
     unlockBtn.className = "primary";
@@ -1167,8 +1175,8 @@ async function renderAppPass(entitlement) {
   const actionsEl = document.getElementById("su-apppass-actions");
   if (!root || !statusEl || !actionsEl) return;
 
-  // Direct purchasers and grandfathered users have nothing to gain from it.
-  const relevant = !entitlement.paid || entitlement.tier === "app-pass";
+  // Anyone who already has Pro for the newer features (purchase, trial) has nothing to gain from it.
+  const relevant = !entitlement.purchased || entitlement.tier === "app-pass";
   root.hidden = !relevant;
   if (!relevant) return;
 
