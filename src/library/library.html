@@ -73,6 +73,12 @@
           </div>
           <p class="export-note">A .bib with citation keys that stay the same on every export, a copy-able \cite list, and a check of your .tex text against your saved papers.</p>
 
+          <h3 class="export-heading">Word and Google Docs</h3>
+          <div class="export-row">
+            <button class="btn" data-export="wordRefList" data-pro="wordRefList">Reference list <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A formatted reference list for the chosen papers, copied with formatting or saved as a .doc file.</p>
+
           <h3 class="export-heading">Lists</h3>
           <div class="export-row">
             <button id="exportCsv" class="btn">CSV</button>
@@ -195,6 +201,27 @@
         <div class="export-row export-row-spaced"><button id="latexCheck" class="btn">Check</button></div>
         <div id="latexResult" class="export-result" aria-live="polite"></div>
         <p id="latexPromo" class="export-note" hidden><a id="latexPromoLink" href="https://purplelink.llc/moderntex/" target="_blank" rel="noopener noreferrer">Check a .bib or write in LaTeX with ModernTex</a> <button type="button" id="latexPromoDismiss" class="promo-dismiss">Dismiss</button></p>
+      </div>
+    </div>
+
+    <div id="refModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="refModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="refModalTitle">Reference list</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="refScope" class="export-note"></p>
+        <label class="export-label" for="refStyle">Style</label>
+        <select id="refStyle"></select>
+        <label class="export-check"><input type="checkbox" id="refQuotes" /> Add a quote sheet from my notes and PDF highlights</label>
+        <label class="export-label" for="refPreview">Preview</label>
+        <pre id="refPreview" class="export-preview" tabindex="0"></pre>
+        <div class="export-row export-row-spaced">
+          <button id="refCopy" class="btn">Copy with formatting</button>
+          <button id="refDoc" class="btn">Download .doc</button>
+        </div>
+        <p class="export-note">Supports APA 7, MLA 9, Chicago 17 (bibliography form) and IEEE, for journal articles, conference papers and preprints. Anything else is formatted as author, year, title and link. Scholar results do not include volume, issue or page numbers, so these are left out. Titles are used as saved: APA and IEEE expect sentence case, so edit them if needed. Author names come from Scholar's author line, which usually gives initials. The preview shows plain text; the copied version has italics and hanging indents. Check each entry against your style guide before you submit.</p>
       </div>
     </div>
 

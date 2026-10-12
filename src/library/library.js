@@ -15,7 +15,8 @@ import {
 import { initLatexLink, initPromoCard } from "../common/promo-card.js";
 import { parseAuthors as parseAuthorsShared, toRecord } from "../common/export-model.js";
 import { createExportUi, downloadText } from "./export-ui.js";
-import { initLatexDialog } from "./export-dialogs.js";
+import { initLatexDialog, initRefListDialog } from "./export-dialogs.js";
+import { formatReference } from "../common/reference-list.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -925,6 +926,7 @@ document.querySelectorAll("[data-modal-close]").forEach((btn) => {
     closeModal("collectionModal");
     closeModal("pdfModal");
     closeModal("latexModal");
+    closeModal("refModal");
   });
 });
 
@@ -1070,6 +1072,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 exportUi = createExportUi({
   el,
+  cite: (r) => formatReference("apa", r),
   prepare: async () => { await ensureQualityState(); },
   getSavedPapers,
   loadLibraryState,
@@ -1080,6 +1083,7 @@ exportUi = createExportUi({
   })
 });
 initLatexDialog(exportUi, { el, openModal, getSavedPapers, saveCitekeys, copyText });
+initRefListDialog(exportUi, { el, openModal, copyText });
 exportUi.wire();
 render();
 initPromoCard();

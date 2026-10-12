@@ -640,3 +640,16 @@ input::placeholder {
 .export-result { margin-top: 10px; font-size: 13px; }
 .export-result-heading { margin: 12px 0 4px; font-size: 13px; }
 .export-result-list { margin: 0; padding-left: 18px; font-size: 12px; overflow-wrap: anywhere; }
+.export-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 13px; }
+.export-preview {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  font: 12px/1.45 ui-sans-serif, system-ui, sans-serif;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -7,9 +7,12 @@
  * src/common/*-export.js, latex-pack.js and reference-list.js takes records, never raw saved papers.
  */
 
-/** "A Smith, B Jones - Venue, 2019 - Publisher" -> ["A Smith", "B Jones"]. Drops Scholar's "…" truncation marker. */
+/**
+ * "A Smith, B Jones - Venue, 2019 - Publisher" -> ["A Smith", "B Jones"]. Drops Scholar's "…" truncation marker.
+ * The author block ends at the first spaced dash, so hyphenated names ("Jean-Paul Sartre") stay whole.
+ */
 export function parseAuthors(authorsVenue) {
-  const raw = String(authorsVenue || "").split(/\s*-\s*/)[0] || "";
+  const raw = String(authorsVenue || "").split(/\s+[-\u2013\u2014]\s+/)[0] || "";
   return raw
     .split(/\s*,\s*|\s+and\s+/i)
     .map((a) => a.replace(/[…]|\.\.\./g, "").trim())

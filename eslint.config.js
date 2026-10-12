@@ -107,6 +107,7 @@ module.exports = [
       "src/common/zotero-export.js",
       "src/common/obsidian-export.js",
       "src/common/latex-pack.js",
+      "src/common/reference-list.js",
       "src/library/export-ui.js",
       "src/library/export-dialogs.js",
       "src/content/content-author.js",

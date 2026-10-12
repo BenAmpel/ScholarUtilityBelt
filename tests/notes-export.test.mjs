@@ -16,6 +16,7 @@ describe("export model", () => {
     assert.deepEqual(parseAuthors(saved.a.authorsVenue), ["A Vaswani", "N Shazeer"]);
     assert.deepEqual(parseAuthors(""), []);
     assert.deepEqual(parseAuthors(undefined), []);
+    assert.deepEqual(parseAuthors("Jean-Paul Sartre, A Camus - Gallimard, 1947"), ["Jean-Paul Sartre", "A Camus"]);
   });
   it("builds a record with collection names, venue fallback and cleaned DOI", () => {
     const r = toRecord(saved.a, { collections: colls, venueOf: () => "NeurIPS", badgesOf: (v) => [`B:${v}`] });

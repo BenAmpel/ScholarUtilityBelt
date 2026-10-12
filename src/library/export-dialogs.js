@@ -5,6 +5,7 @@
  */
 
 import { assignCitekeys, buildBib, buildCiteList, checkCitations } from "../common/latex-pack.js";
+import { STYLES, blocksToHtml, blocksToPlain, buildDocHtml, buildReferenceBlocks } from "../common/reference-list.js";
 import { downloadText } from "./export-ui.js";
 
 function appendList(host, heading, items, emptyText) {
@@ -112,5 +113,76 @@ export function initLatexDialog(ui, deps) {
     limits.className = "export-note";
     limits.textContent = "This is a text scan. It reads \\cite, \\citep, \\citet, \\parencite, \\textcite and similar commands, skips commented lines, and does not follow \\input files or macros. Keys for papers you have not exported yet are shown as they would be assigned.";
     host.appendChild(limits);
+  });
+}
+
+/**
+ * Reference list dialog: style picker, optional quote sheet, preview, rich copy and a .doc download.
+ * @param {ReturnType<import("./export-ui.js").createExportUi>} ui
+ * @param {object} deps same as initLatexDialog (el, openModal, copyText)
+ */
+export function initRefListDialog(ui, deps) {
+  const { el } = deps;
+
+  async function current() {
+    const { scope, records } = await ui.selectedRecords();
+    const style = el("refStyle").value;
+    const built = buildReferenceBlocks(records, { style, includeQuotes: el("refQuotes").checked });
+    return { scope, records, style, blocks: built.blocks };
+  }
+
+  async function refreshPreview() {
+    const { scope, records, blocks } = await current();
+    el("refScope").textContent = `${scope.name}: ${records.length} ${records.length === 1 ? "paper" : "papers"}.`;
+    el("refPreview").textContent = records.length ? blocksToPlain(blocks) : "No saved papers in this scope.";
+  }
+
+  const select = el("refStyle");
+  select.textContent = "";
+  for (const [id, def] of Object.entries(STYLES)) {
+    const o = document.createElement("option");
+    o.value = id;
+    o.textContent = def.label;
+    select.appendChild(o);
+  }
+  select.addEventListener("change", refreshPreview);
+  el("refQuotes").addEventListener("change", refreshPreview);
+
+  ui.register("wordRefList", async () => {
+    await refreshPreview();
+    deps.openModal("refModal");
+  });
+
+  el("refCopy").addEventListener("click", async () => {
+    try {
+      const { records, blocks } = await current();
+      if (!records.length) return ui.setStatus("Nothing to copy in this scope.");
+      const plain = blocksToPlain(blocks);
+      const html = `<meta charset="utf-8">${blocksToHtml(blocks)}`;
+      if (navigator.clipboard && typeof window.ClipboardItem !== "undefined") {
+        await navigator.clipboard.write([new window.ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+        })]);
+        ui.setStatus("Copied with formatting. Paste into Word or Google Docs.");
+      } else {
+        await deps.copyText(plain);
+        ui.setStatus("Copied as plain text. This browser did not allow formatted copy, so italics and indents are missing.");
+      }
+    } catch (err) {
+      ui.setStatus(`Copy failed: ${err && err.message ? err.message : "unknown error"}`, true);
+    }
+  });
+
+  el("refDoc").addEventListener("click", async () => {
+    try {
+      const { scope, records, style, blocks } = await current();
+      if (!records.length) return ui.setStatus("Nothing to export in this scope.");
+      downloadText(`references-${style}-${new Date().toISOString().slice(0, 10)}.doc`,
+        buildDocHtml(blocks, { title: `${STYLES[style].heading}: ${scope.name}` }), "application/msword");
+      ui.setStatus("Downloaded a .doc file. Word opens it directly; Google Docs can import it.");
+    } catch (err) {
+      ui.setStatus(`Export failed: ${err && err.message ? err.message : "unknown error"}`, true);
+    }
   });
 }
