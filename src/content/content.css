@@ -962,9 +962,24 @@ body[data-su-theme="dark"] .su-author-badge-grid {
   color: inherit;
 }
 /* Hide Scholar's native PDF link (keep layout, show extension button) */
-.gs_or_ggsm a,
-.gs_ggs a {
+.gs_or_ggsm a:not(.gs_or_aia),
+.gs_ggs a:not(.gs_or_aia) {
   display: none !important;
+}
+/* Scholar's "Quick read" link shares that column but is not a file: keep it visible, styled as a chip */
+.gs_or_ggsm a.gs_or_aia,
+.gs_ggs a.gs_or_aia {
+  display: inline-block;
+}
+.gs_r.su-has-quickread .gs_or_ggsm a.gs_or_aia {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 12px;
+  text-decoration: none;
+}
+body[data-su-theme="dark"] .gs_or_ggsm a.gs_or_aia {
+  color: #8ab4f8;
 }
 /* Funding tag tooltip (hover on result) */
 .su-funding-tooltip {

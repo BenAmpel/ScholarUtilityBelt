@@ -95,6 +95,7 @@ module.exports = [
     files: [
       "src/common/storage.js",
       "src/common/quality.js",
+      "src/common/scholar-links.js",
       "src/common/entitlement.js",
       "src/common/apppass.js",
       "src/common/install-pages.js",

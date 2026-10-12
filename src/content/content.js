@@ -67,6 +67,9 @@
   let getEntitlementStatus;
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
+  // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
+  let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
+  let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
   async function refreshEntitlementCache() {
     cachedEntitlement = await getEntitlementStatus();
     return cachedEntitlement;
@@ -86,13 +89,15 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
       importModuleWithRetry("dist/content/data-loader.js"),
       importModuleWithRetry("dist/common/entitlement.js"),
+      importModuleWithRetry("dist/common/scholar-links.js"),
     ]);
+    ({ isQuickReadLink, firstFileColumnLink } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -1938,7 +1943,7 @@
       const linkText = text(a).trim().replace(/\s+/g, " ");
       const isPdfLink = /\.pdf(\?|#|$)/i.test(href);
       const isPdfLabel = /^\[?\s*PDF\s*\]?$/i.test(linkText);
-      const inPdfBox = !!a.closest(".gs_or_ggsm, .gs_ggs");
+      const inPdfBox = !!a.closest(".gs_or_ggsm, .gs_ggs") && !isQuickReadLink(a);
       if (isPdfLabel || inPdfBox || (isPdfLink && a.closest(".gs_rt"))) {
         publisherPdf = href;
         break;
@@ -3454,7 +3459,7 @@
       }
     }
     const snippet = text(gsR.querySelector(".gs_rs"));
-    const pdfLink = gsR.querySelector(".gs_or_ggsm a, .gs_ggs a");
+    const pdfLink = firstFileColumnLink(gsR.querySelectorAll(".gs_or_ggsm a, .gs_ggs a"));
     const pdfUrl = tryGetHref(pdfLink);
     const { citedByUrl, versionsUrl, relatedUrl } = flLinks;
     const clusterId =
@@ -4401,7 +4406,13 @@
       }
     }
   }
+  /** Tag rows that carry Scholar's Quick read link so CSS can style it as a chip. */
+  function markQuickRead(container) {
+    const has = Array.from(container.querySelectorAll(".gs_or_ggsm a, .gs_ggs a")).some(isQuickReadLink);
+    container.classList.toggle("su-has-quickread", has);
+  }
   function renderVelocity(container, paper, isAuthorProfile) {
+    if (!isAuthorProfile) markQuickRead(container);
     if (isAuthorProfile && window.suState?.authorFeatureToggles?.velocityBadge === false) {
       const existing = getCachedElement(container, ".su-velocity");
       if (existing) {
