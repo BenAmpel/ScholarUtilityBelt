@@ -4959,6 +4959,16 @@ body[data-su-theme="dark"] .su-review-input,
 body[data-su-theme="dark"] .su-review-project-bar select { background: #35363a; border-color: #5f6368; color: #e8eaed; }
 body[data-su-theme="dark"] .su-review-meta,
 body[data-su-theme="dark"] .su-review-muted { color: #9aa0a6; }
+/* Headings and links that kept their light-theme colours on the dark panel (dark navy on #202124). */
+body[data-su-theme="dark"] .su-review-header .su-review-title,
+body[data-su-theme="dark"] .su-review-row .su-review-title,
+body[data-su-theme="dark"] .su-review-card-title { color: #e8eaed; }
+body[data-su-theme="dark"] .su-review-title a { color: #8ab4f8; }
+body[data-su-theme="dark"] .su-review-subtitle,
+body[data-su-theme="dark"] .su-review-help,
+body[data-su-theme="dark"] .su-review-signal-label,
+body[data-su-theme="dark"] .su-review-tag-cloud em { color: #9aa0a6; }
+body[data-su-theme="dark"] .su-review-card-row { color: #c4c7c5; }
 body[data-su-theme="dark"] .su-review-import-form label,
 body[data-su-theme="dark"] .su-review-import-status { color: #bdc1c6; }
 body[data-su-theme="dark"] .su-review-status-unscreened { background: #3c4043; color: #e8eaed; border-color: #5f6368; }
