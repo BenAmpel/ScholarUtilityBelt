@@ -88,6 +88,10 @@ export const PRO_FEATURES = {
   popReport: "legacy",
   // Added after Pro launched: unlocked by a trial, purchase or App Pass for everyone, grandfathered or not.
   referenceImport: "new",
+  riskOfBias: "new",
+  screeningAgreement: "new",
+  evidenceMatrix: "new",
+  reviewSnapshots: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

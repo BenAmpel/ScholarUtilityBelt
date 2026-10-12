@@ -21,6 +21,22 @@ import {
   searchLogToMarkdown,
   totalRecordsFromSearchLog
 } from "../common/reference-import.js";
+import {
+  ROB_NOTICE, ROB_LEVELS, ROB_LEVEL_LABELS, ROB_TEMPLATES, normalizeRob, templateFor, setJudgement, setOverall,
+  setPaperTemplate, setDefaultTemplate, addCustomDomain, renameCustomDomain, removeCustomDomain,
+  summarizePaper, robToCsv, robToMarkdown, robValueText
+} from "../common/rob.js";
+import {
+  MAYBE_MODES, computeAgreement, latestResolution, appendResolution, methodsParagraph, resolutionsToCsv
+} from "../common/screening-agreement.js";
+import {
+  PICO_KEYS, normalizeColumns, addColumn, removeColumn, moveColumn, buildMatrix, sortRows, groupRows,
+  matrixToCsv, matrixToMarkdown, matrixToHtml
+} from "../common/evidence-matrix.js";
+import {
+  MAX_SNAPSHOTS, MAX_LOG_ENTRIES, OVERRIDE_REVIEWER, takeSnapshot, addSnapshot, deleteSnapshot, restoreSnapshot,
+  appendLog, logToCsv, approxBytes
+} from "../common/review-snapshots.js";
 
 export function createReviewWorkspace(deps) {
   const {
@@ -95,6 +111,11 @@ export function createReviewWorkspace(deps) {
     project.updates = Array.isArray(project.updates) ? project.updates : [];
     project.lastUpdateCheck = project.lastUpdateCheck || null;
     project.searchLog = Array.isArray(project.searchLog) ? project.searchLog : [];
+    project.rob = normalizeRob(project.rob);
+    project.matrixColumns = normalizeColumns(project.matrixColumns);
+    project.agreementResolutions = Array.isArray(project.agreementResolutions) ? project.agreementResolutions : [];
+    project.snapshots = Array.isArray(project.snapshots) ? project.snapshots : [];
+    project.changeLog = Array.isArray(project.changeLog) ? project.changeLog : [];
     return project;
   }
   function createReviewProject(name, query) {
@@ -277,6 +298,8 @@ export function createReviewWorkspace(deps) {
     const votes = decision.votes;
     const existing = votes.find((v) => v.reviewerId === reviewerId);
     const now = new Date().toISOString();
+    const oldVote = existing ? existing.status || "unscreened" : "unscreened";
+    const oldOverride = decision.overrideStatus || "none";
     if (nextStatus && decision.overrideStatus) {
       decision.overrideStatus = "";
     }
@@ -295,6 +318,12 @@ export function createReviewWorkspace(deps) {
     }
     decision.status = getConsensusStatus(votes);
     project.decisions[id] = decision;
+    if (nextStatus) {
+      logDecisionChanges(project, [
+        { paperId: id, reviewerId, old: oldVote, new: nextStatus },
+        { paperId: id, reviewerId: OVERRIDE_REVIEWER, old: oldOverride, new: "none", source: "vote cleared the override" }
+      ]);
+    }
   }
   function computeReviewStats(project) {
     const ids = Object.keys(project.papers || {});
@@ -696,6 +725,488 @@ export function createReviewWorkspace(deps) {
     if (parsed.skipped) notes.push(`${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} without a title skipped`);
     if (parsed.truncated) notes.push("only the first 20,000 records were read");
     setStatus(`Added ${added} new record${added === 1 ? "" : "s"} from ${file.name} (${duplicates} already in the project). Logged as ${database}.${notes.length ? ` ${notes.join("; ")}.` : ""}`);
+  }
+
+  // ── Review tools (Pro): risk of bias, screening agreement, evidence matrix, snapshots ──
+  // Logic lives in src/common/{rob,screening-agreement,evidence-matrix,review-snapshots}.js;
+  // this block is only rendering and event wiring. Each tab has its own PRO_FEATURES id.
+  const PRO_TABS = { rob: "riskOfBias", agreement: "screeningAgreement", matrix: "evidenceMatrix", snapshots: "reviewSnapshots" };
+  const PRO_ACTION_FEATURE = { rob: "riskOfBias", agr: "screeningAgreement", mx: "evidenceMatrix", snap: "reviewSnapshots" };
+  const PRO_BLURBS = {
+    riskOfBias: ["Risk of bias grid", "Record your own risk-of-bias judgement per paper, per domain and per reviewer, using RoB 2, ROBINS-I, Newcastle-Ottawa star counts or a checklist you edit. Export to CSV or Markdown."],
+    screeningAgreement: ["Screening agreement", "Percent agreement and Cohen's kappa between two reviewers, a list of their disagreements with a resolution log, and a methods paragraph with the numbers."],
+    evidenceMatrix: ["Evidence matrix", "Papers as rows and concept columns you define from extraction fields, tags and notes. Sort, group, and export to Markdown, CSV or a Word-friendly HTML table."],
+    reviewSnapshots: ["Snapshots and change log", "Save named snapshots of your review work, restore one when you need to, and keep a log of every screening decision change."]
+  };
+  async function refreshProFeatures(state) {
+    state.pro = state.pro || {};
+    let ent;
+    try { ent = await getEntitlementStatus({ needPurchased: true }); } catch { /* treated as locked */ }
+    for (const id of Object.values(PRO_TABS)) state.pro[id] = !!(ent && canUseFeature(id, ent));
+    return state.pro;
+  }
+  function proFileName(project, suffix) {
+    return `${project.name}-${suffix}`.replace(/\s+/g, "-").toLowerCase();
+  }
+  function reviewerNameOf(project, id) {
+    return (project.reviewers || []).find((r) => r.id === id)?.name || id;
+  }
+  function includedPaperIds(project) {
+    return Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
+  }
+  function selectOptions(list, selected) {
+    return list.map(([value, label]) => `<option value="${escapeHtml(value)}"${String(value) === String(selected) ? " selected" : ""}>${escapeHtml(label)}</option>`).join("");
+  }
+  function renderProLocked(featureId) {
+    const [title, blurb] = PRO_BLURBS[featureId];
+    return `
+      <div class="su-review-import">
+        <h3>${escapeHtml(title)} <span class="su-review-pro-tag">Pro</span></h3>
+        <p class="su-review-muted">${escapeHtml(blurb)} It is unlocked with a free trial, a purchase or App Pass.</p>
+        <div class="su-review-actions">
+          <button type="button" class="su-graph-btn" data-review-unlock="1">Unlock Pro</button>
+        </div>
+      </div>`;
+  }
+  // Decision changes are only logged while the snapshots feature is unlocked.
+  function logDecisionChanges(project, entries) {
+    if (!window.suReviewState?.pro?.reviewSnapshots) return;
+    project.changeLog = appendLog(project.changeLog, entries, new Date());
+  }
+  function effectiveVoteStatus(project, id, reviewerId) {
+    const v = (normalizeDecisionEntry(project.decisions?.[id]).votes || []).find((x) => x.reviewerId === reviewerId);
+    return v?.status || "unscreened";
+  }
+
+  function renderRobTab(project, state) {
+    const rob = project.rob = normalizeRob(project.rob);
+    const active = getActiveReviewer(project);
+    const blind = !!project.blindMode;
+    const ids = includedPaperIds(project);
+    const shown = ids.slice(0, 60);
+    const levelOptions = [["", "Not assessed"], ...ROB_LEVELS.map((l) => [l, ROB_LEVEL_LABELS[l]])];
+    const templateOptions = Object.values(ROB_TEMPLATES).map((t) => [t.id, t.label]);
+    const cards = shown.map((id) => {
+      const paper = project.papers[id] || {};
+      const template = templateFor(rob, id);
+      const entry = rob.papers[id] || {};
+      const mine = entry.reviewers?.[active.id] || {};
+      const others = (project.reviewers || []).filter((r) => r.id !== active.id);
+      const summary = summarizePaper(rob, id, blind ? [active] : project.reviewers || []);
+      const domainRows = template.domains.map((d) => {
+        const choices = template.scale === "stars"
+          ? [["", "Not assessed"], ...Array.from({ length: (d.maxStars || 0) + 1 }, (_, n) => [String(n), `${n} of ${d.maxStars}`])]
+          : levelOptions;
+        const current = mine[d.key] === undefined ? "" : String(mine[d.key]);
+        const otherText = blind ? "" : others.map((r) => {
+          const t = robValueText(template, entry.reviewers?.[r.id]?.[d.key]);
+          return t ? `${r.name || r.id}: ${t}` : "";
+        }).filter(Boolean).join(" · ");
+        return `<div class="su-review-rob-domain">
+          <span>${escapeHtml(d.label)}</span>
+          <select class="su-review-input" data-rv="rob-judge" data-rob-domain="${escapeHtml(d.key)}" aria-label="${escapeHtml(d.label)}">${selectOptions(choices, current)}</select>
+          <span class="su-review-muted">${escapeHtml(otherText)}</span>
+        </div>`;
+      }).join("") || '<div class="su-review-muted">This checklist has no domains yet. Add some under custom checklist domains above.</div>';
+      const tallies = summary.byReviewer.map((t) => template.scale === "stars"
+        ? `${t.name}: ${t.stars} of ${t.maxStars} stars (${t.assessed} of ${t.assessed + t.notAssessed} domains assessed)`
+        : `${t.name}: ${t.low} low, ${t.some} some concerns, ${t.high} high, ${t.notAssessed} not assessed`).join(" | ");
+      const differs = !blind && summary.differing ? ` ${summary.differing} domain${summary.differing === 1 ? "" : "s"} differ between reviewers.` : "";
+      return `<div class="su-review-card su-review-rob-paper" data-review-id="${escapeHtml(id)}">
+        <div class="su-review-card-title">${escapeHtml(paper.title || "Untitled")} <span class="su-review-muted">${escapeHtml(paper.year || "")}</span></div>
+        <label class="su-review-filter-check">Template
+          <select class="su-review-input" data-rv="rob-paper-template">${selectOptions([["", "Project default"], ...templateOptions], entry.template || "")}</select>
+        </label>
+        ${domainRows}
+        <div class="su-review-muted">${escapeHtml(tallies)}${escapeHtml(differs)}</div>
+        <div class="su-review-rob-overall">
+          <label class="su-review-filter-check">Overall (your judgement)
+            <select class="su-review-input" data-rv="rob-overall">${selectOptions(levelOptions.map(([v, l]) => [v, v ? l : "Not set"]), summary.overall.judgement)}</select>
+          </label>
+          <input class="su-review-input" data-rv="rob-overall-note" placeholder="Note" maxlength="2000" value="${escapeHtml(summary.overall.note)}" />
+        </div>
+      </div>`;
+    }).join("");
+    return `
+      <div class="su-review-help"><p>${escapeHtml(ROB_NOTICE)}</p></div>
+      <div class="su-review-filters">
+        <label class="su-review-filter-check">Default template
+          <select class="su-review-input" data-rv="rob-default-template">${selectOptions(templateOptions, rob.defaultTemplate)}</select>
+        </label>
+        <span class="su-review-muted">Judging as ${escapeHtml(active.name || active.id)}${blind ? " (blind: other reviewers hidden)" : ""}</span>
+      </div>
+      <details class="su-review-card">
+        <summary class="su-review-card-title">Custom checklist domains (${rob.customDomains.length})</summary>
+        ${rob.customDomains.map((d) => `<div class="su-review-rob-domain">
+          <input class="su-review-input" data-rv="rob-rename-domain" data-rob-key="${escapeHtml(d.key)}" value="${escapeHtml(d.label)}" maxlength="80" aria-label="Domain name" />
+          <button type="button" class="${CLS_BTN_SEC}" data-rv="rob-remove-domain" data-rob-key="${escapeHtml(d.key)}">Remove</button>
+        </div>`).join("")}
+        <div class="su-review-rob-domain">
+          <input id="su-rv-rob-domain" class="su-review-input" placeholder="Add domain" maxlength="80" />
+          <button type="button" class="su-graph-btn" data-rv="rob-add-domain">Add domain</button>
+        </div>
+        <div class="su-review-muted">Used by papers set to the custom checklist. Removing a domain hides it; answers already given are kept in the project file.</div>
+      </details>
+      <div class="su-review-actions">
+        <button type="button" class="${CLS_BTN_SEC}" data-rv="rob-export-csv">Export CSV</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-rv="rob-export-md">Export Markdown</button>
+      </div>
+      ${ids.length ? "" : '<div class="su-review-muted">No included papers yet. Papers appear here once they are included in screening.</div>'}
+      ${ids.length > shown.length ? `<div class="su-review-muted">Showing the first ${shown.length} of ${ids.length} included papers. Exports include all of them.</div>` : ""}
+      <div class="su-review-rob-list">${cards}</div>`;
+  }
+
+  function agreementSelection(project, state) {
+    const reviewers = project.reviewers || [];
+    const ag = state.agree = state.agree || {};
+    if (!reviewers.some((r) => r.id === ag.a)) ag.a = reviewers[0]?.id || "";
+    if (!reviewers.some((r) => r.id === ag.b) || ag.b === ag.a) ag.b = reviewers.find((r) => r.id !== ag.a)?.id || "";
+    if (!MAYBE_MODES.includes(ag.maybe)) ag.maybe = "separate";
+    return ag;
+  }
+  function renderAgreementTab(project, state) {
+    const ag = agreementSelection(project, state);
+    const reviewers = project.reviewers || [];
+    const names = { a: reviewerNameOf(project, ag.a), b: reviewerNameOf(project, ag.b) };
+    const result = computeAgreement(project, ag.a, ag.b, { maybeMode: ag.maybe });
+    const log = Array.isArray(project.agreementResolutions) ? project.agreementResolutions : [];
+    const resolvedCount = result.conflicts.filter((c) => latestResolution(log, c.paperId)).length;
+    const blind = !!project.blindMode;
+    const reviewerOptions = reviewers.map((r) => [r.id, r.name || r.id]);
+    const cats = result.categories;
+    const matrixHtml = result.compared ? `
+      <div class="su-review-extract-table"><table>
+        <thead><tr><th>${escapeHtml(names.a)} \\ ${escapeHtml(names.b)}</th>${cats.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+        <tbody>${cats.map((r) => `<tr><th>${r}</th>${cats.map((c) => `<td>${result.matrix[r][c]}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table></div>` : "";
+    const conflictsHtml = blind
+      ? '<div class="su-review-muted">Blind screening is on, so individual votes are hidden. Turn blind mode off to list and resolve disagreements.</div>'
+      : (result.conflicts.length ? result.conflicts.map((c) => {
+        const paper = project.papers[c.paperId] || {};
+        const last = latestResolution(log, c.paperId);
+        const current = getDecisionStatus(project, c.paperId, { blind: false });
+        return `<div class="su-review-conflict-item" data-review-id="${escapeHtml(c.paperId)}">
+          <div class="su-review-conflict-title">${escapeHtml(paper.title || "Untitled")}</div>
+          <div class="su-review-conflict-votes">${escapeHtml(names.a)}: ${escapeHtml(c.a)} · ${escapeHtml(names.b)}: ${escapeHtml(c.b)} · current decision: ${escapeHtml(current)}${last ? ` · last resolved by ${escapeHtml(last.resolvedBy)} as ${escapeHtml(last.decision)} on ${escapeHtml(last.at.slice(0, 10))}` : ""}</div>
+          <div class="su-review-filters">
+            <select class="su-review-input" data-rv-field="by" aria-label="Resolved by">${selectOptions(reviewerOptions, ag.resolvedBy || ag.a)}</select>
+            <select class="su-review-input" data-rv-field="decision" aria-label="Decision">${selectOptions([["include", "Include"], ["exclude", "Exclude"], ["maybe", "Maybe"]], "include")}</select>
+            <input class="su-review-input" data-rv-field="note" placeholder="Note (optional)" maxlength="1000" />
+            <button type="button" class="su-graph-btn" data-rv="agr-resolve">Record resolution</button>
+          </div>
+        </div>`;
+      }).join("") : '<div class="su-review-muted">No disagreements between these two reviewers.</div>');
+    const logRows = log.slice().reverse().slice(0, 100).map((r) => `<tr>
+      <td>${escapeHtml(r.at.slice(0, 16).replace("T", " "))}</td><td>${escapeHtml(project.papers[r.paperId]?.title || r.paperId)}</td>
+      <td>${escapeHtml(r.resolvedBy)}</td><td>${escapeHtml(r.decision)}</td><td>${escapeHtml(r.note || "")}</td></tr>`).join("");
+    return `
+      <div class="su-review-help"><p>Agreement uses the include, exclude and maybe votes each reviewer has recorded. Only papers both reviewers have screened are compared. A paper that either reviewer has not screened is left out and counted separately.</p></div>
+      ${reviewers.length < 2 ? '<div class="su-review-muted">Add a second reviewer on the Team tab to compare two reviewers.</div>' : `
+      <div class="su-review-filters">
+        <label class="su-review-filter-check">Reviewer 1 <select class="su-review-input" data-rv="agr-a">${selectOptions(reviewerOptions, ag.a)}</select></label>
+        <label class="su-review-filter-check">Reviewer 2 <select class="su-review-input" data-rv="agr-b">${selectOptions(reviewerOptions, ag.b)}</select></label>
+        <label class="su-review-filter-check">Maybe votes
+          <select class="su-review-input" data-rv="agr-maybe">${selectOptions([["separate", "Own category"], ["include", "Count as include"], ["exclude", "Count as exclude"]], ag.maybe)}</select>
+        </label>
+      </div>
+      <div class="su-review-stats">
+        <div><strong>${result.percent === null ? "n/a" : `${result.percent.toFixed(1)}%`}</strong> agreement</div>
+        <div><strong>${result.kappa === null ? "n/a" : result.kappa.toFixed(2)}</strong> Cohen's kappa${result.kappaLabel ? ` (${escapeHtml(result.kappaLabel)})` : ""}</div>
+        <div><strong>${result.compared}</strong> compared</div>
+        <div><strong>${result.disagreed}</strong> disagreements</div>
+        <div><strong>${result.onlyA + result.onlyB + result.neither}</strong> not compared</div>
+      </div>
+      ${result.kappaNote ? `<div class="su-review-muted">${escapeHtml(result.kappaNote)}</div>` : ""}
+      ${matrixHtml}
+      <h3>Methods paragraph</h3>
+      <textarea class="su-review-report" id="su-rv-agr-text" readonly></textarea>
+      <div class="su-review-actions">
+        <button type="button" class="su-graph-btn" data-rv="agr-copy">Copy paragraph</button>
+      </div>
+      <div class="su-review-conflicts">
+        <div class="su-review-card-title">Disagreements (${result.conflicts.length}, ${resolvedCount} with a recorded resolution)</div>
+        <div class="su-review-muted">Recording a resolution also sets the paper's final decision, the same way the Team tab does, and is added to the log below.</div>
+        ${conflictsHtml}
+      </div>
+      <h3>Resolution log</h3>
+      ${log.length ? `<div class="su-review-extract-table"><table>
+        <thead><tr><th>When</th><th>Paper</th><th>Resolved by</th><th>Decision</th><th>Note</th></tr></thead><tbody>${logRows}</tbody></table></div>
+        <div class="su-review-actions"><button type="button" class="${CLS_BTN_SEC}" data-rv="agr-export-log">Export resolution log CSV</button></div>`
+        : '<div class="su-review-muted">No resolutions recorded yet.</div>'}`}
+    `;
+  }
+  function fillAgreementText(content, project, state) {
+    const el = content.querySelector("#su-rv-agr-text");
+    if (!el) return;
+    const ag = agreementSelection(project, state);
+    const result = computeAgreement(project, ag.a, ag.b, { maybeMode: ag.maybe });
+    const log = Array.isArray(project.agreementResolutions) ? project.agreementResolutions : [];
+    el.value = methodsParagraph(result, { a: reviewerNameOf(project, ag.a), b: reviewerNameOf(project, ag.b) }, {
+      blind: !!project.blindMode,
+      resolvedCount: result.conflicts.filter((c) => latestResolution(log, c.paperId)).length
+    });
+  }
+
+  function matrixPrepare(project, state) {
+    const mx = state.matrix = state.matrix || {};
+    if (mx.rows !== "all") mx.rows = "included";
+    if (mx.dir !== "desc") mx.dir = "asc";
+    mx.sort = mx.sort || "title";
+    mx.group = mx.group || "";
+    const ids = mx.rows === "all" ? Object.keys(project.papers || {}) : includedPaperIds(project);
+    const matrix = buildMatrix(project, project.matrixColumns, ids);
+    const rows = sortRows(matrix, mx.sort, mx.dir);
+    const grouped = matrix.columns.some((c) => c.id === mx.group);
+    const groups = groupRows(matrix, rows, grouped ? mx.group : "");
+    return { mx, matrix, groups, grouped };
+  }
+  function renderMatrixTab(project, state) {
+    project.matrixColumns = normalizeColumns(project.matrixColumns);
+    const { mx, matrix, groups, grouped } = matrixPrepare(project, state);
+    const fields = getExtractionFields(project);
+    const sourceOptions = [
+      ...fields.map((f) => [`extraction:${f.key}`, `Extraction: ${f.label}`]),
+      ["tags", "All tags"], ["tagsfilter", "Tags containing text"], ["notes", "Notes"],
+      ...PICO_KEYS.map((k) => [`pico:${k}`, `PICO: ${k}`])
+    ];
+    const colOptions = [["title", "Title"], ["year", "Year"], ...matrix.columns.map((c) => [c.id, c.label])];
+    const head = `<tr><th>Paper</th>${matrix.columns.map((c, i) => `<th>${escapeHtml(c.label)}
+      <span class="su-review-mx-tools">
+        <button type="button" class="su-review-mx-btn" data-rv="mx-left" data-mx-id="${escapeHtml(c.id)}" aria-label="Move ${escapeHtml(c.label)} left"${i === 0 ? " disabled" : ""}>&lt;</button>
+        <button type="button" class="su-review-mx-btn" data-rv="mx-right" data-mx-id="${escapeHtml(c.id)}" aria-label="Move ${escapeHtml(c.label)} right"${i === matrix.columns.length - 1 ? " disabled" : ""}>&gt;</button>
+        <button type="button" class="su-review-mx-btn" data-rv="mx-remove" data-mx-id="${escapeHtml(c.id)}" aria-label="Remove ${escapeHtml(c.label)}">Remove</button>
+      </span></th>`).join("")}</tr>`;
+    const body = groups.map((g) => `${grouped ? `<tr><td colspan="${matrix.columns.length + 1}"><strong>${escapeHtml(g.group)}</strong> <span class="su-review-muted">(${g.rows.length})</span></td></tr>` : ""}${g.rows.map((row) => `<tr>
+      <td class="su-review-extract-title">${escapeHtml(row.title)}${row.year ? ` <span class="su-review-muted">${escapeHtml(row.year)}</span>` : ""}</td>
+      ${row.cells.map((c) => `<td class="su-review-mx-cell">${escapeHtml(c.text.length > 240 ? `${c.text.slice(0, 240)}...` : c.text)}</td>`).join("")}</tr>`).join("")}`).join("");
+    return `
+      <div class="su-review-help"><p>Each column reads from data already in this project: an extraction field, the paper's tags, its notes or a PICO box. Nothing is stored except the column list.</p></div>
+      <div class="su-review-extract-controls">
+        <input id="su-rv-mx-label" class="su-review-input" placeholder="Column name (e.g., Trust)" maxlength="80" />
+        <select id="su-rv-mx-source" class="su-review-input">${selectOptions(sourceOptions, "tags")}</select>
+        <input id="su-rv-mx-filter" class="su-review-input" placeholder="Tag text (for Tags containing)" maxlength="80" />
+        <button type="button" class="su-graph-btn" data-rv="mx-add">Add column</button>
+      </div>
+      <div class="su-review-filters">
+        <label class="su-review-filter-check">Rows <select class="su-review-input" data-rv="mx-rows">${selectOptions([["included", "Included papers"], ["all", "All papers"]], mx.rows)}</select></label>
+        <label class="su-review-filter-check">Sort <select class="su-review-input" data-rv="mx-sort">${selectOptions(colOptions, mx.sort)}</select></label>
+        <select class="su-review-input" data-rv="mx-dir" aria-label="Sort direction">${selectOptions([["asc", "Ascending"], ["desc", "Descending"]], mx.dir)}</select>
+        <label class="su-review-filter-check">Group by <select class="su-review-input" data-rv="mx-group">${selectOptions([["", "No grouping"], ...matrix.columns.map((c) => [c.id, c.label])], mx.group)}</select></label>
+      </div>
+      ${grouped ? '<div class="su-review-muted">A paper with several values in the grouped column (for example several tags) appears under each of them.</div>' : ""}
+      <div class="su-review-actions">
+        <button type="button" class="${CLS_BTN_SEC}" data-rv="mx-export-md">Export Markdown</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-rv="mx-export-csv">Export CSV</button>
+        <button type="button" class="${CLS_BTN_SEC}" data-rv="mx-export-html">Export Word table (HTML)</button>
+      </div>
+      ${matrix.rows.length ? `<div class="su-review-extract-table"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`
+        : '<div class="su-review-muted">No papers to show. Include papers in screening, or switch Rows to All papers.</div>'}
+      ${matrix.columns.length ? "" : '<div class="su-review-muted">Add a column to start.</div>'}`;
+  }
+
+  function renderSnapshotsTab(project, state) {
+    const snaps = Array.isArray(project.snapshots) ? project.snapshots : [];
+    const log = Array.isArray(project.changeLog) ? project.changeLog : [];
+    const rows = snaps.slice().reverse().map((s) => `<tr data-snap-id="${escapeHtml(s.id)}">
+      <td>${escapeHtml(s.name)}${s.kind === "auto" ? ' <span class="su-review-muted">(automatic)</span>' : ""}</td>
+      <td>${escapeHtml(String(s.createdAt || "").slice(0, 16).replace("T", " "))}</td>
+      <td>${Number(s.counts?.votes) || 0} votes, ${Number(s.counts?.extracted) || 0} extracted</td>
+      <td>${Math.max(1, Math.round(approxBytes(s) / 1024))} KB</td>
+      <td><button type="button" class="${CLS_BTN_SEC}" data-rv="snap-restore" data-snap-id="${escapeHtml(s.id)}">Restore</button>
+          <button type="button" class="${CLS_BTN_SEC}" data-rv="snap-delete" data-snap-id="${escapeHtml(s.id)}">Delete</button></td></tr>`).join("");
+    const logRows = log.slice(-50).reverse().map((e) => `<tr>
+      <td>${escapeHtml(String(e.at).slice(0, 16).replace("T", " "))}</td><td>${escapeHtml(project.papers[e.paperId]?.title || e.paperId)}</td>
+      <td>${escapeHtml(e.reviewerId === OVERRIDE_REVIEWER ? "Final decision" : reviewerNameOf(project, e.reviewerId))}</td><td>${escapeHtml(e.old)}</td><td>${escapeHtml(e.new)}</td></tr>`).join("");
+    return `
+      <div class="su-review-help"><p>A snapshot is a copy of your screening decisions, extraction, quality answers, tags, notes, PICO boxes, highlights, reviewers, risk-of-bias grid and matrix columns. It does not include the records themselves, so restoring never removes papers. Snapshots are stored in this browser with the project and are part of Export JSON.</p></div>
+      <div class="su-review-extract-controls">
+        <input id="su-rv-snap-name" class="su-review-input" placeholder="Snapshot name (e.g., After pilot screening)" maxlength="80" />
+        <button type="button" class="su-graph-btn" data-rv="snap-save">Save snapshot</button>
+      </div>
+      <div class="su-review-import-status" role="status" aria-live="polite">${escapeHtml(state.proStatus || "")}</div>
+      <div class="su-review-muted">Limit: ${MAX_SNAPSHOTS} snapshots (${snaps.length} saved). When the limit is reached the oldest is dropped. Restoring saves an automatic snapshot of the current state first, which counts toward the limit.</div>
+      ${snaps.length ? `<div class="su-review-extract-table"><table><thead><tr><th>Name</th><th>Saved</th><th>Contents</th><th>Size</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="su-review-muted">No snapshots yet.</div>'}
+      <h3>Decision change log</h3>
+      <div class="su-review-muted">Records who changed which paper's screening decision, from what, to what, and when, while this feature is unlocked. Limit: ${MAX_LOG_ENTRIES.toLocaleString()} entries (${log.length.toLocaleString()} logged); the oldest are dropped. Nothing is logged for changes made while Pro is locked.</div>
+      ${log.length ? `<div class="su-review-extract-table"><table><thead><tr><th>When</th><th>Paper</th><th>Reviewer</th><th>Old</th><th>New</th></tr></thead><tbody>${logRows}</tbody></table></div>
+        <div class="su-review-muted">Showing the latest ${Math.min(50, log.length)}. The export has all of them.</div>
+        <div class="su-review-actions"><button type="button" class="${CLS_BTN_SEC}" data-rv="snap-export-log">Export change log CSV</button></div>` : ""}`;
+  }
+
+  /** Returns the HTML for one of the review-tool tabs, or the locked card. */
+  function renderProTab(tab, project, state) {
+    const feature = PRO_TABS[tab];
+    if (!state.pro?.[feature]) return renderProLocked(feature);
+    if (tab === "rob") return renderRobTab(project, state);
+    if (tab === "agreement") return renderAgreementTab(project, state);
+    if (tab === "matrix") return renderMatrixTab(project, state);
+    return renderSnapshotsTab(project, state);
+  }
+
+  function rerenderKeepScroll(overlay, project) {
+    const content = overlay.querySelector("#su-review-content");
+    const top = content ? content.scrollTop : 0;
+    renderReviewOverlay(project);
+    if (content) content.scrollTop = top;
+  }
+  async function proSave(overlay, project) {
+    await saveReviewProject(project);
+    rerenderKeepScroll(overlay, project);
+  }
+
+  /**
+   * Handles clicks and changes on elements marked data-rv. Returns true when the
+   * event belonged to this block. Entitlement is re-checked on every action.
+   */
+  async function handleProEvent(e, overlay, kind) {
+    const el = e.target.closest("[data-rv]");
+    if (!el) return false;
+    const isButton = el.tagName === "BUTTON";
+    if ((kind === "click") !== isButton) return false;
+    const action = el.dataset.rv;
+    const feature = PRO_ACTION_FEATURE[action.split("-")[0]];
+    const project = getActiveReviewProject();
+    const state = await ensureReviewState();
+    if (!feature || !project) return true;
+    await refreshProFeatures(state);
+    if (!state.pro[feature]) { renderReviewOverlay(project); return true; }
+    const row = el.closest("[data-review-id]");
+    const paperId = row?.dataset.reviewId || "";
+    const reviewer = getActiveReviewer(project);
+    const download = (suffix, mime, text) => downloadBlob(proFileName(project, suffix), mime, text);
+
+    // Risk of bias
+    if (action === "rob-default-template") { project.rob = normalizeRob(project.rob); setDefaultTemplate(project.rob, el.value); return void (await proSave(overlay, project)); }
+    if (action === "rob-paper-template") { project.rob = normalizeRob(project.rob); setPaperTemplate(project.rob, paperId, el.value); return void (await proSave(overlay, project)); }
+    if (action === "rob-judge") { project.rob = normalizeRob(project.rob); setJudgement(project.rob, paperId, reviewer.id, el.dataset.robDomain, el.value); return void (await proSave(overlay, project)); }
+    if (action === "rob-overall") { project.rob = normalizeRob(project.rob); setOverall(project.rob, paperId, el.value, null); return void (await proSave(overlay, project)); }
+    if (action === "rob-overall-note") { project.rob = normalizeRob(project.rob); setOverall(project.rob, paperId, null, el.value); await saveReviewProject(project); return true; }
+    if (action === "rob-add-domain") {
+      const input = overlay.querySelector("#su-rv-rob-domain");
+      project.rob = normalizeRob(project.rob);
+      if (addCustomDomain(project.rob, input?.value)) return void (await proSave(overlay, project));
+      return true;
+    }
+    if (action === "rob-rename-domain") { project.rob = normalizeRob(project.rob); renameCustomDomain(project.rob, el.dataset.robKey, el.value); await saveReviewProject(project); return true; }
+    if (action === "rob-remove-domain") { project.rob = normalizeRob(project.rob); removeCustomDomain(project.rob, el.dataset.robKey); return void (await proSave(overlay, project)); }
+    if (action === "rob-export-csv" || action === "rob-export-md") {
+      const input = { rob: project.rob, paperIds: includedPaperIds(project), papers: project.papers, reviewers: project.reviewers || [] };
+      if (action === "rob-export-csv") download("risk-of-bias.csv", "text/csv;charset=utf-8", robToCsv(input));
+      else download("risk-of-bias.md", "text/markdown;charset=utf-8", robToMarkdown({ ...input, title: `Risk of bias: ${project.name}` }));
+      return true;
+    }
+
+    // Screening agreement
+    if (action === "agr-a" || action === "agr-b" || action === "agr-maybe") {
+      const ag = agreementSelection(project, state);
+      if (action === "agr-a") ag.a = el.value; else if (action === "agr-b") ag.b = el.value; else ag.maybe = el.value;
+      renderReviewOverlay(project);
+      return true;
+    }
+    if (action === "agr-copy") {
+      const ta = overlay.querySelector("#su-rv-agr-text");
+      if (ta) { ta.select(); document.execCommand("copy"); }
+      return true;
+    }
+    if (action === "agr-resolve") {
+      if (project.blindMode || !paperId) return true;
+      const by = row.querySelector('[data-rv-field="by"]')?.value || "";
+      const decisionValue = row.querySelector('[data-rv-field="decision"]')?.value || "";
+      const note = row.querySelector('[data-rv-field="note"]')?.value || "";
+      const next = appendResolution(project.agreementResolutions, { paperId, resolvedBy: reviewerNameOf(project, by), decision: decisionValue, note });
+      if (!next) return true;
+      project.agreementResolutions = next;
+      const decision = normalizeDecisionEntry(project.decisions[paperId]);
+      const old = decision.overrideStatus || "none";
+      decision.overrideStatus = decisionValue;
+      project.decisions[paperId] = decision;
+      logDecisionChanges(project, [{ paperId, reviewerId: OVERRIDE_REVIEWER, old, new: decisionValue, source: "conflict resolution" }]);
+      state.agree = state.agree || {};
+      state.agree.resolvedBy = by;
+      await proSave(overlay, project);
+      return true;
+    }
+    if (action === "agr-export-log") {
+      download("screening-resolutions.csv", "text/csv;charset=utf-8", resolutionsToCsv(project.agreementResolutions, (id) => project.papers[id]?.title || ""));
+      return true;
+    }
+
+    // Evidence matrix
+    if (action === "mx-add") {
+      const label = overlay.querySelector("#su-rv-mx-label")?.value;
+      const sel = String(overlay.querySelector("#su-rv-mx-source")?.value || "");
+      const filter = overlay.querySelector("#su-rv-mx-filter")?.value || "";
+      let source = null;
+      if (sel.startsWith("extraction:")) source = { type: "extraction", key: sel.slice(11) };
+      else if (sel.startsWith("pico:")) source = { type: "pico", key: sel.slice(5) };
+      else if (sel === "tags") source = { type: "tags" };
+      else if (sel === "tagsfilter") source = { type: "tags", contains: filter };
+      else if (sel === "notes") source = { type: "notes" };
+      const next = source ? addColumn(project.matrixColumns, label, source) : null;
+      if (next) { project.matrixColumns = next; await proSave(overlay, project); }
+      return true;
+    }
+    if (action === "mx-remove") { project.matrixColumns = removeColumn(project.matrixColumns, el.dataset.mxId); return void (await proSave(overlay, project)); }
+    if (action === "mx-left" || action === "mx-right") { project.matrixColumns = moveColumn(project.matrixColumns, el.dataset.mxId, action === "mx-left" ? -1 : 1); return void (await proSave(overlay, project)); }
+    if (action === "mx-rows" || action === "mx-sort" || action === "mx-dir" || action === "mx-group") {
+      state.matrix = state.matrix || {};
+      state.matrix[action.slice(3)] = el.value;
+      renderReviewOverlay(project);
+      return true;
+    }
+    if (action === "mx-export-md" || action === "mx-export-csv" || action === "mx-export-html") {
+      const { matrix, groups, grouped } = matrixPrepare(project, state);
+      if (action === "mx-export-md") download("evidence-matrix.md", "text/markdown;charset=utf-8", matrixToMarkdown(matrix, groups, grouped, `Evidence matrix: ${project.name}`));
+      else if (action === "mx-export-csv") download("evidence-matrix.csv", "text/csv;charset=utf-8", matrixToCsv(matrix, groups, grouped));
+      else download("evidence-matrix.html", "text/html;charset=utf-8", matrixToHtml(matrix, groups, grouped, `Evidence matrix: ${project.name}`));
+      return true;
+    }
+
+    // Snapshots and change log
+    if (action === "snap-save") {
+      const input = overlay.querySelector("#su-rv-snap-name");
+      const snap = takeSnapshot(project, input?.value, { kind: "manual" });
+      const previous = project.snapshots;
+      project.snapshots = addSnapshot(project.snapshots, snap);
+      try {
+        await saveReviewProject(project);
+        state.proStatus = `Saved "${snap.name}".`;
+      } catch {
+        project.snapshots = previous;
+        state.proStatus = "Could not save the snapshot. Browser storage may be full; delete an old snapshot and try again.";
+      }
+      rerenderKeepScroll(overlay, project);
+      return true;
+    }
+    if (action === "snap-delete") {
+      const snap = (project.snapshots || []).find((s) => s.id === el.dataset.snapId);
+      if (!snap || !window.confirm(`Delete the snapshot "${snap.name}"? This cannot be undone.`)) return true;
+      project.snapshots = deleteSnapshot(project.snapshots, snap.id);
+      state.proStatus = `Deleted "${snap.name}".`;
+      await proSave(overlay, project);
+      return true;
+    }
+    if (action === "snap-restore") {
+      const snap = (project.snapshots || []).find((s) => s.id === el.dataset.snapId);
+      if (!snap) return true;
+      const full = (project.snapshots || []).length >= MAX_SNAPSHOTS;
+      const msg = `Restore "${snap.name}" (${String(snap.createdAt).slice(0, 16).replace("T", " ")})?\n\nYour current screening decisions, extraction, quality answers, tags, notes and risk-of-bias grid will be replaced by the snapshot's. A snapshot of the current state is saved first so you can undo this.${full ? `\n\nYou already have ${MAX_SNAPSHOTS} snapshots, so the oldest will be dropped to make room.` : ""}`;
+      if (!window.confirm(msg)) return true;
+      const auto = takeSnapshot(project, `Before restoring "${snap.name}"`, { kind: "auto" });
+      const previous = project.snapshots;
+      project.snapshots = addSnapshot(project.snapshots, auto);
+      const changes = restoreSnapshot(project, snap);
+      if (!changes) { project.snapshots = previous; state.proStatus = "That snapshot could not be read."; rerenderKeepScroll(overlay, project); return true; }
+      logDecisionChanges(project, changes.map((c) => ({ ...c, source: `restore: ${snap.name}` })));
+      state.proStatus = `Restored "${snap.name}". ${changes.length} decision change${changes.length === 1 ? "" : "s"} logged.`;
+      await proSave(overlay, project);
+      return true;
+    }
+    if (action === "snap-export-log") {
+      download("decision-change-log.csv", "text/csv;charset=utf-8", logToCsv(project.changeLog, (id) => project.papers[id]?.title || "", (id) => (id === OVERRIDE_REVIEWER ? "Final decision" : reviewerNameOf(project, id))));
+      return true;
+    }
+    return true;
   }
 
   function renderReviewOverlay(project) {
@@ -1184,6 +1695,11 @@ export function createReviewWorkspace(deps) {
       content.innerHTML = renderImportTab(project, state);
       return;
     }
+    if (PRO_TABS[tab]) {
+      content.innerHTML = renderProTab(tab, project, state);
+      if (tab === "agreement" && state.pro?.screeningAgreement) fillAgreementText(content, project, state);
+      return;
+    }
     if (tab === "report") {
       const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
       const lines = [
@@ -1255,12 +1771,17 @@ export function createReviewWorkspace(deps) {
           <button type="button" class="su-review-tab" data-review-tab="insights">Insights</button>
           <button type="button" class="su-review-tab" data-review-tab="report">Report</button>
           <button type="button" class="su-review-tab" data-review-tab="team">Team</button>
+          <button type="button" class="su-review-tab" data-review-tab="rob">Risk of bias</button>
+          <button type="button" class="su-review-tab" data-review-tab="agreement">Agreement</button>
+          <button type="button" class="su-review-tab" data-review-tab="matrix">Matrix</button>
+          <button type="button" class="su-review-tab" data-review-tab="snapshots">Snapshots</button>
         </div>
         <div id="su-review-content" class="su-review-content"></div>
       </div>
     `;
     document.body.appendChild(overlay);
     overlay.addEventListener("click", async (e) => {
+      if (await handleProEvent(e, overlay, "click")) return;
       const close = e.target.closest("[data-review-close]");
       if (close) {
         overlay.classList.remove("su-visible");
@@ -1271,6 +1792,7 @@ export function createReviewWorkspace(deps) {
         const state = await ensureReviewState();
         state.tab = String(tab.dataset.reviewTab || "overview");
         if (state.tab === "import") await refreshImportEntitlement(state);
+        if (PRO_TABS[state.tab]) await refreshProFeatures(state);
         renderReviewOverlay(getActiveReviewProject());
         return;
       }
@@ -1574,6 +2096,7 @@ export function createReviewWorkspace(deps) {
       }
     });
     overlay.addEventListener("change", async (e) => {
+      if (await handleProEvent(e, overlay, "change")) return;
       const select = e.target.closest("#su-review-project-select");
       if (select) {
         const state = await ensureReviewState();
@@ -1647,8 +2170,10 @@ export function createReviewWorkspace(deps) {
         if (!row || !project) return;
         const id = row.dataset.reviewId;
         const decision = normalizeDecisionEntry(project.decisions[id]);
+        const oldOverride = decision.overrideStatus || "none";
         decision.overrideStatus = conflictResolve.value || "";
         project.decisions[id] = decision;
+        logDecisionChanges(project, [{ paperId: id, reviewerId: OVERRIDE_REVIEWER, old: oldOverride, new: decision.overrideStatus || "none", source: "team tab resolution" }]);
         await saveReviewProject(project);
         renderReviewOverlay(project);
         return;
@@ -1757,6 +2282,7 @@ export function createReviewWorkspace(deps) {
     const blindToggle = overlay.querySelector("#su-review-blind-toggle-top");
     if (blindToggle) blindToggle.checked = !!project?.blindMode;
     overlay.classList.add("su-visible");
+    await refreshProFeatures(state);
     renderReviewOverlay(getActiveReviewProject());
   }
 

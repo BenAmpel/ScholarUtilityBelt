@@ -69,6 +69,22 @@ const TARGETS = [
     args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
   },
   {
+    label: 'common/rob.js',
+    args: ['src/common/rob.js', '--bundle=false', '--minify', '--outfile=dist/common/rob.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/screening-agreement.js',
+    args: ['src/common/screening-agreement.js', '--bundle=false', '--minify', '--outfile=dist/common/screening-agreement.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/evidence-matrix.js',
+    args: ['src/common/evidence-matrix.js', '--bundle=false', '--minify', '--outfile=dist/common/evidence-matrix.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/review-snapshots.js',
+    args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },

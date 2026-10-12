@@ -5349,3 +5349,13 @@ body[data-su-theme="dark"] .su-trend-retry {
 body[data-su-theme="dark"] .su-trend-retry:hover {
   background: #394457;
 }
+.su-review-rob-list { display: grid; gap: 10px; margin-top: 10px; }
+.su-review-rob-paper { display: grid; gap: 6px; }
+.su-review-rob-domain { display: grid; grid-template-columns: minmax(140px, 1fr) 160px minmax(0, 1.2fr); gap: 8px; align-items: center; font-size: 12px; margin-bottom: 4px; }
+.su-review-rob-overall { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; border-top: 1px dashed #e5e7eb; padding-top: 6px; }
+.su-review-mx-cell { max-width: 260px; white-space: pre-wrap; vertical-align: top; }
+.su-review-mx-tools { display: inline-flex; gap: 2px; margin-left: 4px; }
+.su-review-mx-btn { border: 1px solid #d7dbe0; background: #fff; border-radius: 4px; font-size: 10px; padding: 0 4px; cursor: pointer; color: #475569; }
+.su-review-mx-btn:disabled { opacity: 0.4; cursor: default; }
+body[data-su-theme="dark"] .su-review-rob-overall { border-color: #3c4043; }
+body[data-su-theme="dark"] .su-review-mx-btn { background: #35363a; border-color: #5f6368; color: #e8eaed; }

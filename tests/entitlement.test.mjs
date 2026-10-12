@@ -236,6 +236,16 @@ describe("grandfathering covers legacy Pro features only", () => {
     assert.equal(canUseFeature("referenceImport", { paid: true, tier: "lifetime", purchased: true }), true);
   });
 
+  it("registers the review tools as new features: locked until a trial, purchase or App Pass", () => {
+    for (const id of ["riskOfBias", "screeningAgreement", "evidenceMatrix", "reviewSnapshots"]) {
+      assert.equal(PRO_FEATURES[id], "new", id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
+  });
+
   it("keeps a new feature locked for a grandfathered user who has not purchased", () => {
     const saved = { ...PRO_FEATURES };
     PRO_FEATURES.__futureFeature = "new";
