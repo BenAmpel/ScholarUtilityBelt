@@ -50,6 +50,20 @@
           <button id="exportLibrary" class="btn full">Export library</button>
           <button id="importLibrary" class="btn full">Import library</button>
           <input id="importLibraryFile" type="file" accept="application/json" hidden />
+          <p id="importStatus" class="panel-note" role="status" hidden></p>
+          <button id="undoImport" class="btn full" hidden>Undo last import</button>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title">Collection packets <span class="pro-tag">Pro</span></h2>
+          <p class="panel-note">Share one collection as a small file. Your notes stay out unless you tick the box.</p>
+          <button id="exportPacket" class="btn full">Export packet</button>
+          <button id="importPacket" class="btn full">Import packet</button>
+          <input id="importPacketFile" type="file" accept=".json,application/json" hidden />
+        </section>
+        <section class="panel">
+          <h2 class="panel-title">Watch lists <span class="pro-tag">Pro</span></h2>
+          <p class="panel-note">Save a search or an author name. Once a day, while this page or Scholar is open, recent works are looked up in OpenAlex.</p>
+          <button id="openWatchLists" class="btn full">Open watch lists</button>
         </section>
       </aside>
 
@@ -66,6 +80,15 @@
             <option value="citations">Sort: Citations</option>
           </select>
           <button id="toggleDuplicates" class="btn">Duplicates</button>
+          <button id="findSimilarDuplicates" class="btn" title="Finds near-duplicates such as a preprint and its published version">Possible duplicates</button>
+        </section>
+
+        <section id="toolView" class="tool-view" hidden aria-live="polite">
+          <div class="tool-view-header">
+            <h3 id="toolViewTitle"></h3>
+            <button id="toolViewClose" class="btn">Close</button>
+          </div>
+          <div id="toolViewBody"></div>
         </section>
 
         <section id="activeFilters" class="active-filters"></section>
@@ -123,6 +146,7 @@
               <button class="btn" data-act="tags">Tags</button>
               <button class="btn" data-act="notes">Notes</button>
               <button class="btn" data-act="cite">Cite</button>
+              <button class="btn" data-act="similar">Similar</button>
               <button class="btn danger" data-act="remove">Remove</button>
             </div>
             <div class="cite-menu"></div>
@@ -144,6 +168,28 @@
         <div class="modal-row">
           <input id="collectionModalNew" type="text" placeholder="New collection name" />
           <button id="collectionModalAdd" class="btn">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="packetModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="packetModalTitle">
+      <button class="modal-backdrop" data-tool-modal-close="packetModal" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="packetModalTitle">Export collection packet</h3>
+          <button class="btn" data-tool-modal-close="packetModal">Close</button>
+        </div>
+        <div class="packet-form">
+          <label for="packetCollection">Collection</label>
+          <select id="packetCollection"></select>
+          <label for="packetName">Packet name</label>
+          <input id="packetName" type="text" maxlength="80" />
+          <label for="packetFrom">From (your name or lab)</label>
+          <input id="packetFrom" type="text" maxlength="60" />
+          <label class="packet-check"><input id="packetNotes" type="checkbox" /> Include my notes, PDF summaries and highlights</label>
+          <p class="panel-note">Off by default. Local PDF paths are never included. The file carries a checksum that detects accidental damage; it is not a signature.</p>
+          <p id="packetError" class="panel-note packet-error" role="alert" hidden></p>
+          <button id="packetCreate" class="btn">Download packet</button>
         </div>
       </div>
     </div>

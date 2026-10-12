@@ -95,6 +95,10 @@ Scholar Utility Belt addresses those gaps in-place. Instead of replacing Scholar
 
 - Local saved-paper library with tags, notes, search, sorting, export/import, and collection-style organization.
 - **Pro:** systematic-review workspace — multi-reviewer screening with blind mode, consensus/conflict detection, PICO fields, PRISMA flow-diagram export, and CSV/BibTeX/Markdown report export.
+- Import merges instead of overwriting: papers are matched by DOI, then by normalized title; tags, collections and highlights are combined, differing notes are joined, and nothing is deleted. A summary shows how many papers were added, merged and unchanged, and the last import can be undone from a backup kept in extension storage.
+- **Pro:** collection packets — export one collection as a `.sub.json` file (papers and tags; notes only if you tick a box) and import a packet from someone else. Packets carry a SHA-256 checksum that detects accidental damage. They are not signed, and the checksum does not prove who made a file.
+- **Pro:** library similarity — a "Similar" action on each saved paper and a "Possible duplicates" view (for example a preprint and its published version), using word overlap in titles and abstracts or snippets, computed on your device with no model download. Merging a pair keeps both links.
+- **Pro:** watch lists — save up to 20 searches or author names and see recent works from OpenAlex that you have not looked at yet, with the same quality badges as the library. Lookups run at most once per item per 24 hours, only while the library page or a Scholar page is open (there is no background timer and no notification). Failures back off.
 - Popup and options pages for configuring badge sources, external enrichments, UI density, and quality datasets.
 
 ## Design principles
@@ -135,6 +139,8 @@ Optional external enrichment can use public APIs such as:
 - selected metadata services such as PubMed, Europe PMC, and ROR
 
 The extension is built to minimize those calls and to make their effects legible in the UI.
+
+**Watch lists send your queries to OpenAlex, but only if you add watch items.** A watch item is a search or an author name you type into the library page. Once one exists, the text of each item is sent to `api.openalex.org` (with your optional API key and the same `mailto` parameter other OpenAlex calls use) at most once per item per 24 hours, while the library page or a Scholar page is open. With no watch items, nothing is sent. Removing an item stops its lookups. Google Scholar itself is never fetched for this feature.
 
 **A note on OpenAlex rate limits:** as of February 2026, OpenAlex asks unauthenticated callers to attach a free API key for reliable service. Without one, requests behind citation metrics, p-index/FWCI, trends, and related-works may be rate-limited or fail. Add a free key from [openalex.org/settings/api](https://openalex.org/settings/api) in Options → OpenAlex API key; the extension works without one but degrades gracefully.
 

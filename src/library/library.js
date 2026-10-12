@@ -13,6 +13,10 @@ import {
 } from "../common/storage.js";
 import { initPromoCard } from "../common/promo-card.js";
 import { initAskPanel, isPicked, setPicked } from "./ask-panel.js";
+import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
+import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
+import { getLibraryBackup } from "../common/storage.js";
+import { initLibraryTools, showSimilar } from "./library-tools.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -82,20 +86,6 @@ function hashString(str) {
     h |= 0;
   }
   return Math.abs(h).toString(36);
-}
-
-function normalizeTitleForMatch(title) {
-  return String(title || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function paperFingerprint(p) {
-  const doi = String(p?.doi || "").toLowerCase().trim();
-  if (doi) return `doi:${doi}`;
-  const t = normalizeTitleForMatch(p?.title || "");
-  return t ? `title:${t}` : `key:${p?.key || ""}`;
 }
 
 function parseAuthors(authorsVenue) {
@@ -888,6 +878,10 @@ async function render() {
           await renderCollectionModal(p, state);
           return;
         }
+        if (act === "similar") {
+          await showSimilar(p);
+          return;
+        }
         if (act === "cite") {
           citeMenu.classList.toggle("open");
           e.stopPropagation();
@@ -1048,22 +1042,58 @@ el("importLibrary").addEventListener("click", () => {
   el("importLibraryFile").click();
 });
 
+function setImportStatus(message, { showUndo = false } = {}) {
+  const status = el("importStatus");
+  status.textContent = message || "";
+  status.hidden = !message;
+  el("undoImport").hidden = !showUndo;
+}
+
+async function refreshUndoButton() {
+  const backup = await getLibraryBackup();
+  if (backup && el("undoImport").hidden && !el("importStatus").textContent) {
+    const when = fmtDate(backup.at);
+    setImportStatus(`A backup from before the last ${backup.reason} (${when}) is available.`, { showUndo: true });
+  }
+}
+
 el("importLibraryFile").addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
+  e.target.value = "";
   if (!file) return;
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    const saved = await getSavedPapers();
-    const merged = { ...saved, ...(data.savedPapers || {}) };
-    await chrome.storage.local.set({ savedPapers: merged });
-    if (data.libraryState) {
-      await saveLibraryState(data.libraryState);
+    const parsed = parseLibraryFileText(await file.text());
+    if (!parsed.ok) {
+      setImportStatus(`Nothing was imported. ${parsed.error}`);
+      return;
     }
-  } catch (_) {
-    window.alert("Could not import library file.");
+    if (parsed.data && parsed.data.format === "scholar-utility-belt-packet") {
+      setImportStatus("Nothing was imported. This file is a collection packet; use Import packet instead.");
+      return;
+    }
+    const result = await importLibraryPayload(parsed.data, { reason: "import" });
+    if (!result.ok) {
+      setImportStatus(`Nothing was imported. ${result.error}`);
+      return;
+    }
+    setImportStatus(`Import finished: ${describeImportSummary(result.summary)}. Existing papers were merged, not overwritten.`, { showUndo: true });
+  } catch (err) {
+    setImportStatus(`Nothing was imported. ${err && err.message ? err.message : "The file could not be read."}`);
   }
-  e.target.value = "";
+  qualityState = null;
+  libraryState = null;
+  render();
+});
+
+el("undoImport").addEventListener("click", async () => {
+  const ok = window.confirm(
+    "Restore the library to how it was before the last import or merge? Changes made after that point will be lost."
+  );
+  if (!ok) return;
+  const r = await undoLastImport();
+  setImportStatus(r.ok ? "The library was restored from the backup." : r.error);
+  qualityState = null;
+  libraryState = null;
   render();
 });
 
@@ -1088,6 +1118,24 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+initLibraryTools({
+  loadLibraryState,
+  openModal,
+  closeModal,
+  downloadText,
+  setImportStatus,
+  getQualityBadges: async (venue) => {
+    const qs = await ensureQualityState();
+    return qs.show && venue ? qualityBadgesForVenue(venue, qs.qIndex).map((b) => b.text) : [];
+  },
+  refresh: () => {
+    qualityState = null;
+    libraryState = null;
+    return render();
+  }
+});
+
 render();
+refreshUndoButton();
 initPromoCard();
 initAskPanel().catch(() => {});

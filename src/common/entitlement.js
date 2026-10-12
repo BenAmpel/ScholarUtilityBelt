@@ -100,6 +100,9 @@ export const PRO_FEATURES = {
   askShortlist: "new",
   bibliographyCheck: "new",
   tenurePacket: "new",
+  collectionPackets: "new",
+  librarySimilarity: "new",
+  watchLists: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

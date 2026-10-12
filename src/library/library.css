@@ -705,3 +705,67 @@ input::placeholder {
   font-size: 12px;
   color: var(--muted);
 }
+[hidden] {
+  display: none !important;
+.panel-note {
+  line-height: 1.4;
+.pro-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--chip-tag-border);
+  background: var(--chip-tag-bg);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+.tool-view {
+  margin: 12px 0;
+  padding: 12px;
+.tool-view-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+.tool-view-header h3 {
+  margin: 0;
+  font-size: 15px;
+.tool-row {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+.tool-row:first-child {
+  border-top: 0;
+.tool-row-main {
+  min-width: 0;
+  flex: 1;
+.tool-row-title {
+  overflow-wrap: anywhere;
+.tool-row-meta {
+  overflow-wrap: anywhere;
+.tool-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+.tool-actions {
+  gap: 6px;
+.tool-form {
+  gap: 6px;
+.tool-form select,
+.tool-form input[type="text"] {
+  min-width: 0;
+  flex: 1 1 160px;
+.packet-form {
+  display: grid;
+.packet-check {
+  gap: 6px;
+.packet-error {
+  color: var(--danger);
+.tool-progress {
+@media (max-width: 700px) {
+  .tool-pair {
+    grid-template-columns: 1fr;
+  }
