@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Librarian report - Scholar Utility Belt</title>
+    <link rel="stylesheet" href="library.css" />
+    <link rel="stylesheet" href="tool-pages.css" />
+  </head>
+  <body>
+    <header>
+      <div class="left">
+        <h1>Librarian report</h1>
+        <div class="sub">Research-impact numbers for a list of researchers, from OpenAlex</div>
+      </div>
+      <div class="right">
+        <a class="btn" href="library.html">Back to library</a>
+      </div>
+    </header>
+
+    <main class="tool-main">
+      <section id="lockedCard" class="tool-card" hidden>
+        <h2 class="tool-h">Pro feature</h2>
+        <p>The librarian batch report is part of Scholar Utility Belt Pro. A trial, purchase or App Pass unlocks it.</p>
+        <button id="unlockPro" class="btn" type="button">Unlock Pro</button>
+      </section>
+
+      <div id="toolBody" hidden>
+        <section class="tool-card">
+          <h2 class="tool-h">Researchers</h2>
+          <p class="sub">One researcher per line, up to 50. Add an institution after a bar (Name | institution) or an ORCID to narrow the match.</p>
+          <label class="sr-only" for="nameText">Researcher names</label>
+          <textarea id="nameText" class="tool-text" rows="10" spellcheck="false" placeholder="Jane Smith | University of Arizona&#10;Wei Zhang&#10;0000-0002-1825-0097"></textarea>
+          <p class="tool-note">Read before you search: the names, institutions and ORCIDs you type are sent to api.openalex.org (with your OpenAlex API key if you set one in Options). One request per second, so 50 names take about a minute. Nothing is sent until you press the button, and Google Scholar is not used.</p>
+          <div class="tool-row">
+            <button id="findAuthors" class="btn" type="button">Find authors in OpenAlex</button>
+            <button id="cancelRun" class="btn" type="button" hidden>Stop</button>
+            <span id="status" class="sub" role="status"></span>
+          </div>
+        </section>
+
+        <section id="matches" class="tool-card" hidden>
+          <h2 class="tool-h">Confirm each person</h2>
+          <p class="tool-note">Common names can match the wrong person. Pick the right candidate for each line, or leave it on "None of these". Only people you confirm go into the report. A suggestion is a guess, not a confirmation. A candidate is pre-selected only when its ORCID equals the one you typed.</p>
+          <div id="matchList"></div>
+          <div class="tool-row">
+            <button id="buildReport" class="btn" type="button">Build report for confirmed people</button>
+            <span id="confirmCount" class="sub" role="status"></span>
+          </div>
+        </section>
+
+        <section id="results" class="tool-card" hidden>
+          <h2 class="tool-h">Report</h2>
+          <p class="tool-note">These numbers come from OpenAlex. They can differ from Google Scholar profiles, which count different sources and update on a different schedule. The h-index and citation counts here are OpenAlex's own. Works in the last 5 years counts the current year and the four before it, from OpenAlex's yearly counts. Top venues are the journals or repositories listed as the main location of the person's works.</p>
+          <div class="tool-scroll">
+            <table id="reportTable" class="tool-table">
+              <thead>
+                <tr><th>Typed</th><th>OpenAlex author</th><th>Institution</th><th>Works</th><th>Citations</th><th>h-index</th><th>2-year mean citedness</th><th>Works, last 5 years</th><th>Top 5 venues</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="tool-row">
+            <button id="exportCsv" class="btn" type="button">Export CSV</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="librarian-report.js"></script>
+  </body>
+</html>

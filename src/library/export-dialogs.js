@@ -6,6 +6,7 @@
 
 import { assignCitekeys, buildBib, buildCiteList, checkCitations } from "../common/latex-pack.js";
 import { STYLES, blocksToHtml, blocksToPlain, buildDocHtml, buildReferenceBlocks } from "../common/reference-list.js";
+import { buildOverleafMain, overleafDisclosure, submitToOverleaf, MAX_SOURCE_BYTES } from "../common/overleaf.js";
 import { downloadText } from "./export-ui.js";
 
 function appendList(host, heading, items, emptyText) {
@@ -61,6 +62,7 @@ export function initLatexDialog(ui, deps) {
     const { scope, records } = await ui.selectedRecords();
     el("latexScope").textContent = `${scope.name}: ${records.length} ${records.length === 1 ? "paper" : "papers"}.`;
     el("latexResult").textContent = "";
+    el("overleafPanel").hidden = true;
     deps.openModal("latexModal");
   });
 
@@ -84,6 +86,62 @@ export function initLatexDialog(ui, deps) {
     } catch (err) {
       ui.setStatus(`Copy failed: ${err && err.message ? err.message : "unknown error"}`, true);
     }
+  });
+
+  // Open in Overleaf: two steps. The first click only builds the file and shows it; nothing is sent
+  // until "Send to Overleaf" is clicked.
+  let overleafSource = "";
+  function overleafPanelClose() {
+    overleafSource = "";
+    el("overleafPanel").hidden = true;
+    el("overleafSource").value = "";
+  }
+  async function overleafPanelRefresh() {
+    const data = await prepare(true);
+    if (!data) { overleafPanelClose(); return ui.setStatus("Nothing to send in this scope."); }
+    const includeNotes = el("overleafNotes").checked;
+    const built = buildOverleafMain(data.records, { includeNotes });
+    const list = el("overleafSends");
+    list.textContent = "";
+    if (!built.ok) {
+      overleafSource = "";
+      el("overleafSource").value = "";
+      el("overleafSend").disabled = true;
+      el("overleafSummary").textContent = built.reason === "too-large"
+        ? `This scope makes a ${Math.round(built.bytes / 1000)} KB file; the limit here is ${Math.round(MAX_SOURCE_BYTES / 1000)} KB. Choose a smaller collection.`
+        : "Nothing to send in this scope.";
+      el("overleafPanel").hidden = false;
+      return;
+    }
+    overleafSource = built.source;
+    el("overleafSource").value = built.source;
+    el("overleafSend").disabled = false;
+    el("overleafSummary").textContent = "If you press Send, this is posted to www.overleaf.com in a new tab:";
+    for (const text of overleafDisclosure(built, { includeNotes })) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      list.appendChild(li);
+    }
+    el("overleafPanel").hidden = false;
+  }
+  el("latexOverleaf").addEventListener("click", async () => {
+    try {
+      if (!(await ui.requirePro("latexPack"))) return;
+      el("overleafNotes").checked = false;
+      await overleafPanelRefresh();
+    } catch (err) {
+      ui.setStatus(`Could not prepare the file: ${err && err.message ? err.message : "unknown error"}`, true);
+    }
+  });
+  el("overleafNotes").addEventListener("change", () => {
+    overleafPanelRefresh().catch((err) => ui.setStatus(`Could not prepare the file: ${err && err.message ? err.message : "unknown error"}`, true));
+  });
+  el("overleafCancel").addEventListener("click", overleafPanelClose);
+  el("overleafSend").addEventListener("click", () => {
+    if (!overleafSource) return;
+    submitToOverleaf(overleafSource, document);
+    ui.setStatus("Sent to Overleaf in a new tab. Overleaf's own terms and privacy policy apply to what it received.");
+    overleafPanelClose();
   });
 
   el("latexCheck").addEventListener("click", async () => {

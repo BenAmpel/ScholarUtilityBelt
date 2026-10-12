@@ -14,6 +14,7 @@
       </div>
       <div class="right">
         <a class="btn" href="biblio-check.html">Bibliography checker</a>
+        <a class="btn" href="librarian-report.html">Librarian report</a>
         <button id="openOptions">Options</button>
       </div>
     </header>
@@ -275,10 +276,22 @@
           <button class="btn" data-modal-close="1">Close</button>
         </div>
         <p id="latexScope" class="export-note"></p>
-        <p class="export-note">Each paper gets a citation key the first time you export. The key is saved on the paper and never changes, so a .bib exported later still matches your .tex. Your private notes are not written to the .bib.</p>
+        <p class="export-note">Each paper gets a citation key the first time you export. The key is saved on the paper and never changes, so a .bib exported later still matches your .tex. Your private notes are not written to the .bib. "Open in Overleaf" shows you the file first and sends it to overleaf.com only when you press Send.</p>
         <div class="export-row export-row-spaced">
           <button id="latexBib" class="btn">Download .bib</button>
           <button id="latexCopy" class="btn">Copy \cite list</button>
+          <button id="latexOverleaf" class="btn">Open in Overleaf</button>
+        </div>
+        <div id="overleafPanel" class="export-result" hidden>
+          <p id="overleafSummary" class="export-note"></p>
+          <ul id="overleafSends" class="export-result-list"></ul>
+          <label class="export-label" for="overleafSource">main.tex</label>
+          <textarea id="overleafSource" class="export-textarea" rows="10" spellcheck="false" readonly></textarea>
+          <label class="export-note"><input type="checkbox" id="overleafNotes" /> Also send my private notes (off by default)</label>
+          <div class="export-row export-row-spaced">
+            <button id="overleafSend" class="btn">Send to Overleaf</button>
+            <button id="overleafCancel" class="btn">Cancel</button>
+          </div>
         </div>
         <label class="export-label" for="latexInput">Check your document against your saved papers</label>
         <textarea id="latexInput" class="export-textarea" rows="8" spellcheck="false" placeholder="Paste .tex text, or a list of cite keys separated by commas or lines"></textarea>

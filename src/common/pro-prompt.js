@@ -38,6 +38,7 @@ export const PRO_FEATURE_LABELS = {
   obsidianExport: "Obsidian export",
   latexPack: "The LaTeX citation pack",
   wordRefList: "The Word and Docs reference list",
+  librarianReport: "The librarian batch report",
 };
 
 /** The words in the dialog, as data so they can be tested. */

@@ -134,6 +134,7 @@ export const PRO_FEATURES = {
   obsidianExport: "new",
   latexPack: "new",
   wordRefList: "new",
+  librarianReport: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */
