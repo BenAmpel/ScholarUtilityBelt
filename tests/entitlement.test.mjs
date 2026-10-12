@@ -251,4 +251,13 @@ describe("grandfathering covers legacy Pro features only", () => {
   it("only knows the two promise tiers", () => {
     for (const kind of Object.values(PRO_FEATURES)) assert.ok(kind === "legacy" || kind === "new");
   });
+
+  it("registers the library export features as new Pro features", () => {
+    for (const id of ["zoteroExport"]) {
+      assert.equal(PRO_FEATURES[id], "new", id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
+  });
 });

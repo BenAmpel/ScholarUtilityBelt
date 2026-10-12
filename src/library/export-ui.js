@@ -8,6 +8,7 @@
 
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import { selectPapers, sortRecords } from "../common/export-model.js";
+import { buildCslJson, buildRis } from "../common/zotero-export.js";
 import { buildNotesHtml, buildNotesMarkdown } from "../common/notes-export.js";
 
 export function downloadBlob(filename, blob) {
@@ -128,6 +129,18 @@ export function createExportUi(deps) {
       downloadText(`highlights-notes-${scopeSlug(scope.name)}-${fileStamp()}.html`,
         buildNotesHtml(records, { scope: scope.name, cite: deps.cite }), "text/html");
       setStatus(`Exported notes and highlights for ${records.length} ${records.length === 1 ? "paper" : "papers"}.`);
+    },
+    async zoteroRis() {
+      const { scope, records } = await selectedRecords();
+      if (!records.length) return setStatus("Nothing to export in this scope.");
+      downloadText(`zotero-${scopeSlug(scope.name)}-${fileStamp()}.ris`, buildRis(records), "application/x-research-info-systems");
+      setStatus(`Exported ${records.length} ${records.length === 1 ? "paper" : "papers"} as RIS, including your notes. In Zotero: File, Import.`);
+    },
+    async zoteroCsl() {
+      const { scope, records } = await selectedRecords();
+      if (!records.length) return setStatus("Nothing to export in this scope.");
+      downloadText(`zotero-${scopeSlug(scope.name)}-${fileStamp()}.json`, buildCslJson(records), "application/json");
+      setStatus(`Exported ${records.length} ${records.length === 1 ? "paper" : "papers"} as CSL-JSON. In Zotero: File, Import.`);
     },
   };
 

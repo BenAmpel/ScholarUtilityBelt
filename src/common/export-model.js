@@ -117,3 +117,25 @@ export function isoDate(now = new Date()) {
 export function escapeHtml(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+const NAME_PARTICLES = new Set(["van", "von", "de", "der", "den", "di", "da", "del", "della", "du", "dos", "das", "la", "le", "bin", "ibn", "al", "el", "ter", "ten"]);
+
+/**
+ * Splits a Scholar-style author ("A Smith", "AB van der Berg", "Smith") into family and given parts.
+ * Scholar lists initials first and the family name last. Lower-case particles before the last word stay
+ * with the family name. A single word is treated as a family name. This is a heuristic: names written
+ * "Family, Given" are handled, but Scholar rarely produces them.
+ */
+export function splitName(author) {
+  const raw = String(author || "").replace(/\s+/g, " ").trim();
+  if (!raw) return { family: "", given: "" };
+  if (raw.includes(",")) {
+    const [family, ...rest] = raw.split(",");
+    return { family: family.trim(), given: rest.join(" ").trim() };
+  }
+  const words = raw.split(" ");
+  if (words.length === 1) return { family: words[0], given: "" };
+  let start = words.length - 1;
+  while (start > 1 && NAME_PARTICLES.has(words[start - 1].toLowerCase())) start--;
+  return { family: words.slice(start).join(" "), given: words.slice(0, start).join(" ") };
+}

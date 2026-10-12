@@ -104,6 +104,7 @@ module.exports = [
       "src/common/zip-writer.js",
       "src/common/export-model.js",
       "src/common/notes-export.js",
+      "src/common/zotero-export.js",
       "src/library/export-ui.js",
       "src/content/content-author.js",
       "src/content/data-loader.js",
