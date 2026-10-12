@@ -20,6 +20,7 @@ import {
 import { normalizeVenueName } from "../common/quality.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
+import { initAskSettings } from "./ask-settings.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -1226,5 +1227,6 @@ initBadgePaletteDropdown();
 initCollapsibleSections();
 initSettingsFilter();
 load();
+initAskSettings().catch(() => {});
 renderProStatus();
 initPromoCard();

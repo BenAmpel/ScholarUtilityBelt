@@ -499,6 +499,46 @@
         </div>
       </section>
 
+      <section class="card" data-section="ask-ai" id="askAiCard">
+        <h2>Ask my shortlist (your own API key)</h2>
+        <p class="sub">Pro feature, off by default. In the Library you can ask one question about papers you saved. The paper titles and the saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you choose below, using your own API key. They go nowhere else: this extension has no server of its own and collects no telemetry. Your key is stored only in this browser (chrome.storage.local), is never written to a log, and is sent only to the chosen provider. Nothing is sent until you review the cost estimate and confirm each question.</p>
+        <p class="sub">The provider handles that text under its own terms and privacy policy. Using an API costs money; the estimate shown before you confirm is approximate and is not a bill.</p>
+        <label class="field">
+          <div class="label">Provider</div>
+          <select id="askProvider">
+            <option value="anthropic">Anthropic (api.anthropic.com)</option>
+            <option value="openai">OpenAI (api.openai.com)</option>
+            <option value="gemini">Google Gemini (generativelanguage.googleapis.com)</option>
+          </select>
+        </label>
+        <label class="field">
+          <div class="label">API key</div>
+          <input type="password" id="askApiKey" autocomplete="off" spellcheck="false" placeholder="Paste your own key" />
+        </label>
+        <label class="field">
+          <div class="label">Model name</div>
+          <input type="text" id="askModel" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="spike-params">
+          <label class="spike-param" for="askInPrice">
+            <span class="label">Input price (US$ per million tokens)</span>
+            <input type="number" id="askInPrice" min="0" step="0.01" class="input-narrow" />
+          </label>
+          <label class="spike-param" for="askOutPrice">
+            <span class="label">Output price (US$ per million tokens)</span>
+            <input type="number" id="askOutPrice" min="0" step="0.01" class="input-narrow" />
+          </label>
+        </div>
+        <p class="sub">The prices fill in from a built-in table of starting values that were written from memory and may be out of date. Check your provider's pricing page and edit them here; the estimate uses what you enter.</p>
+        <div class="actions">
+          <button id="askEnable" type="button">Turn on and allow access to the provider</button>
+          <button id="askSave" type="button">Save changes</button>
+          <button id="askDisable" type="button">Turn off and remove key</button>
+          <span id="askStatus" class="status" role="status"></span>
+        </div>
+        <p class="sub" id="askProNote" hidden>This is a Pro feature. <button id="askUnlock" type="button">Unlock Pro</button></p>
+      </section>
+
       <section class="card">
         <h2>Storage Usage</h2>
         <div class="storage-bar-container">

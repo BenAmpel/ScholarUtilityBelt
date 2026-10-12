@@ -65,6 +65,8 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let canUseFeature;
+  let triageMod = null; // dist/common/triage-verify.js, loaded on first use
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
@@ -160,7 +162,7 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
-    ({ getEntitlementStatus } = entitlement);
+    ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
     modulesLoaded = true;
@@ -13066,6 +13068,149 @@
       return null;
     }
   }
+  // ── Structured triage card (Pro: triageCard) ─────────────────────────────────
+  // Opt-in second line under a result: study design, sample and setting, read from the Scholar snippet
+  // by the on-device Chrome Prompt API. Chrome's built-in AI availability varies by Chrome version, device
+  // and flags, and the API surface has changed between releases, so every step is feature-detected and any
+  // failure leaves the page exactly as it was. Each value is shown only if it appears word for word in the
+  // snippet (see src/common/triage-verify.js); otherwise the line says "not stated in snippet".
+  // Rows are processed lazily as they scroll into view, one model call at a time, and never block rendering.
+  let triageState = null; // { observer, queue, running, cards: Set, opts, LM }
+  const TRIAGE_LABELS = { design: "Design", sample: "Sample", setting: "Setting" };
+  function renderTriageCard(card, result) {
+    card.textContent = "";
+    card.classList.remove("su-triage-pending");
+    for (const f of triageMod.TRIAGE_FIELDS) {
+      const line = document.createElement("div");
+      line.className = "su-triage-line" + (result[f].verified ? "" : " su-triage-missing");
+      const label = document.createElement("span");
+      label.className = "su-triage-label";
+      label.textContent = TRIAGE_LABELS[f] + ": ";
+      const value = document.createElement("span");
+      value.textContent = result[f].text;
+      line.append(label, value);
+      card.appendChild(line);
+    }
+    card.title = "Read from the snippet by an on-device model. A value is shown only if it appears in the snippet text; it can still be the wrong part of the snippet, so check the paper.";
+  }
+  async function triageOneResult(r) {
+    const st = triageState;
+    const snippetText = getSnippetText(r);
+    if (!st || !snippetText || snippetText.length < 40) return;
+    let paperKey = "";
+    try { paperKey = extractPaperFromResultFast(r).key || ""; } catch (_) {}
+    if (!paperKey) return;
+    let card = r.querySelector(".su-triage-card");
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "su-triage-card su-triage-pending";
+      card.textContent = "Reading snippet...";
+      const snippetEl = r.querySelector(".gs_rs");
+      const anchor = r.querySelector(".su-ai-contribution") || snippetEl;
+      if (anchor) anchor.after(card);
+      else (r.querySelector(".gs_ri") || r).appendChild(card);
+      st.cards.add(card);
+    }
+    const cacheKey = triageMod.triageCacheKey(paperKey);
+    try {
+      const cachedRaw = safeSessionGet(cacheKey);
+      if (cachedRaw) {
+        const cached = triageMod.readTriageCache(JSON.parse(cachedRaw), snippetText);
+        if (cached) { renderTriageCard(card, cached); return; }
+      }
+    } catch (_) {}
+    let session = null;
+    try {
+      session = await st.LM.create(st.opts);
+      const out = await session.prompt(triageMod.buildTriagePrompt(snippetText));
+      const result = triageMod.verifyTriage(triageMod.parseTriageResponse(out), snippetText);
+      safeSessionSet(cacheKey, JSON.stringify(triageMod.makeTriageCacheEntry(snippetText, result)));
+      renderTriageCard(card, result);
+    } catch (_) {
+      card.remove();
+      st.cards.delete(card);
+    } finally {
+      try { session?.destroy?.(); } catch (_) {}
+    }
+  }
+  async function drainTriageQueue() {
+    const st = triageState;
+    if (!st || st.running) return; // concurrency limit of 1
+    st.running = true;
+    try {
+      while (triageState === st && st.queue.length) {
+        const r = st.queue.shift();
+        if (!r.isConnected) continue;
+        await triageOneResult(r);
+        // Let the page paint and handle input between model calls.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    } finally {
+      st.running = false;
+    }
+  }
+  function stopTriageCards() {
+    const st = triageState;
+    triageState = null;
+    if (!st) return;
+    st.observer?.disconnect();
+    st.cards.forEach((c) => c.remove());
+    document.querySelectorAll(".su-triage-card").forEach((c) => c.remove());
+  }
+  async function toggleTriageCards(btn) {
+    if (triageState) {
+      stopTriageCards();
+      btn.textContent = "Triage cards (local AI)";
+      return;
+    }
+    const entitlement = await getEntitlementStatus({ needPurchased: true });
+    if (!canUseFeature("triageCard", entitlement)) {
+      chrome.runtime.sendMessage({ action: "openUpsellModal" });
+      return;
+    }
+    const LM = globalThis.LanguageModel || window.LanguageModel;
+    if (!LM?.availability || typeof IntersectionObserver !== "function") {
+      showLocalSummaryMessage("Triage cards need Chrome's built-in Prompt API (Gemini Nano), which this browser does not offer.");
+      return;
+    }
+    const opts = { expectedInputs: [{ type: "text", languages: ["en"] }], expectedOutputs: [{ type: "text", languages: ["en"] }] };
+    let availability;
+    try {
+      availability = await LM.availability(opts);
+    } catch (_) {
+      showLocalSummaryMessage("Triage cards: the on-device model could not be checked on this device.");
+      return;
+    }
+    if (availability !== "available") {
+      showLocalSummaryMessage("Triage cards: the on-device model is not ready on this device (" + availability + "). Nothing was changed.");
+      return;
+    }
+    if (!triageMod) {
+      try {
+        triageMod = await importModuleWithRetry("dist/common/triage-verify.js");
+      } catch (_) {
+        return;
+      }
+    }
+    const { results, isAuthorProfile } = scanResults();
+    if (isAuthorProfile || !results.length) return;
+    const st = { observer: null, queue: [], running: false, cards: new Set(), opts, LM };
+    st.observer = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        st.observer.unobserve(e.target);
+        st.queue.push(e.target);
+      }
+      drainTriageQueue();
+    }, { rootMargin: "200px" });
+    triageState = st;
+    btn.textContent = "Hide triage cards";
+    for (const r of results) {
+      if (r.style.display === "none" || r.classList.contains("su-filtered-out")) continue;
+      if (!r.querySelector(".gs_rs")) continue;
+      st.observer.observe(r);
+    }
+  }
   async function runLocalSummaries() {
     const LM = globalThis.LanguageModel || window.LanguageModel;
     if (!LM?.availability) {
@@ -13799,6 +13944,12 @@
     summarizeBtn.textContent = "Summarize (local AI)";
     summarizeBtn.title = "One-sentence contribution per result using Chrome Prompt API (Gemini Nano). Runs on your device; 100% private.";
     summarizeBtn.addEventListener("click", () => runLocalSummaries());
+    const triageBtn = document.createElement("button");
+    triageBtn.type = "button";
+    triageBtn.className = "su-filter-clear su-summarize-ai su-triage-toggle";
+    triageBtn.textContent = "Triage cards (local AI)";
+    triageBtn.title = "Pro. Adds design, sample and setting under each result, read from the snippet by Chrome's on-device model. A value appears only if it is in the snippet. Nothing leaves your device.";
+    triageBtn.addEventListener("click", () => toggleTriageCards(triageBtn));
     const sortSelect = document.createElement("select");
     sortSelect.className = "su-filter-sort-citations";
     sortSelect.title = "Sort search results by citation count";
@@ -14216,6 +14367,7 @@
       row.appendChild(openPdfBtn);
       row.appendChild(reviewBtn);
       if (summarizeBtn) row.appendChild(summarizeBtn);
+      if (triageBtn) row.appendChild(triageBtn);
     } catch (_) {
       // If any append fails, still try to show the bar with what we have
     }

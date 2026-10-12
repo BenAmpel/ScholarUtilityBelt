@@ -248,6 +248,15 @@ describe("grandfathering covers legacy Pro features only", () => {
     assert.equal(canUseFeature("compareAuthors", undefined), false);
   });
 
+  it("registers the AI features as new Pro features that grandfathering does not unlock", () => {
+    for (const id of ["triageCard", "askShortlist"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
+  });
+
   it("only knows the two promise tiers", () => {
     for (const kind of Object.values(PRO_FEATURES)) assert.ok(kind === "legacy" || kind === "new");
   });

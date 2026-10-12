@@ -89,6 +89,16 @@ const TARGETS = [
     args: ['src/common/apppass.js', '--bundle=true', '--format=iife', '--global-name=SUAppPass', '--minify', '--outfile=dist/common/apppass.sw.js', '--log-level=warning'],
   },
   {
+    // Structured triage card helpers, loaded by content.js with import().
+    label: 'common/triage-verify.js',
+    args: ['src/common/triage-verify.js', '--bundle=false', '--minify', '--outfile=dist/common/triage-verify.js', '--log-level=warning'],
+  },
+  {
+    // "Ask my shortlist" provider adapters and verifier as a global for the classic service worker (same reason as above).
+    label: 'common/ask-sw.js',
+    args: ['src/common/ask-sw.js', '--bundle=true', '--format=iife', '--global-name=SUAsk', '--minify', '--outfile=dist/common/ask-sw.js', '--log-level=warning'],
+  },
+  {
     // Third-party library — not minified, so the shipped bytes match what was audited.
     label: 'common/extpay.js',
     args: ['src/common/extpay.js', '--bundle=false', '--minify=false', '--outfile=dist/common/extpay.js', '--log-level=warning'],

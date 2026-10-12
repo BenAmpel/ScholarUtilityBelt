@@ -725,6 +725,37 @@ body[data-su-theme="dark"] .su-author-badge-grid {
 .su-ai-contribution.su-ai-contribution-done {
   font-style: italic;
 }
+/* Structured triage card: second line under a result, from the on-device model, values checked against the snippet */
+.su-triage-card {
+  margin-top: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #3c4043;
+  background: #f8f9fa;
+  border-left: 3px solid #80868b;
+  border-radius: 0 4px 4px 0;
+}
+.su-triage-card.su-triage-pending {
+  color: #5f6368;
+  font-style: italic;
+}
+.su-triage-label {
+  font-weight: 600;
+}
+.su-triage-missing {
+  color: #5f6368;
+  font-style: italic;
+}
+body[data-su-theme="dark"] .su-triage-card {
+  color: #e8eaed;
+  background: #2a2b2e;
+  border-left-color: #9aa0a6;
+}
+body[data-su-theme="dark"] .su-triage-card.su-triage-pending,
+body[data-su-theme="dark"] .su-triage-missing {
+  color: #bdc1c6;
+}
 .su-ai-summary-message {
   display: none;
   margin-bottom: 10px;
