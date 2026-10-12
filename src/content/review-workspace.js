@@ -345,7 +345,7 @@ export function createReviewWorkspace(deps) {
     const papers = project.papers || {};
     const pos = new Map();
     const neg = new Map();
-    const tokenize = (txt) => String(txt || "").toLowerCase().replace(/[^a-z0-9\\s]/g, " ").split(/\\s+/).filter((t) => t.length >= 3);
+    const tokenize = (txt) => String(txt || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((t) => t.length >= 3);
     Object.keys(papers).forEach((id) => {
       const status = getDecisionStatus(project, id, { blind: false });
       if (status !== "include" && status !== "exclude") return;
@@ -368,8 +368,8 @@ export function createReviewWorkspace(deps) {
     if (!weights || weights.size === 0) return 0;
     const tokens = String(`${paper.title || ""} ${paper.abstract || ""}`)
       .toLowerCase()
-      .replace(/[^a-z0-9\\s]/g, " ")
-      .split(/\\s+/)
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
       .filter((t) => t.length >= 3);
     let score = 0;
     tokens.forEach((t) => { score += weights.get(t) || 0; });
@@ -485,11 +485,11 @@ export function createReviewWorkspace(deps) {
     const includedIds = Object.keys(project.papers || {}).filter((id) => getDecisionStatus(project, id, { blind: false }) === "include");
     const entries = includedIds.map((id) => {
       const p = project.papers[id];
-      const key = `${(project.name || "review").replace(/\\W+/g, "")}${p.year || ""}${hashString(p.title || "")}`.slice(0, 32);
-      const authors = p.authors ? p.authors.split(/\\s*[,;]\\s*|\\s+and\\s+/i).join(" and ") : "";
-      return `@article{${key},\\n  title={${p.title || ""}},\\n  author={${authors}},\\n  year={${p.year || ""}},\\n  doi={${p.doi || ""}},\\n  url={${p.url || ""}}\\n}`;
-    }).join("\\n\\n");
-    downloadBlob(`${project.name}-included.bib`.replace(/\\s+/g, "-").toLowerCase(), "text/plain;charset=utf-8", entries || "");
+      const key = `${(project.name || "review").replace(/\W+/g, "")}${p.year || ""}${hashString(p.title || "")}`.slice(0, 32);
+      const authors = p.authors ? p.authors.split(/\s*[,;]\s*|\s+and\s+/i).join(" and ") : "";
+      return `@article{${key},\n  title={${p.title || ""}},\n  author={${authors}},\n  year={${p.year || ""}},\n  doi={${p.doi || ""}},\n  url={${p.url || ""}}\n}`;
+    }).join("\n\n");
+    downloadBlob(`${project.name}-included.bib`.replace(/\s+/g, "-").toLowerCase(), "text/plain;charset=utf-8", entries || "");
   }
   function exportReviewReport(project, stats) {
     if (!project) return;
@@ -509,11 +509,11 @@ export function createReviewWorkspace(deps) {
       "## Included papers",
       ...includedIds.map((id) => `- ${project.papers[id]?.title || "Untitled"} (${project.papers[id]?.year || "—"})`)
     ];
-    downloadBlob(`${project.name}-report.md`.replace(/\\s+/g, "-").toLowerCase(), "text/markdown;charset=utf-8", lines.join("\\n"));
+    downloadBlob(`${project.name}-report.md`.replace(/\s+/g, "-").toLowerCase(), "text/markdown;charset=utf-8", lines.join("\n"));
   }
   function exportPrismaSvg(stats, name) {
     const svg = renderPrismaDiagram(stats);
-    const filename = `${(name || "review")}-prisma.svg`.replace(/\\s+/g, "-").toLowerCase();
+    const filename = `${(name || "review")}-prisma.svg`.replace(/\s+/g, "-").toLowerCase();
     downloadBlob(filename, "image/svg+xml;charset=utf-8", svg);
   }
   async function checkReviewUpdates(project) {
