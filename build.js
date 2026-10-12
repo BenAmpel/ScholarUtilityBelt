@@ -59,6 +59,10 @@ const TARGETS = [
     args: ['src/common/storage.js', '--bundle=false', '--minify', '--outfile=dist/common/storage.js', '--log-level=warning'],
   },
   {
+    label: 'common/scholar-links.js',
+    args: ['src/common/scholar-links.js', '--bundle=false', '--minify', '--outfile=dist/common/scholar-links.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },
