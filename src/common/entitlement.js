@@ -95,6 +95,9 @@ export const PRO_FEATURES = {
   claimEvidenceChips: "new",
   reproSignals: "new",
   readingOrder: "new",
+  // Optional on-device and bring-your-own-key AI features. Not grandfathered.
+  triageCard: "new",
+  askShortlist: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

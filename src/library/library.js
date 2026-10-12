@@ -12,6 +12,7 @@ import {
   upsertPaper
 } from "../common/storage.js";
 import { initPromoCard } from "../common/promo-card.js";
+import { initAskPanel, isPicked, setPicked } from "./ask-panel.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -798,6 +799,12 @@ async function render() {
     node.querySelector(".meta").textContent = metaParts.join(" ");
 
     node.querySelector(".snippet").textContent = p.snippet || "";
+    const askPick = node.querySelector(".ask-pick");
+    if (askPick) {
+      askPick.checked = isPicked(p.key);
+      askPick.setAttribute("aria-label", `Include "${p.title || "untitled"}" in Ask my shortlist`);
+      askPick.addEventListener("change", () => setPicked(p.key, askPick.checked));
+    }
 
     const tagsNode = document.createDocumentFragment();
     (p.tags || []).forEach((t, idx) => {
@@ -1083,3 +1090,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 render();
 initPromoCard();
+initAskPanel().catch(() => {});

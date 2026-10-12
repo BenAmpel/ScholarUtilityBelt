@@ -69,11 +69,48 @@
 
         <section id="activeFilters" class="active-filters"></section>
 
+        <details id="askPanel" class="ask-panel">
+          <summary>Ask my shortlist <span class="ask-tag">Pro, your own API key</span></summary>
+          <p class="sub">Ask one question about saved papers. Only the titles and saved abstract or snippet text of the papers you select, plus your question, go to the provider you chose in Options, and only after you confirm. The extension has no server of its own.</p>
+          <div id="askLocked" hidden>
+            <p class="sub">This is a Pro feature.</p>
+            <button id="askUnlock" type="button" class="btn">Unlock Pro</button>
+          </div>
+          <div id="askForm" hidden>
+            <div class="ask-row">
+              <label for="askScope">Papers</label>
+              <select id="askScope"></select>
+              <span id="askPickedCount" class="sub"></span>
+            </div>
+            <label class="sr-only" for="askQuestion">Question about the selected papers</label>
+            <textarea id="askQuestion" rows="2" placeholder="For example: does this paper report an effect on retention?"></textarea>
+            <div class="ask-row">
+              <button id="askReview" type="button" class="btn">Review what will be sent</button>
+              <button id="askOpenOptions" type="button" class="btn">Provider and key settings</button>
+            </div>
+            <div id="askConfirm" class="ask-confirm" hidden>
+              <div id="askSummary"></div>
+              <details>
+                <summary>Exact text that will be sent</summary>
+                <pre id="askPreview" class="ask-preview"></pre>
+              </details>
+              <div class="ask-row">
+                <button id="askSend" type="button" class="btn">Send</button>
+                <button id="askCancel" type="button" class="btn">Cancel</button>
+              </div>
+            </div>
+            <p id="askMessage" class="ask-message" role="status"></p>
+            <div id="askResults"></div>
+          </div>
+        </details>
+
+
         <section id="list" class="list"></section>
 
         <template id="itemTpl">
           <article class="item">
             <div class="top">
+              <label class="ask-pick-wrap"><input type="checkbox" class="ask-pick" /> <span>Ask</span></label>
               <a class="title" target="_blank" rel="noreferrer"></a>
               <div class="meta"></div>
             </div>

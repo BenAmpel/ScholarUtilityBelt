@@ -24,6 +24,7 @@ import { normalizeVenueName } from "../common/quality.js";
 import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
+import { initAskSettings } from "./ask-settings.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -1311,5 +1312,6 @@ initCollapsibleSections();
 initSettingsFilter();
 initCustomList();
 load();
+initAskSettings().catch(() => {});
 renderProStatus();
 initPromoCard();

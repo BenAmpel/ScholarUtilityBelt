@@ -63,7 +63,8 @@ importScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
   chrome.runtime.getURL("dist/common/entitlement.sw.js"),
   chrome.runtime.getURL("dist/common/apppass.sw.js"),
-  chrome.runtime.getURL("dist/common/install-pages.sw.js")
+  chrome.runtime.getURL("dist/common/install-pages.sw.js"),
+  chrome.runtime.getURL("dist/common/ask-sw.js")
 );
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
@@ -126,7 +127,7 @@ if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFil
   });
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.action === "openTabs" && Array.isArray(msg.urls)) {
     (async () => {
       let opened = 0;
@@ -283,6 +284,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.action === "appPassManage") {
     SUAppPass.manageAppPass().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg?.action === "askShortlist") {
+    // "Ask my shortlist" (Pro, bring your own key). Only the extension's own pages may call this, because
+    // it spends the user's API key. The key is read here from chrome.storage.local and goes nowhere except
+    // the provider the user picked. It is never logged, and never put in a response.
+    (async () => {
+      const fromOwnPage = sender?.id === chrome.runtime.id && typeof sender?.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
+      if (!fromOwnPage) { sendResponse({ ok: false, error: "Not allowed from this page." }); return; }
+      if (msg.confirmed !== true) { sendResponse({ ok: false, error: "Not confirmed. Nothing was sent." }); return; }
+      const { grandfathered } = await chrome.storage.local.get("grandfathered");
+      const localExtpay = ExtPay(EXTPAY_ID);
+      const user = await localExtpay.getUser().catch(() => null);
+      const appPass = user?.paid || SUEntitlement.isTrialActive(user) ? null : await resolveAppPass().catch(() => null);
+      const ent = SUEntitlement.describeEntitlement({ grandfathered: !!grandfathered, extpayUser: user, appPass });
+      if (!SUEntitlement.canUseFeature("askShortlist", ent)) { sendResponse({ ok: false, error: "Ask my shortlist is a Pro feature." }); return; }
+      const { askShortlistConfig: cfg } = await chrome.storage.local.get("askShortlistConfig");
+      const provider = SUAsk.getProvider(cfg?.providerId);
+      if (!cfg?.enabled || !provider || !cfg.apiKey) { sendResponse({ ok: false, error: "Turn on Ask my shortlist in Options first." }); return; }
+      if (!(await chrome.permissions.contains({ origins: [provider.origin] }))) { sendResponse({ ok: false, error: "The host permission for " + provider.host + " is not granted. Turn the feature on again in Options." }); return; }
+      const keys = Array.isArray(msg.keys) ? msg.keys.filter((k) => typeof k === "string") : [];
+      const { savedPapers } = await chrome.storage.local.get("savedPapers");
+      const { papers } = SUAsk.selectPapersForAsk(keys.map((k) => ({ key: k, ...(savedPapers && savedPapers[k]) })));
+      const result = await SUAsk.runAsk({
+        providerId: cfg.providerId, apiKey: cfg.apiKey, model: cfg.model,
+        question: String(msg.question || ""), papers, confirmed: true,
+      });
+      sendResponse(result);
+    })().catch(() => sendResponse({ ok: false, error: "Something went wrong. Nothing more was sent." }));
     return true;
   }
   if (msg?.action === "openUpsellModal") {
