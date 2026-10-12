@@ -13,8 +13,6 @@
         <div class="sub">Local-only list of saved Scholar results</div>
       </div>
       <div class="right">
-        <button id="exportCsv" class="btn">Export CSV</button>
-        <button id="exportBibtex" class="btn">Export BibTeX</button>
         <button id="openOptions">Options</button>
       </div>
     </header>
@@ -43,6 +41,26 @@
           <div id="folderList" class="panel-list"></div>
           <button id="scanFolder" class="btn full">Scan folder</button>
           <input id="folderPicker" type="file" webkitdirectory multiple hidden />
+        </section>
+        <section class="panel export-panel" id="exportGroup" aria-labelledby="exportTitle">
+          <h2 class="panel-title" id="exportTitle">Export</h2>
+          <label class="export-label" for="exportScope">Papers to export</label>
+          <select id="exportScope"></select>
+
+          <h3 class="export-heading">Highlights and notes</h3>
+          <div class="export-row">
+            <button class="btn" data-export="notesMd">Markdown</button>
+            <button class="btn" data-export="notesHtml">HTML</button>
+          </div>
+          <p class="export-note">One document: each paper's citation, your notes and every PDF highlight as a quote.</p>
+
+          <h3 class="export-heading">Lists</h3>
+          <div class="export-row">
+            <button id="exportCsv" class="btn">CSV</button>
+            <button id="exportBibtex" class="btn">BibTeX</button>
+          </div>
+
+          <p id="exportStatus" class="export-status" role="status" aria-live="polite"></p>
         </section>
         <section class="panel">
           <h2 class="panel-title">Sharing</h2>

@@ -12,6 +12,8 @@ import {
   upsertPaper
 } from "../common/storage.js";
 import { initPromoCard } from "../common/promo-card.js";
+import { parseAuthors as parseAuthorsShared, toRecord } from "../common/export-model.js";
+import { createExportUi, downloadText } from "./export-ui.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -97,13 +99,7 @@ function paperFingerprint(p) {
   return t ? `title:${t}` : `key:${p?.key || ""}`;
 }
 
-function parseAuthors(authorsVenue) {
-  const raw = (authorsVenue || "").split(/\s*-\s*/)[0] || "";
-  return raw
-    .split(/\s*,\s*|\s+and\s+/i)
-    .map((a) => a.trim())
-    .filter(Boolean);
-}
+const parseAuthors = parseAuthorsShared;
 
 function lastName(author) {
   const parts = String(author || "").trim().split(/\s+/);
@@ -173,18 +169,6 @@ function formatRIS(p) {
   return lines.join("\n");
 }
 
-function downloadText(filename, text, mime = "text/plain") {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 function escapeCsvField(val) {
   const s = String(val ?? "");
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
@@ -232,6 +216,7 @@ async function copyText(txt) {
 }
 
 let qualityState = null;
+let exportUi = null;
 let impactIndexCache = null;
 let libraryState = null;
 let activePdfKey = null;
@@ -715,6 +700,7 @@ async function render() {
 
   const items = Object.values(saved);
   await renderSidebar(state, items);
+  exportUi.refreshScope(state);
 
   const tagFilters = tagFilter
     ? tagFilter.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
@@ -1009,15 +995,13 @@ el("toggleDuplicates").addEventListener("click", async () => {
 });
 
 el("exportCsv").addEventListener("click", async () => {
-  const saved = await getSavedPapers();
-  const papers = Object.values(saved);
+  const papers = await exportUi.selectedPapers();
   const csv = buildCsvExport(papers);
   downloadText(`library-export-${Date.now()}.csv`, csv, "text/csv");
 });
 
 el("exportBibtex").addEventListener("click", async () => {
-  const saved = await getSavedPapers();
-  const papers = Object.values(saved);
+  const papers = await exportUi.selectedPapers();
   const bib = buildBibtexExport(papers);
   downloadText(`library-export-${Date.now()}.bib`, bib, "application/x-bibtex");
 });
@@ -1081,5 +1065,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+exportUi = createExportUi({
+  el,
+  prepare: async () => { await ensureQualityState(); },
+  getSavedPapers,
+  loadLibraryState,
+  toRecord: (p, state) => toRecord(p, {
+    collections: collectionMap(state),
+    venueOf: (paper) => extractVenueFromAuthorsVenue(paper.authorsVenue),
+    badgesOf: (venue) => (qualityState && qualityState.qIndex ? qualityBadgesForVenue(venue, qualityState.qIndex).map((b) => b.text) : [])
+  })
+});
+exportUi.wire();
 render();
 initPromoCard();

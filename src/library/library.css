@@ -604,3 +604,23 @@ input::placeholder {
 .library-promo { margin: 12px 16px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .library-promo h2 { margin: 0 0 6px; font-size: 16px; }
 .library-promo .sub { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* Export group */
+.export-label { display: block; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+.export-heading { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
+.export-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.export-note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.export-status { min-height: 1.2em; margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.export-status.is-error { color: var(--danger); }
+.pro-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.btn.is-locked { border-style: dashed; }
