@@ -13,6 +13,9 @@ Scholar Utility Belt adds journal quality badges, citation analytics, author met
 ★ JOURNAL QUALITY BADGES
 See ABDC, FT50, UTD24, VHB, SJR Quartile (Q1–Q4), ERA, ABS, CORE, CCF, Norwegian Register, FNEGE, and Impact Factor rankings as color-coded badges on every search result and author profile page. Instantly identify top-tier publications without leaving Scholar.
 
+★ YOUR OWN JOURNAL LIST
+Upload a CSV of journals and conferences with your own tier labels, such as a department's A, B and C list. Matching venues get a badge with your label next to the built-in ones. The file is read in your browser and stays there.
+
 ★ CITATION VELOCITY & ANALYTICS
 Each paper shows citations per year with trend arrows (↑ accelerating, → stable, ↓ decaying). Compare papers not just by total citations but by research momentum.
 

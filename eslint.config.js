@@ -97,6 +97,7 @@ module.exports = [
       "src/common/quality.js",
       "src/common/scholar-links.js",
       "src/common/bibtex.js",
+      "src/common/custom-venues.js",
       "src/common/entitlement.js",
       "src/common/apppass.js",
       "src/common/install-pages.js",
