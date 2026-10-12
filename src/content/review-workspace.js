@@ -25,7 +25,7 @@ import {
 import {
   ROB_NOTICE, ROB_LEVELS, ROB_LEVEL_LABELS, ROB_TEMPLATES, normalizeRob, templateFor, setJudgement, setOverall,
   setPaperTemplate, setDefaultTemplate, addCustomDomain, renameCustomDomain, removeCustomDomain,
-  summarizePaper, robToCsv, robToMarkdown, robValueText
+  summarizePaper, robToCsv, robToMarkdown, robValueText, CHECK_ANSWERS, CHECK_LABELS
 } from "../common/rob.js";
 import {
   MAYBE_MODES, computeAgreement, latestResolution, appendResolution, methodsParagraph, resolutionsToCsv
@@ -736,7 +736,7 @@ export function createReviewWorkspace(deps) {
   const PRO_TABS = { rob: "riskOfBias", agreement: "screeningAgreement", matrix: "evidenceMatrix", snapshots: "reviewSnapshots" };
   const PRO_ACTION_FEATURE = { rob: "riskOfBias", agr: "screeningAgreement", mx: "evidenceMatrix", snap: "reviewSnapshots" };
   const PRO_BLURBS = {
-    riskOfBias: ["Risk of bias grid", "Record your own risk-of-bias judgement per paper, per domain and per reviewer, using RoB 2, ROBINS-I, Newcastle-Ottawa star counts or a checklist you edit. Export to CSV or Markdown."],
+    riskOfBias: ["Risk of bias grid", "Record your own risk-of-bias judgement per paper, per domain and per reviewer, using RoB 2, ROBINS-I, Newcastle-Ottawa star counts, JBI-style design checklists (yes, no, unclear, not applicable) or a checklist you edit. Export to CSV or Markdown."],
     screeningAgreement: ["Screening agreement", "Percent agreement and Cohen's kappa between two reviewers, a list of their disagreements with a resolution log, and a methods paragraph with the numbers."],
     evidenceMatrix: ["Evidence matrix", "Papers as rows and concept columns you define from extraction fields, tags and notes. Sort, group, and export to Markdown, CSV or a Word-friendly HTML table."],
     reviewSnapshots: ["Snapshots and change log", "Save named snapshots of your review work, restore one when you need to, and keep a log of every screening decision change."]
@@ -788,6 +788,7 @@ export function createReviewWorkspace(deps) {
     const ids = includedPaperIds(project);
     const shown = ids.slice(0, 60);
     const levelOptions = [["", "Not assessed"], ...ROB_LEVELS.map((l) => [l, ROB_LEVEL_LABELS[l]])];
+    const checkOptions = [["", "Not assessed"], ...CHECK_ANSWERS.map((a) => [a, CHECK_LABELS[a]])];
     const templateOptions = Object.values(ROB_TEMPLATES).map((t) => [t.id, t.label]);
     const cards = shown.map((id) => {
       const paper = project.papers[id] || {};
@@ -799,7 +800,7 @@ export function createReviewWorkspace(deps) {
       const domainRows = template.domains.map((d) => {
         const choices = template.scale === "stars"
           ? [["", "Not assessed"], ...Array.from({ length: (d.maxStars || 0) + 1 }, (_, n) => [String(n), `${n} of ${d.maxStars}`])]
-          : levelOptions;
+          : template.scale === "checklist" ? checkOptions : levelOptions; // checklist: yes / no / unclear / not applicable
         const current = mine[d.key] === undefined ? "" : String(mine[d.key]);
         const otherText = blind ? "" : others.map((r) => {
           const t = robValueText(template, entry.reviewers?.[r.id]?.[d.key]);
@@ -813,6 +814,8 @@ export function createReviewWorkspace(deps) {
       }).join("") || '<div class="su-review-muted">This checklist has no domains yet. Add some under custom checklist domains above.</div>';
       const tallies = summary.byReviewer.map((t) => template.scale === "stars"
         ? `${t.name}: ${t.stars} of ${t.maxStars} stars (${t.assessed} of ${t.assessed + t.notAssessed} domains assessed)`
+        : template.scale === "checklist"
+        ? `${t.name}: yes count ${t.yes} of ${t.assessed + t.notAssessed} items (a count, not a judgement); ${t.no} no, ${t.unclear} unclear, ${t.na} not applicable, ${t.notAssessed} not assessed`
         : `${t.name}: ${t.low} low, ${t.some} some concerns, ${t.high} high, ${t.notAssessed} not assessed`).join(" | ");
       const differs = !blind && summary.differing ? ` ${summary.differing} domain${summary.differing === 1 ? "" : "s"} differ between reviewers.` : "";
       return `<div class="su-review-card su-review-rob-paper" data-review-id="${escapeHtml(id)}">
