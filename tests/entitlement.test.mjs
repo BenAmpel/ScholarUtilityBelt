@@ -241,6 +241,16 @@ describe("grandfathering covers legacy Pro features only", () => {
     }
   });
 
+  it("registers bibliographyCheck and tenurePacket as new Pro features", () => {
+    for (const id of ["bibliographyCheck", "tenurePacket"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true, id);
+    }
+  });
+
   it("locks legacy features for free users and fails closed on unknown ids", () => {
     assert.equal(canUseFeature("compareAuthors", free), false);
     assert.equal(canUseFeature("compareAuthors", { paid: true, tier: "monthly", purchased: true }), true);

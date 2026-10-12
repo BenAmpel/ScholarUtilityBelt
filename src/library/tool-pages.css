@@ -1,0 +1,46 @@
+/* Shared by the bibliography checker and the tenure packet page. */
+.tool-main { max-width: 1100px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
+.tool-card { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 16px; }
+.tool-card[hidden], #toolBody[hidden] { display: none; }
+.tool-h { margin: 0 0 8px; font-size: 16px; }
+.tool-h2 { margin: 18px 0 6px; font-size: 14px; }
+.tool-note { margin: 6px 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.tool-text { width: 100%; font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); background: var(--input-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical; }
+.tool-text:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+a.btn { text-decoration: none; display: inline-block; color: inherit; }
+label.btn { cursor: pointer; display: inline-block; }
+.tool-scroll { overflow-x: auto; }
+.tool-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tool-table th, .tool-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tool-table th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.tool-table td.num { text-align: right; white-space: nowrap; }
+.tool-table td.wrap { max-width: 420px; word-break: break-word; }
+.tool-table tr.attn td { background: var(--active-bg); }
+.sum-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin: 10px 0; }
+.sum-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.sum-item b { display: block; font-size: 18px; }
+.sum-item span { color: var(--muted); font-size: 12px; }
+.chip { display: inline-block; border: 1px solid var(--chip-tag-border); background: var(--chip-tag-bg); border-radius: 999px; padding: 1px 8px; margin: 1px 3px 1px 0; font-size: 12px; }
+
+/* Tenure packet document view */
+.doc-wrap { max-width: 860px; margin: 0 auto; padding: 16px 20px 40px; }
+.doc { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 6px; padding: 32px 36px; font: 14px/1.5 Georgia, "Times New Roman", serif; }
+.doc h1 { font-size: 24px; margin: 0 0 4px; }
+.doc h2 { font-size: 17px; margin: 22px 0 6px; border-bottom: 1px solid #bbb; padding-bottom: 2px; }
+.doc p { margin: 6px 0; }
+.doc p.src { color: #444; font-size: 12.5px; font-style: italic; }
+.doc table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+.doc th, .doc td { border: 1px solid #999; padding: 4px 8px; text-align: left; vertical-align: top; }
+.doc th { background: #eee; }
+.doc td.num { text-align: right; }
+.doc .notice { border: 1px solid #999; padding: 8px 12px; margin: 10px 0; font-size: 13px; background: #f6f6f6; }
+
+@media print {
+  body { background: #fff; }
+  header, .no-print, .tool-row { display: none !important; }
+  .doc-wrap { padding: 0; max-width: none; }
+  .doc { border: 0; padding: 0; font-size: 11pt; }
+  .doc table, .doc tr { break-inside: avoid; }
+  .doc h2 { break-after: avoid; }
+}

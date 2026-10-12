@@ -65,6 +65,7 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let canUseFeature;
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
@@ -160,7 +161,7 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
-    ({ getEntitlementStatus } = entitlement);
+    ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
     modulesLoaded = true;
@@ -7824,6 +7825,18 @@
           openPoPOverlay();
           return;
         }
+        const tenureBtnEl = e.target.closest("[data-tenure-packet]");
+        if (tenureBtnEl) {
+          e.stopPropagation();
+          e.preventDefault();
+          const entitlement = await getEntitlementStatus({ needPurchased: true });
+          if (!canUseFeature("tenurePacket", entitlement)) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
+          await openTenurePacket();
+          return;
+        }
         const narrativeToggle = e.target.closest("[data-narrative-toggle]");
         if (narrativeToggle) {
           e.stopPropagation();
@@ -8731,6 +8744,7 @@
       const popReportBtn = showResearchIntel
         ? `<button type="button" class="su-compare-authors-btn" data-pop-report="1">PoP report</button>`
         : "";
+      const tenureBtn = `<button type="button" class="su-compare-authors-btn" data-tenure-packet="1" title="Build a one-document summary of this profile for a tenure or promotion file">Tenure packet</button>`;
       const activeCoauthor = String(window.suAuthorCoauthorFilter || "").trim();
       const coauthorInsights = window.suState?.authorFeatureToggles?.coauthors !== false;
       const coauthorQuery = coauthorInsights ? String(window.suCoauthorQuery || "") : "";
@@ -8801,7 +8815,7 @@
         ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers. If it doesn’t respond, try clicking again.</div>' : ''}
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
-        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
+        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${tenureBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
         ${narrativeBlock}
       `;
       window.suLastCoauthorsHtml = coauthorsHtml || "";
@@ -12689,6 +12703,55 @@
   function closeIdeaLineageOverlay() {
     const overlay = document.getElementById("su-idea-lineage-overlay");
     if (overlay) overlay.classList.remove("su-visible");
+  }
+  /**
+   * Read what the profile page already shows plus the stats the extension has
+   * already computed. Makes no requests: nothing here loads more publications.
+   */
+  function collectTenureSnapshot() {
+    const stats = window.suFullAuthorStats || {};
+    const text = (n) => (n && n.textContent ? n.textContent.trim() : "");
+    const sidebarRows = Array.from(document.querySelectorAll("#gsc_rsb_st tbody tr")).map((tr) => [
+      text(tr.querySelector(".gsc_rsb_sc1")),
+      ...Array.from(tr.querySelectorAll(".gsc_rsb_std")).map(text)
+    ]);
+    const sidebarHeaders = Array.from(document.querySelectorAll("#gsc_rsb_st thead th")).map(text);
+    const histRoot = document.querySelector("#gsc_rsb_cit .gsc_md_hist_b") || document.querySelector(".gsc_md_hist_b");
+    const years = histRoot ? Array.from(histRoot.querySelectorAll(".gsc_g_t")).map(text) : [];
+    const counts = histRoot ? Array.from(histRoot.querySelectorAll(".gsc_g_a .gsc_g_al")).map(text) : [];
+    const more = document.getElementById("gsc_bpf_more");
+    const partial = more ? !more.disabled : !!window.suState?.authorStatsPartial;
+    let profileUrl = "";
+    try {
+      const u = new URL(window.location.href);
+      const user = u.searchParams.get("user");
+      if (user) profileUrl = `${u.origin}${u.pathname}?user=${encodeURIComponent(user)}`;
+    } catch (_) {}
+    return {
+      authorName: (extractAuthorName() || window.suState?.authorVariations?.[0] || "").trim(),
+      profileUrl,
+      sidebar: { headers: sidebarHeaders, rows: sidebarRows },
+      histogram: { years, counts },
+      papers: (Array.isArray(stats.papers) ? stats.papers : []).map((p) => ({
+        title: p.title, year: p.year, citations: p.citations, authorsText: p.authorsText
+      })),
+      partial,
+      qualityBadgesEnabled: window.suState?.settings?.showQualityBadges !== false,
+      stats: {
+        hIndex: stats.hIndex, gIndex: stats.gIndex, mIndex: stats.mIndex, h5Index: stats.h5Index,
+        firstYear: stats.firstYear, totalCitations: stats.totalCitations,
+        soloAuthored: stats.soloAuthored, firstAuthor: stats.firstAuthor, lastAuthor: stats.lastAuthor, middleAuthor: stats.middleAuthor,
+        qualityCounts: stats.qualityCounts
+      }
+    };
+  }
+  async function openTenurePacket() {
+    if (!window.suFullAuthorStats) {
+      window.alert("The publication list is still loading. Try again in a moment.");
+      return;
+    }
+    await chrome.storage.local.set({ suTenurePacketDraft: { snapshot: collectTenureSnapshot(), createdAt: Date.now() } });
+    chrome.runtime.sendMessage({ action: "openTenurePacket" });
   }
   function exportPoPMarkdown(payload) {
     const { authorName, metrics } = payload;

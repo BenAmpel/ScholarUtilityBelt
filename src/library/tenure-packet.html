@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scholar profile summary - Scholar Utility Belt</title>
+    <link rel="stylesheet" href="library.css" />
+    <link rel="stylesheet" href="tool-pages.css" />
+  </head>
+  <body>
+    <header class="no-print">
+      <div class="left">
+        <h1>Tenure and promotion packet</h1>
+        <div class="sub">Built from the Scholar profile page you were viewing</div>
+      </div>
+    </header>
+
+    <main class="tool-main no-print">
+      <section id="lockedCard" class="tool-card" hidden>
+        <h2 class="tool-h">Pro feature</h2>
+        <p>The tenure and promotion packet is part of Scholar Utility Belt Pro. A trial, purchase or App Pass unlocks it.</p>
+        <button id="unlockPro" class="btn" type="button">Unlock Pro</button>
+      </section>
+      <section id="emptyCard" class="tool-card" hidden>
+        <h2 class="tool-h">Nothing to show</h2>
+        <p>No profile data was found. Open a Google Scholar author profile, let the publication list load, and press Tenure packet again.</p>
+      </section>
+      <section id="actions" class="tool-card" hidden>
+        <p class="sub">Every number below was read from the profile page or computed by the extension from it. No new requests were made to Google Scholar. To make a PDF, press the print button and choose Save as PDF.</p>
+        <div class="tool-row">
+          <button id="downloadDocx" class="btn" type="button">Download .docx</button>
+          <button id="printPdf" class="btn" type="button">Print or save as PDF</button>
+          <span id="status" class="sub" role="status"></span>
+        </div>
+      </section>
+    </main>
+
+    <div class="doc-wrap">
+      <div id="docRoot"></div>
+    </div>
+
+    <script type="module" src="tenure-packet.js"></script>
+  </body>
+</html>

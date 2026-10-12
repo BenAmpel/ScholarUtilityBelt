@@ -295,6 +295,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     localExtpay.openLoginPage();
     return false;
   }
+  if (msg?.action === "openTenurePacket") {
+    // The packet page reads the snapshot the profile content script saved in storage.
+    chrome.tabs.create({ url: chrome.runtime.getURL("src/library/tenure-packet.html") }, () => {
+      void chrome.runtime.lastError;
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
   if (msg?.action === "openOptionsPage") {
     chrome.runtime.openOptionsPage();
     return false;
