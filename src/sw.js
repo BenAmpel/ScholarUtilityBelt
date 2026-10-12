@@ -185,7 +185,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg?.action === "fetchBib" && typeof msg.url === "string") {
-    fetch(msg.url, { credentials: "omit" })
+    if (!isFetchableUrl(msg.url)) {
+      sendResponse({ ok: false, error: "unsupported_url" });
+      return true;
+    }
+    // Same 10 s limit as the other fetch handlers; this one had none and could hold the worker open.
+    fetchWithTimeout(msg.url, { credentials: "omit" }, 10000)
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((body) => sendResponse({ ok: true, body }))
       .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
@@ -228,6 +233,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }, 10000)
       .then((r) => {
         if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
+        // A server that ignores the Range header answers 200 with the whole file. Do not buffer a
+        // large PDF in the worker for a page count: stop unless it is small.
+        if (r.status === 200) {
+          const length = Number(r.headers.get("content-length"));
+          if (!(length > 0 && length <= 2000000)) {
+            try { r.body && r.body.cancel(); } catch { /* already closed */ }
+            throw new Error("range not supported");
+          }
+        }
         return r.arrayBuffer();
       })
       .then((buf) => {
@@ -295,7 +309,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Local state only, no network.
     chrome.storage.local.get(["appPassOptIn", "appPassCache"]).then(({ appPassOptIn, appPassCache }) => {
       sendResponse({ optedIn: appPassOptIn === true, status: appPassCache?.status || null });
-    });
+    }).catch(() => sendResponse({ optedIn: false, status: null }));
     return true;
   }
   if (msg?.action === "appPassSetOptIn") {
@@ -303,7 +317,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set({ appPassOptIn: enabled }).then(async () => {
       if (!enabled) await chrome.storage.local.remove("appPassCache");
       sendResponse({ ok: true });
-    });
+    }).catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (msg?.action === "appPassRefresh") {
@@ -435,6 +449,10 @@ async function checkGraphMonitors(targetAuthorId) {
   const map = stored[GRAPH_ALERTS_KEY] || {};
   const keys = targetAuthorId ? [targetAuthorId] : Object.keys(map);
   const nowIso = new Date().toISOString();
+  // Results are collected here and merged into a fresh read at the end: this loop awaits network
+  // calls for a long time, and writing back the map read at the start would erase changes the
+  // user made in the meantime (read marks, disabling a monitor).
+  const updates = {};
   for (const authorId of keys) {
     const entry = map[authorId];
     if (!entry || !entry.enabled) continue;
@@ -445,6 +463,9 @@ async function checkGraphMonitors(targetAuthorId) {
     const lastDate = Number.isFinite(parsedLastDate.getTime()) ? parsedLastDate : new Date(0);
     const candidateIds = new Set();
     const seedWorks = await Promise.all(seedIds.map((seed) => fetchOpenAlexWork(seed)));
+    // Every lookup failed (offline, rate limit, server error): leave lastCheck alone. Moving it on
+    // would mean works published during an outage are never alerted.
+    if (!seedWorks.some(Boolean)) continue;
     for (const work of seedWorks) {
       const related = Array.isArray(work?.related_works) ? work.related_works.slice(0, 8) : [];
       related.forEach((r) => {
@@ -459,6 +480,7 @@ async function checkGraphMonitors(targetAuthorId) {
       workBatches.push(fetchOpenAlexWorks(candidates.slice(i, i + 25)));
     }
     const workResults = await Promise.all(workBatches);
+    if (candidates.length > 0 && workResults.every((w) => !Array.isArray(w) || w.length === 0)) continue;
     for (const works of workResults) {
       for (const w of works) {
         const pubDate = w?.publication_date ? new Date(w.publication_date) : null;
@@ -475,15 +497,22 @@ async function checkGraphMonitors(targetAuthorId) {
         }
       }
     }
-    const existing = Array.isArray(entry.alerts) ? entry.alerts : [];
-    const existingIds = new Set(existing.map((a) => a.id));
-    const merged = [...newAlerts.filter((a) => !existingIds.has(a.id)), ...existing].slice(0, 50);
-    entry.alerts = merged;
-    entry.unreadCount = Math.min(50, (Number(entry.unreadCount) || 0) + newAlerts.length);
-    entry.lastCheck = nowIso;
-    map[authorId] = entry;
+    updates[authorId] = { newAlerts, lastCheck: nowIso };
   }
-  await chrome.storage.local.set({ [GRAPH_ALERTS_KEY]: map });
+  const fresh = (await chrome.storage.local.get({ [GRAPH_ALERTS_KEY]: {} }))[GRAPH_ALERTS_KEY] || {};
+  for (const [authorId, update] of Object.entries(updates)) {
+    if (!fresh[authorId]) continue; // removed while the check ran
+    const current = Array.isArray(fresh[authorId].alerts) ? fresh[authorId].alerts : [];
+    const known = new Set(current.map((a) => a.id));
+    const added = update.newAlerts.filter((a) => !known.has(a.id));
+    fresh[authorId] = {
+      ...fresh[authorId],
+      alerts: [...added, ...current].slice(0, 50),
+      unreadCount: Math.min(50, (Number(fresh[authorId].unreadCount) || 0) + added.length),
+      lastCheck: update.lastCheck
+    };
+  }
+  await chrome.storage.local.set({ [GRAPH_ALERTS_KEY]: fresh });
   return true;
 }
 

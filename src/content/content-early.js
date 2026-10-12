@@ -37,9 +37,21 @@
     if (el) el.textContent = `${EARLY_SELECTORS} { background: ${LIGHT_BG} !important; color: ${LIGHT_COLOR} !important; }`;
   }
 
+  // If storage never answers (context invalidated, slow profile), a light-theme page must not stay
+  // dark: after 2 s fall back to the system preference.
+  let themeSettled = false;
+  setTimeout(() => {
+    if (themeSettled) return;
+    themeSettled = true;
+    try {
+      if (typeof window.matchMedia !== "undefined" && !window.matchMedia("(prefers-color-scheme: dark)").matches) applyLight();
+    } catch (_) {}
+  }, 2000);
   try {
     if (chrome && chrome.storage && chrome.storage.local && chrome.storage.local.get) {
       chrome.storage.local.get({ settings: {} }, function (result) {
+        if (themeSettled) return;
+        themeSettled = true;
         const settings = result.settings || {};
         const theme = settings.theme || "auto";
         const resolved =
