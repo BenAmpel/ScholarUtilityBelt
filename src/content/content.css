@@ -5390,6 +5390,7 @@ body[data-su-theme="dark"] .su-trend-retry:hover {
 .su-review-mx-btn:disabled { opacity: 0.4; cursor: default; }
 body[data-su-theme="dark"] .su-review-rob-overall { border-color: #3c4043; }
 body[data-su-theme="dark"] .su-review-mx-btn { background: #35363a; border-color: #5f6368; color: #e8eaed; }
+
 /* Pro signals: claim-evidence chips, reproducibility signals, reading order. Class styling only (strict CSP). */
 .su-claim-chips,
 .su-repro-signals {

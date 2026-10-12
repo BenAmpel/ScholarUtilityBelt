@@ -65,6 +65,8 @@ const TARGETS = [
   {
     label: 'common/custom-venues.js',
     args: ['src/common/custom-venues.js', '--bundle=false', '--minify', '--outfile=dist/common/custom-venues.js', '--log-level=warning'],
+  },
+  {
     label: 'common/reference-import.js',
     args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
   },
@@ -83,10 +85,16 @@ const TARGETS = [
   {
     label: 'common/review-snapshots.js',
     args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
+  },
+  {
     label: 'common/claim-signals.js',
     args: ['src/common/claim-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/claim-signals.js', '--log-level=warning'],
+  },
+  {
     label: 'common/repro-signals.js',
     args: ['src/common/repro-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/repro-signals.js', '--log-level=warning'],
+  },
+  {
     label: 'common/reading-order.js',
     args: ['src/common/reading-order.js', '--bundle=false', '--minify', '--outfile=dist/common/reading-order.js', '--log-level=warning'],
   },

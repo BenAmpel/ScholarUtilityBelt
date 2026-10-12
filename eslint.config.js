@@ -100,6 +100,7 @@ module.exports = [
       "src/common/bibtex.js",
       "src/common/custom-venues.js",
       "src/common/reference-import.js",
+      "src/common/reference-import.js",
       "src/common/rob.js",
       "src/common/screening-agreement.js",
       "src/common/evidence-matrix.js",

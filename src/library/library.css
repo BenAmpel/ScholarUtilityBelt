@@ -707,8 +707,15 @@ input::placeholder {
 }
 [hidden] {
   display: none !important;
+}
+
 .panel-note {
+  margin: 8px 0;
+  font-size: 12px;
   line-height: 1.4;
+  color: var(--muted);
+}
+
 .pro-tag {
   display: inline-block;
   margin-left: 6px;
@@ -717,58 +724,116 @@ input::placeholder {
   border: 1px solid var(--chip-tag-border);
   background: var(--chip-tag-bg);
   font-size: 10px;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   vertical-align: middle;
+}
+
 .tool-view {
   margin: 12px 0;
   padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
 .tool-view-header {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
+}
+
 .tool-view-header h3 {
   margin: 0;
   font-size: 15px;
+}
+
 .tool-row {
+  display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   padding: 8px 0;
   border-top: 1px solid var(--line);
+}
+
 .tool-row:first-child {
   border-top: 0;
+}
+
 .tool-row-main {
   min-width: 0;
   flex: 1;
+}
+
 .tool-row-title {
+  font-size: 13px;
+  font-weight: 600;
   overflow-wrap: anywhere;
+}
+
 .tool-row-meta {
+  font-size: 12px;
+  color: var(--muted);
   overflow-wrap: anywhere;
+}
+
 .tool-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   flex: 1;
   min-width: 0;
+}
+
 .tool-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
 .tool-form {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  margin: 8px 0;
+}
+
 .tool-form select,
 .tool-form input[type="text"] {
   min-width: 0;
   flex: 1 1 160px;
+}
+
 .packet-form {
   display: grid;
+  gap: 8px;
+}
+
 .packet-check {
+  display: flex;
+  align-items: center;
   gap: 6px;
+  font-size: 13px;
+}
+
 .packet-error {
   color: var(--danger);
+}
+
 .tool-progress {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 @media (max-width: 700px) {
   .tool-pair {
     grid-template-columns: 1fr;
   }
+}
 /* Export group */
 .export-label { display: block; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
 .export-heading { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
@@ -776,19 +841,44 @@ input::placeholder {
 .export-note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .export-status { min-height: 1.2em; margin: 12px 0 0; font-size: 12px; color: var(--muted); }
 .export-status.is-error { color: var(--danger); }
+.pro-tag {
+  display: inline-block;
   margin-left: 4px;
   padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .btn.is-locked { border-style: dashed; }
 .export-row-spaced { margin: 10px 0; }
 .export-textarea {
+  width: 100%;
   min-height: 120px;
+  border: 1px solid var(--line);
+  background: var(--input-bg);
+  color: var(--fg);
+  border-radius: 10px;
+  padding: 8px 10px;
   font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   outline: none;
+}
 .export-textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .export-result { margin-top: 10px; font-size: 13px; }
 .export-result-heading { margin: 12px 0 4px; font-size: 13px; }
 .export-result-list { margin: 0; padding-left: 18px; font-size: 12px; overflow-wrap: anywhere; }
 .export-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 13px; }
 .export-preview {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0;
   padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
   font: 12px/1.45 ui-sans-serif, system-ui, sans-serif;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
