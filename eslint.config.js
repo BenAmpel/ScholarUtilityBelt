@@ -76,6 +76,7 @@ module.exports = [
         SUAppPass: "readonly",
         SUAsk: "readonly",
         SUInstallPages: "readonly",
+        SUUrlPolicy: "readonly",
         // Browser globals missing from the list above.
         prompt: "readonly",
         DecompressionStream: "readonly",
@@ -98,6 +99,7 @@ module.exports = [
       "src/common/quality.js",
       "src/common/scholar-links.js",
       "src/common/bibtex.js",
+      "src/common/url-policy.js",
       "src/common/reload-banner.js",
       "src/common/pro-prompt.js",
       "src/common/custom-venues.js",

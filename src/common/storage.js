@@ -128,6 +128,9 @@ export const DEFAULT_SETTINGS = {
   qualityCcfRanksCustom: false,
   showSemanticExpansion: true,
   showFundingTag: true,
+  // Look up open-access, funder, citation and dataset signals for each result in the detailed view.
+  // Sends the result's DOI (or arXiv or PubMed id) to public services; see the README host table.
+  externalSignalLookups: true,
   showReadingGuide: true,
   showRetractionWatch: true,
   showTorturedPhrases: true,

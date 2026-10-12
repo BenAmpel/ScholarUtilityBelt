@@ -889,26 +889,6 @@ body[data-su-theme="dark"] .su-triage-missing {
   vertical-align: middle;
   opacity: 0.9;
 }
-.su-code-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 6px;
-  padding: 0 10px;
-  height: var(--su-chip-height, 26px);
-  border-radius: var(--su-chip-radius, 8px);
-  border: 1px solid var(--su-chip-border, rgba(0,0,0,0.18));
-  background: var(--su-chip-bg, #fff);
-  color: var(--su-chip-text, #1f2937);
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: none;
-  vertical-align: middle;
-}
-.su-code-badge:hover {
-  background: #e0e7ff;
-  border-color: #a5b4fc;
-  color: #1e3a8a;
-}
 /* Contribution Signal Score (CSS) badge */
 .su-css-badge {
   display: inline-flex;
@@ -3758,16 +3738,6 @@ body[data-su-theme="dark"] .su-author-stat-tooltip {
 body[data-su-theme="dark"] .su-author-stat-tooltip::after { border-top-color: #202124; }
 body[data-su-theme="dark"] .su-css-badge {
   background: var(--su-chip-bg);
-  border-color: var(--su-chip-border);
-  color: var(--su-chip-text);
-}
-body[data-su-theme="dark"] .su-code-badge {
-  background: var(--su-chip-bg);
-  border-color: var(--su-chip-border);
-  color: var(--su-chip-text);
-}
-body[data-su-theme="dark"] .su-code-badge:hover {
-  background: var(--su-chip-bg-hover);
   border-color: var(--su-chip-border);
   color: var(--su-chip-text);
 }

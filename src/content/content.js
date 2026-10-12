@@ -1769,7 +1769,6 @@
       }
     })();
   }
-  const CODE_LINK_CACHE = new Map(); // key -> { status: "pending"|"found"|"none", url: string|null }
   function extractArxivIdFromUrl(url) {
     const u = String(url || "");
     const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\\d+)?/i);
@@ -1816,68 +1815,6 @@
       if (m) return m[1];
     }
     return null;
-  }
-  async function fetchCatalyzeXCodeLink({ title, url }) {
-    const arxivId = extractArxivIdFromUrl(url);
-    let api = "https://www.catalyzex.com/api/code?extension=true";
-    if (arxivId) api += `&paper_arxiv_id=${encodeURIComponent(arxivId)}`;
-    if (title) api += `&paper_title=${encodeURIComponent(title)}`;
-    if (url) api += `&paper_url=${encodeURIComponent(url)}`;
-    let data = null;
-    try {
-      const res = await chrome.runtime.sendMessage({
-        action: "fetchExternal",
-        url: api,
-        timeoutMs: 8000,
-        responseType: "json"
-      });
-      if (!res?.ok || !res.body) return null;
-      data = res.body;
-    } catch (_) {
-      return null;
-    }
-    const link = data?.code_url || data?.unshortened_url || data?.cx_url || null;
-    return link || null;
-  }
-  async function renderCodeLinkBadge(container, paper) {
-    const existing = container.querySelector(".su-code-badge");
-    if (existing) existing.remove();
-    const titleEl = container.querySelector(".gs_rt") || container.querySelector(".gsc_a_at");
-    if (!titleEl) return;
-    const key = paper?.clusterId || paper?.url || paper?.title;
-    if (!key) return;
-    const cached = CODE_LINK_CACHE.get(key);
-    if (cached?.status === "found" && cached.url) {
-      const a = document.createElement("a");
-      a.className = "su-code-badge";
-      a.href = cached.url;
-      a.target = "_blank";
-      a.rel = "noopener";
-      a.textContent = "Code";
-      a.title = "Open associated code repository (CatalyzeX)";
-      titleEl.appendChild(a);
-      return;
-    }
-    if (cached?.status === "pending" || cached?.status === "none") return;
-    CODE_LINK_CACHE.set(key, { status: "pending", url: null });
-    try {
-      const link = await fetchCatalyzeXCodeLink({ title: paper?.title, url: paper?.url });
-      if (link) {
-        CODE_LINK_CACHE.set(key, { status: "found", url: link });
-        const a = document.createElement("a");
-        a.className = "su-code-badge";
-        a.href = link;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = "Code";
-        a.title = "Open associated code repository (CatalyzeX)";
-        titleEl.appendChild(a);
-      } else {
-        CODE_LINK_CACHE.set(key, { status: "none", url: null });
-      }
-    } catch {
-      CODE_LINK_CACHE.set(key, { status: "none", url: null });
-    }
   }
   /**
    * Detect funding mentions in snippet/abstract text (e.g. from .gs_rs).
@@ -5101,6 +5038,8 @@
   function renderExternalSignalBadges(container, state, isAuthorProfile, opts = {}) {
     const existing = container.querySelectorAll(".su-external");
     existing.forEach((el) => el.remove());
+    // The Options switch for per-result lookups: off means nothing is sent for any result.
+    if (state?.settings?.externalSignalLookups === false) return;
     const doiRaw = extractDOIFromResult(container);
     const doi = normalizeDoi(doiRaw);
     const arxivId = extractArxivIdFromResult(container);
@@ -5739,7 +5678,6 @@
         renderExternalSignalBadges(container, state, isAuthorProfile, { inViewport });
         // renderSkimmabilityStrip(container, paper, state, isAuthorProfile);
         renderArtifactBadges(container, state);
-        renderCodeLinkBadge(container, paper);
         renderVelocity(container, paper, isAuthorProfile);
         // Pro: claim-evidence chips and reproducibility signals (local, from the snippet and links).
         if (signalsUi && !isAuthorProfile) {

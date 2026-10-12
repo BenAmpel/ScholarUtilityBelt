@@ -212,6 +212,7 @@ async function load() {
   el("hideAuthorsRegex").value = s.hideAuthorsRegex || "";
   el("showSemanticExpansion").checked = !!s.showSemanticExpansion;
   el("showFundingTag").checked = !!s.showFundingTag;
+  el("externalSignalLookups").checked = s.externalSignalLookups !== false;
   el("showHoverSummary").checked = !!s.showHoverSummary;
   el("showReadingGuide").checked = !!s.showReadingGuide;
   el("showEmergingScore").checked = s.showEmergingScore !== false;
@@ -677,6 +678,7 @@ async function handleSave() {
     hideAuthorsRegex: el("hideAuthorsRegex").value,
     showSemanticExpansion: el("showSemanticExpansion").checked,
     showFundingTag: el("showFundingTag").checked,
+    externalSignalLookups: el("externalSignalLookups").checked,
     showHoverSummary: el("showHoverSummary").checked,
     showReadingGuide: el("showReadingGuide").checked,
     showEmergingScore: el("showEmergingScore").checked,
