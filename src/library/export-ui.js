@@ -8,6 +8,8 @@
 
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import { selectPapers, sortRecords } from "../common/export-model.js";
+import { buildVaultFiles } from "../common/obsidian-export.js";
+import { buildZip } from "../common/zip-writer.js";
 import { buildCslJson, buildRis } from "../common/zotero-export.js";
 import { buildNotesHtml, buildNotesMarkdown } from "../common/notes-export.js";
 
@@ -141,6 +143,14 @@ export function createExportUi(deps) {
       if (!records.length) return setStatus("Nothing to export in this scope.");
       downloadText(`zotero-${scopeSlug(scope.name)}-${fileStamp()}.json`, buildCslJson(records), "application/json");
       setStatus(`Exported ${records.length} ${records.length === 1 ? "paper" : "papers"} as CSL-JSON. In Zotero: File, Import.`);
+    },
+    async obsidianVault() {
+      const { scope, records } = await selectedRecords();
+      if (!records.length) return setStatus("Nothing to export in this scope.");
+      const now = new Date();
+      const zip = buildZip(buildVaultFiles(records, { now }), { date: now });
+      downloadBlob(`scholar-vault-${scopeSlug(scope.name)}-${fileStamp(now)}.zip`, new Blob([zip], { type: "application/zip" }));
+      setStatus(`Exported ${records.length} ${records.length === 1 ? "note" : "notes"} plus an index. Unzip into your vault; exporting again overwrites the same files.`);
     },
   };
 

@@ -61,6 +61,12 @@
           </div>
           <p class="export-note">The Zotero Connector already saves single papers from a page. This is the bulk version: it also carries your tags, notes and collections. RIS keeps notes as child notes and PDF highlights as a second note; CSL-JSON puts your notes in the Extra field. Both files contain your private notes. Import with File, Import in Zotero.</p>
 
+          <h3 class="export-heading">Obsidian or Markdown vault</h3>
+          <div class="export-row">
+            <button class="btn" data-export="obsidianVault" data-pro="obsidianExport">Vault (.zip) <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">One note per paper with YAML properties, your notes, PDF highlights as quoted bullets, and an index note with [[links]] grouped by collection. File names come from the DOI, or from author, year and title, so exporting again overwrites the same files. Editing a title changes that paper's file name.</p>
+
           <h3 class="export-heading">Lists</h3>
           <div class="export-row">
             <button id="exportCsv" class="btn">CSV</button>
