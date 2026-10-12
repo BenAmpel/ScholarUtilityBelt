@@ -16,8 +16,10 @@
 import { showProPrompt } from "../common/pro-prompt.js";
 import {
   MAX_FILE_BYTES,
+  findExistingKey,
   hashId,
   parseReferences,
+  registerKeys,
   searchLogToCsv,
   searchLogToMarkdown,
   totalRecordsFromSearchLog
@@ -220,14 +222,15 @@ export function createReviewWorkspace(deps) {
   }
   function addPapersToProject(project, papers) {
     if (!project || !Array.isArray(papers)) return { added: 0, duplicates: 0 };
+    const keyHelpers = { normalizeDoi, normalizeTitle: normalizeTitleForMatch };
+    // Papers saved by older versions are keyed by DOI only. Give each one its title (and PubMed id) key too,
+    // so a record from a database that leaves the DOI out is recognised as the same paper.
+    for (const [id, existing] of Object.entries(project.papers || {})) registerKeys(project.fingerprints, { ...existing, id }, id, keyHelpers);
     let added = 0;
     let duplicates = 0;
     for (const p of papers) {
       if (!p || !p.title) continue;
-      const fp = paperFingerprint(p);
-      // A PubMed id (from .nbib imports) is a second key: it also catches a record whose DOI or title differs.
-      const pmKey = p.pmid ? `pmid:${p.pmid}` : "";
-      const hitKey = project.fingerprints?.[fp] ? fp : (pmKey && project.fingerprints?.[pmKey] ? pmKey : "");
+      const hitKey = findExistingKey(project.fingerprints, project.papers, p, keyHelpers);
       if (hitKey) {
         duplicates += 1;
         project.duplicates = Array.isArray(project.duplicates) ? project.duplicates : [];
@@ -240,8 +243,7 @@ export function createReviewWorkspace(deps) {
         continue;
       }
       project.papers[p.id] = p;
-      project.fingerprints[fp] = p.id;
-      if (pmKey) project.fingerprints[pmKey] = p.id;
+      registerKeys(project.fingerprints, p, p.id, keyHelpers);
       added += 1;
     }
     project.dedupeCount = (project.dedupeCount || 0) + duplicates;

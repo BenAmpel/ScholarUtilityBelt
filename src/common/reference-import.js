@@ -317,3 +317,54 @@ export function searchLogToMarkdown(log) {
 export function totalRecordsFromSearchLog(log) {
   return (Array.isArray(log) ? log : []).reduce((n, e) => n + (Number(e.recordsInFile) || 0), 0);
 }
+
+// ------------------------------------------------------- duplicate matching
+
+/** A title this short or generic ("Introduction") is not evidence of the same work on its own. */
+export const MIN_TITLE_MATCH_CHARS = 25;
+
+/**
+ * Every key a paper can be matched on, most reliable first: DOI, PubMed id, title. A title key is used
+ * when the title is long enough to mean something, or when the paper has no DOI (then it is all there is,
+ * as before). Before, a paper was keyed by DOI alone when it had one, so the same paper arriving from a
+ * database that omits DOIs was never matched to it and was added twice.
+ * @param {{doi?:string,pmid?:string,title?:string,id?:string}} paper
+ * @param {{normalizeDoi:(s:string)=>string, normalizeTitle:(s:string)=>string}} h
+ */
+export function matchKeys(paper, { normalizeDoi, normalizeTitle }) {
+  const keys = [];
+  const doi = normalizeDoi(paper?.doi || "");
+  if (doi) keys.push(`doi:${doi}`);
+  if (paper?.pmid) keys.push(`pmid:${paper.pmid}`);
+  const title = normalizeTitle(paper?.title || "");
+  if (title && (!doi || title.length >= MIN_TITLE_MATCH_CHARS)) keys.push(`title:${title}`);
+  if (!keys.length) keys.push(`key:${paper?.id || ""}`);
+  return keys;
+}
+
+/** Same year, or either year unknown, or one year apart (online-first versus issue date). */
+export function yearsCompatible(a, b) {
+  const ya = parseInt(String(a ?? "").match(/\d{4}/)?.[0] ?? "", 10);
+  const yb = parseInt(String(b ?? "").match(/\d{4}/)?.[0] ?? "", 10);
+  if (!Number.isFinite(ya) || !Number.isFinite(yb)) return true;
+  return Math.abs(ya - yb) <= 1;
+}
+
+/**
+ * The first existing key that this paper matches, or "". `fingerprints` maps key to paper id and `papers`
+ * maps id to paper. A title match is ignored when the two years are more than a year apart.
+ */
+export function findExistingKey(fingerprints, papers, paper, helpers) {
+  for (const key of matchKeys(paper, helpers)) {
+    const existingId = fingerprints?.[key];
+    if (!existingId) continue;
+    if (key.startsWith("title:") && !yearsCompatible(papers?.[existingId]?.year, paper?.year)) continue;
+    return key;
+  }
+  return "";
+}
+
+/** Records every key of `paper` as pointing at `id`, without overwriting a key that already has an owner. */
+export function registerKeys(fingerprints, paper, id, helpers) {
+  for (const key of matchKeys(paper, helpers)) if (!fingerprints[key]) fingerprints[key] = id;
+}

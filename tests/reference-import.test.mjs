@@ -301,3 +301,51 @@ describe("parseMedline", () => {
     assert.match(csv.split("\n")[1], /^PubMed,,,a\.nbib,medline,2,2,0$/);
   });
 });
+
+describe("duplicate matching across records with and without a DOI", async () => {
+  const { matchKeys, findExistingKey, registerKeys, yearsCompatible, MIN_TITLE_MATCH_CHARS } = await import("../src/common/reference-import.js");
+  const h = { normalizeDoi: (s) => String(s || "").toLowerCase().trim(), normalizeTitle: (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() };
+  const longTitle = "Test record one: effect of a made-up intervention on a made-up outcome in a randomized trial";
+
+  it("gives a paper with a DOI a DOI key and a title key, and a paper without one just the title", () => {
+    assert.deepEqual(matchKeys({ doi: "10.1/x", title: longTitle }, h).map((k) => k.split(":")[0]), ["doi", "title"]);
+    assert.deepEqual(matchKeys({ title: "Short" }, h).map((k) => k.split(":")[0]), ["title"]);
+    assert.deepEqual(matchKeys({ doi: "10.1/x", title: "Short" }, h), ["doi:10.1/x"], "a short title is no evidence next to a DOI");
+    assert.deepEqual(matchKeys({ doi: "10.1/x", pmid: "123", title: "Short" }, h), ["doi:10.1/x", "pmid:123"]);
+  });
+  it("matches a DOI-less record to a stored record that has a DOI, by title", () => {
+    const fps = {}; const papers = {};
+    const first = { id: "a", doi: "10.9999/test.0001", title: longTitle, year: "2021" };
+    papers.a = first; registerKeys(fps, first, "a", h);
+    const incoming = { id: "b", title: longTitle, year: "2021" };
+    assert.equal(findExistingKey(fps, papers, incoming, h), `title:${h.normalizeTitle(longTitle)}`);
+  });
+  it("still matches by DOI when the titles differ", () => {
+    const fps = {}; const papers = {};
+    const first = { id: "a", doi: "10.1/x", title: "One title of reasonable length for the test", year: "2020" };
+    papers.a = first; registerKeys(fps, first, "a", h);
+    assert.equal(findExistingKey(fps, papers, { id: "b", doi: "10.1/x", title: "Another wording entirely" }, h), "doi:10.1/x");
+  });
+  it("does not merge two different papers that share a short title, or whose years are far apart", () => {
+    const fps = {}; const papers = {};
+    const first = { id: "a", title: "Introduction", year: "2020" };
+    papers.a = first; registerKeys(fps, first, "a", h);
+    assert.equal(findExistingKey(fps, papers, { id: "b", doi: "10.1/y", title: "Introduction", year: "2020" }, h), "", "short title next to a DOI is not a match");
+    const long = { id: "c", title: longTitle, year: "2010" };
+    papers.c = long; registerKeys(fps, long, "c", h);
+    assert.equal(findExistingKey(fps, papers, { id: "d", title: longTitle, year: "2021" }, h), "", "eleven years apart is a different paper");
+    assert.ok(MIN_TITLE_MATCH_CHARS >= 20);
+  });
+  it("treats a missing or one-year-off year as compatible", () => {
+    assert.equal(yearsCompatible("2021", ""), true);
+    assert.equal(yearsCompatible(undefined, 2020), true);
+    assert.equal(yearsCompatible("2021", "2022"), true);
+    assert.equal(yearsCompatible("2021", "2023"), false);
+  });
+  it("registerKeys never takes over a key another paper owns", () => {
+    const fps = { "doi:10.1/x": "a" };
+    registerKeys(fps, { doi: "10.1/x", title: longTitle }, "b", h);
+    assert.equal(fps["doi:10.1/x"], "a");
+    assert.equal(fps[`title:${h.normalizeTitle(longTitle)}`], "b");
+  });
+});
