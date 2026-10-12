@@ -13,8 +13,6 @@
         <div class="sub">Local-only list of saved Scholar results</div>
       </div>
       <div class="right">
-        <button id="exportCsv" class="btn">Export CSV</button>
-        <button id="exportBibtex" class="btn">Export BibTeX</button>
         <a class="btn" href="biblio-check.html">Bibliography checker</a>
         <button id="openOptions">Options</button>
       </div>
@@ -44,6 +42,51 @@
           <div id="folderList" class="panel-list"></div>
           <button id="scanFolder" class="btn full">Scan folder</button>
           <input id="folderPicker" type="file" webkitdirectory multiple hidden />
+        </section>
+        <section class="panel export-panel" id="exportGroup" aria-labelledby="exportTitle">
+          <h2 class="panel-title" id="exportTitle">Export</h2>
+          <label class="export-label" for="exportScope">Papers to export</label>
+          <select id="exportScope"></select>
+
+          <h3 class="export-heading">Highlights and notes</h3>
+          <div class="export-row">
+            <button class="btn" data-export="notesMd">Markdown</button>
+            <button class="btn" data-export="notesHtml">HTML</button>
+          </div>
+          <p class="export-note">One document: each paper's citation, your notes and every PDF highlight as a quote.</p>
+
+          <h3 class="export-heading">Zotero</h3>
+          <div class="export-row">
+            <button class="btn" data-export="zoteroRis" data-pro="zoteroExport">RIS <span class="pro-tag">Pro</span></button>
+            <button class="btn" data-export="zoteroCsl" data-pro="zoteroExport">CSL-JSON <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">The Zotero Connector already saves single papers from a page. This is the bulk version: it also carries your tags, notes and collections. RIS keeps notes as child notes and PDF highlights as a second note; CSL-JSON puts your notes in the Extra field. Both files contain your private notes. Import with File, Import in Zotero.</p>
+
+          <h3 class="export-heading">Obsidian or Markdown vault</h3>
+          <div class="export-row">
+            <button class="btn" data-export="obsidianVault" data-pro="obsidianExport">Vault (.zip) <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">One note per paper with YAML properties, your notes, PDF highlights as quoted bullets, and an index note with [[links]] grouped by collection. File names come from the DOI, or from author, year and title, so exporting again overwrites the same files. Editing a title changes that paper's file name.</p>
+
+          <h3 class="export-heading">LaTeX</h3>
+          <div class="export-row">
+            <button class="btn" data-export="latexPack" data-pro="latexPack">Citation pack <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A .bib with citation keys that stay the same on every export, a copy-able \cite list, and a check of your .tex text against your saved papers.</p>
+
+          <h3 class="export-heading">Word and Google Docs</h3>
+          <div class="export-row">
+            <button class="btn" data-export="wordRefList" data-pro="wordRefList">Reference list <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A formatted reference list for the chosen papers, copied with formatting or saved as a .doc file.</p>
+
+          <h3 class="export-heading">Lists</h3>
+          <div class="export-row">
+            <button id="exportCsv" class="btn">CSV</button>
+            <button id="exportBibtex" class="btn">BibTeX</button>
+          </div>
+
+          <p id="exportStatus" class="export-status" role="status" aria-live="polite"></p>
         </section>
         <section class="panel">
           <h2 class="panel-title">Sharing</h2>
@@ -221,6 +264,48 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="latexModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="latexModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="latexModalTitle">LaTeX citation pack</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="latexScope" class="export-note"></p>
+        <p class="export-note">Each paper gets a citation key the first time you export. The key is saved on the paper and never changes, so a .bib exported later still matches your .tex. Your private notes are not written to the .bib.</p>
+        <div class="export-row export-row-spaced">
+          <button id="latexBib" class="btn">Download .bib</button>
+          <button id="latexCopy" class="btn">Copy \cite list</button>
+        </div>
+        <label class="export-label" for="latexInput">Check your document against your saved papers</label>
+        <textarea id="latexInput" class="export-textarea" rows="8" spellcheck="false" placeholder="Paste .tex text, or a list of cite keys separated by commas or lines"></textarea>
+        <div class="export-row export-row-spaced"><button id="latexCheck" class="btn">Check</button></div>
+        <div id="latexResult" class="export-result" aria-live="polite"></div>
+        <p id="latexPromo" class="export-note" hidden><a id="latexPromoLink" href="https://purplelink.llc/moderntex/" target="_blank" rel="noopener noreferrer">Check a .bib or write in LaTeX with ModernTex</a> <button type="button" id="latexPromoDismiss" class="promo-dismiss">Dismiss</button></p>
+      </div>
+    </div>
+
+    <div id="refModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="refModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="refModalTitle">Reference list</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="refScope" class="export-note"></p>
+        <label class="export-label" for="refStyle">Style</label>
+        <select id="refStyle"></select>
+        <label class="export-check"><input type="checkbox" id="refQuotes" /> Add a quote sheet from my notes and PDF highlights</label>
+        <label class="export-label" for="refPreview">Preview</label>
+        <pre id="refPreview" class="export-preview" tabindex="0"></pre>
+        <div class="export-row export-row-spaced">
+          <button id="refCopy" class="btn">Copy with formatting</button>
+          <button id="refDoc" class="btn">Download .doc</button>
+        </div>
+        <p class="export-note">Supports APA 7, MLA 9, Chicago 17 (bibliography form) and IEEE, for journal articles, conference papers and preprints. Anything else is formatted as author, year, title and link. Scholar results do not include volume, issue or page numbers, so these are left out. Titles are used as saved: APA and IEEE expect sentence case, so edit them if needed. Author names come from Scholar's author line, which usually gives initials. The preview shows plain text; the copied version has italics and hanging indents. Check each entry against your style guide before you submit.</p>
       </div>
     </div>
 

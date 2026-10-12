@@ -103,6 +103,10 @@ export const PRO_FEATURES = {
   collectionPackets: "new",
   librarySimilarity: "new",
   watchLists: "new",
+  zoteroExport: "new",
+  obsidianExport: "new",
+  latexPack: "new",
+  wordRefList: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

@@ -337,6 +337,31 @@ export async function clearLibraryBackup() {
   }
 }
 
+/**
+ * Stores citekeys on saved papers in one write. A paper that already has a citekey is never changed
+ * (keys must stay stable across exports), and a paper that has been removed is not recreated.
+ * @param {Record<string,string>|Map<string,string>} keys storage key -> citekey
+ * @returns {Promise<number>} how many papers received a new key
+ */
+export async function saveCitekeys(keys) {
+  try {
+    const entries = keys instanceof Map ? [...keys] : Object.entries(keys || {});
+    const savedPapers = await getSavedPapers();
+    let n = 0;
+    for (const [key, citekey] of entries) {
+      const p = savedPapers[key];
+      if (!p || p.citekey || !citekey) continue;
+      p.citekey = String(citekey);
+      n++;
+    }
+    if (n) await chrome.storage.local.set({ savedPapers });
+    return n;
+  } catch (e) {
+    if (isContextInvalidated(e)) return 0;
+    throw e;
+  }
+}
+
 export async function removePaper(key) {
   try {
     const savedPapers = await getSavedPapers();

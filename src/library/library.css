@@ -769,3 +769,26 @@ input::placeholder {
   .tool-pair {
     grid-template-columns: 1fr;
   }
+/* Export group */
+.export-label { display: block; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+.export-heading { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
+.export-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.export-note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.export-status { min-height: 1.2em; margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+.export-status.is-error { color: var(--danger); }
+  margin-left: 4px;
+  padding: 0 6px;
+.btn.is-locked { border-style: dashed; }
+.export-row-spaced { margin: 10px 0; }
+.export-textarea {
+  min-height: 120px;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  outline: none;
+.export-textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.export-result { margin-top: 10px; font-size: 13px; }
+.export-result-heading { margin: 12px 0 4px; font-size: 13px; }
+.export-result-list { margin: 0; padding-left: 18px; font-size: 12px; overflow-wrap: anywhere; }
+.export-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 13px; }
+.export-preview {
+  padding: 10px;
+  font: 12px/1.45 ui-sans-serif, system-ui, sans-serif;

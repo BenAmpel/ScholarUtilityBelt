@@ -43,3 +43,32 @@ export async function initPromoCard({ doc = document, storage = chrome.storage.l
   card.hidden = false;
   return true;
 }
+
+// One plain, dismissible link line inside the LaTeX citation pack dialog on the library page. Same rules as the
+// card above: macOS only, no request, nothing recorded except that it was dismissed. Its own dismissal key, so
+// dismissing the card does not hide it and the other way round. utm_campaign=latex-pack is a separate row in the
+// site's `sub` channel funnel.
+export const LATEX_LINK_URL = "https://purplelink.llc/moderntex/?utm_source=sub&utm_medium=extension&utm_campaign=latex-pack";
+export const LATEX_LINK_DISMISS_KEY = "promoLatexLinkDismissed";
+
+export async function initLatexLink({ doc = document, storage = chrome.storage.local, nav = navigator } = {}) {
+  const line = doc.getElementById("latexPromo");
+  const button = doc.getElementById("latexPromoDismiss");
+  const link = doc.getElementById("latexPromoLink");
+  if (!line || !button) return false;
+  let dismissed;
+  try {
+    const stored = await storage.get(LATEX_LINK_DISMISS_KEY);
+    dismissed = Boolean(stored && stored[LATEX_LINK_DISMISS_KEY]);
+  } catch (_) {
+    return false;
+  }
+  if (link) link.href = LATEX_LINK_URL;
+  if (!shouldShowPromo({ isMac: isMacPlatform(nav), dismissed })) return false;
+  button.addEventListener("click", async () => {
+    line.hidden = true;
+    try { await storage.set({ [LATEX_LINK_DISMISS_KEY]: true }); } catch (_) { /* hidden for this visit either way */ }
+  });
+  line.hidden = false;
+  return true;
+}
