@@ -86,6 +86,27 @@ export const PRO_FEATURES = {
   reviewWorkspace: "legacy",
   citationGraph: "legacy",
   popReport: "legacy",
+  // Added after Pro launched: unlocked by a trial, purchase or App Pass for everyone, grandfathered or not.
+  referenceImport: "new",
+  riskOfBias: "new",
+  screeningAgreement: "new",
+  evidenceMatrix: "new",
+  reviewSnapshots: "new",
+  claimEvidenceChips: "new",
+  reproSignals: "new",
+  readingOrder: "new",
+  // Optional on-device and bring-your-own-key AI features. Not grandfathered.
+  triageCard: "new",
+  askShortlist: "new",
+  bibliographyCheck: "new",
+  tenurePacket: "new",
+  collectionPackets: "new",
+  librarySimilarity: "new",
+  watchLists: "new",
+  zoteroExport: "new",
+  obsidianExport: "new",
+  latexPack: "new",
+  wordRefList: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

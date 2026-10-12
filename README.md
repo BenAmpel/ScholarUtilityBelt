@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/scholar-utility-belt/omcogfcgldfmihfogbffflbocdbjockn"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-Install-4285F4?logo=googlechrome&logoColor=white"></a>
   <a href="https://github.com/BenAmpel/ScholarUtilityBelt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BenAmpel/ScholarUtilityBelt?style=flat"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.6.2-2f855a">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-2f855a">
   <a href="https://doi.org/10.5281/zenodo.18645552"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-ISC-black"></a>
   <a href="https://buymeacoffee.com/bampel"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=000000&labelColor=FFDD00"></a>
@@ -44,6 +44,8 @@ The extension layers paper triage, venue quality signals, lightweight bibliometr
 - [x] Citation-lineage/idea-lineage views and an interactive citation-graph overlay for exploring a paper's or author's citation network
 - [x] Systematic-review workspace: multi-reviewer screening, PICO fields, PRISMA flow diagrams, and CSV/BibTeX/Markdown export
 - [x] Publish-or-Perish-style report with peer-cohort benchmarking
+- [x] Your own journal list: upload a CSV of venues and tier labels (a department or institutional list) and matching venues get a badge with your label; free for everyone, stored only in your browser
+- [x] Reference import for the review workspace (Pro, unlocked by trial, purchase or App Pass): bring RIS or BibTeX exports from PubMed, Scopus, Web of Science or a reference manager into a review project, matched by DOI then title, with a search log for the PRISMA-S methods section
 - [x] Local saved-paper library with notes, tags, collections, export/import
 - [x] Configurable options page for feature toggles, quality sources, and enrichment behavior
 
@@ -93,6 +95,10 @@ Scholar Utility Belt addresses those gaps in-place. Instead of replacing Scholar
 
 - Local saved-paper library with tags, notes, search, sorting, export/import, and collection-style organization.
 - **Pro:** systematic-review workspace — multi-reviewer screening with blind mode, consensus/conflict detection, PICO fields, PRISMA flow-diagram export, and CSV/BibTeX/Markdown report export.
+- Import merges instead of overwriting: papers are matched by DOI, then by normalized title; tags, collections and highlights are combined, differing notes are joined, and nothing is deleted. A summary shows how many papers were added, merged and unchanged, and the last import can be undone from a backup kept in extension storage.
+- **Pro:** collection packets — export one collection as a `.sub.json` file (papers and tags; notes only if you tick a box) and import a packet from someone else. Packets carry a SHA-256 checksum that detects accidental damage. They are not signed, and the checksum does not prove who made a file.
+- **Pro:** library similarity — a "Similar" action on each saved paper and a "Possible duplicates" view (for example a preprint and its published version), using word overlap in titles and abstracts or snippets, computed on your device with no model download. Merging a pair keeps both links.
+- **Pro:** watch lists — save up to 20 searches or author names and see recent works from OpenAlex that you have not looked at yet, with the same quality badges as the library. Lookups run at most once per item per 24 hours, only while the library page or a Scholar page is open (there is no background timer and no notification). Failures back off.
 - Popup and options pages for configuring badge sources, external enrichments, UI density, and quality datasets.
 
 ## Design principles
@@ -134,13 +140,24 @@ Optional external enrichment can use public APIs such as:
 
 The extension is built to minimize those calls and to make their effects legible in the UI.
 
+**Watch lists send your queries to OpenAlex, but only if you add watch items.** A watch item is a search or an author name you type into the library page. Once one exists, the text of each item is sent to `api.openalex.org` (with your optional API key and the same `mailto` parameter other OpenAlex calls use) at most once per item per 24 hours, while the library page or a Scholar page is open. With no watch items, nothing is sent. Removing an item stops its lookups. Google Scholar itself is never fetched for this feature.
+
 **A note on OpenAlex rate limits:** as of February 2026, OpenAlex asks unauthenticated callers to attach a free API key for reliable service. Without one, requests behind citation metrics, p-index/FWCI, trends, and related-works may be rate-limited or fail. Add a free key from [openalex.org/settings/api](https://openalex.org/settings/api) in Options → OpenAlex API key; the extension works without one but degrades gracefully.
 
 ### A note on the Pro tier
 
-Scholar Utility Belt Pro (author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report) is licensed through [ExtensionPay](https://extensionpay.com), which makes a network request to `extensionpay.com` to check your entitlement status. This is the one exception to the "no backend, no telemetry" design above — everything else in the extension still runs entirely from data already on the page or packaged with the extension. If you installed Scholar Utility Belt before this tier shipped, nothing changes for you: every one of these features stays free, permanently. That promise covers the features listed above; Pro features added in later versions need Pro for everyone (a purchase, the 14-day free trial, or App Pass). Starting the free trial or buying Pro goes through ExtensionPay, which collects your email address.
+Scholar Utility Belt Pro (author compare, citation lineage, the extended bibliometrics, narrative CV, the review workspace, the citation-graph overlay, and the Publish-or-Perish report) is licensed through [ExtensionPay](https://extensionpay.com), which makes a network request to `extensionpay.com` to check your entitlement status. This is the one exception to the "no backend, no telemetry" design above — everything else in the extension still runs entirely from data already on the page or packaged with the extension, apart from the optional, user-initiated [AI features](#optional-ai-features-pro-off-by-default) below, whose only network call goes to the AI provider you choose with your own key. If you installed Scholar Utility Belt before this tier shipped, nothing changes for you: every one of these features stays free, permanently. That promise covers the features listed above; Pro features added in later versions need Pro for everyone (a purchase, the 14-day free trial, or App Pass). Starting the free trial or buying Pro goes through ExtensionPay, which collects your email address.
 
 **App Pass (optional, off by default).** If you already subscribe to [App Pass](https://joinapppass.com), a single subscription that covers many browser extensions, you can turn it on in Options to unlock Pro with it. Nothing contacts `joinapppass.com` until you do. Once on, the extension asks `joinapppass.com` whether your pass is active (about every 6 hours once it is, or about every 10 minutes while you browse Scholar if no pass is found yet, so a new activation shows up quickly), sending this extension's ID and your `joinapppass.com` login cookie; App Pass uses those checks to share revenue between extensions. The answer, never your email, is cached locally. Turning it off in Options stops all contact. Anyone who bought Pro directly, or is grandfathered, is never checked.
+
+### Optional AI features (Pro, off by default)
+
+Two features use language models. Both are opt-in and neither runs unless you turn it on.
+
+- **Triage cards** add a second line under a Scholar result with study design, sample and setting. They use Chrome's built-in Prompt API (Gemini Nano) on your device, so the snippet text is not sent anywhere by this extension. Whether that API is available depends on your Chrome version, device and settings; where it is missing the button explains that and nothing else changes. A value is shown only if it appears word for word in the snippet (a normalized comparison: case, spacing, dashes and thousands separators are ignored); otherwise the line says "not stated in snippet". This guarantees the text is in the snippet. It does not guarantee it is the right part of the snippet, so check the paper. Results are cached for the browser session.
+- **Ask my shortlist** (Library page) lets you ask one question about papers you saved. You supply your own API key for Anthropic, OpenAI or Google Gemini in Options. **If you turn this on, the titles and the saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you chose, under that provider's terms and privacy policy.** Nothing else is sent: no notes, tags, authors or links. Nothing is sent until you have seen the provider, the model, the number of papers, an estimated token count and cost, and the exact text, and pressed Send. The key is stored only in `chrome.storage.local` on this device, is not logged, and is sent only to the chosen provider's API host. The extension asks Chrome for that one host as an optional permission when you turn the feature on, and you can turn it off (this deletes the key and releases the permission) in Options. The cost estimate uses a price table you can edit; its built-in starting values were written from memory and may be out of date. The answer is a table with a verdict per paper and one quoted sentence; a quote is kept only if it appears word for word in the saved text, otherwise the row reads "no support found in the abstract". Saved text is the abstract when the paper has one, otherwise the Scholar snippet.
+
+The project still runs no server and collects no telemetry; the only party that receives text in the second feature is the provider you picked.
 
 ## Packaged data sources
 

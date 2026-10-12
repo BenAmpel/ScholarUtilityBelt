@@ -51,6 +51,8 @@
   let normalizeVenueName;
   let normalizeVhbRank;
   let qualityBadgesForVenue;
+  let customBadgeForVenue;
+  let compileCustomVenueIndex;
   let venueWeightForVenue;
   let getCachedElement;
   let getCachedElements;
@@ -65,6 +67,13 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let canUseFeature;
+  // Pro signals (claim chips, reproducibility signals, reading order). Loaded in
+  // loadSignalsModules(); null/empty means "not available", and rows render without them.
+  let signalsUi = null;
+  let reproSignalsMod = null;
+  let signalsAllowed = {};
+  let triageMod = null; // dist/common/triage-verify.js, loaded on first use
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
@@ -89,14 +98,16 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
       importModuleWithRetry("dist/content/data-loader.js"),
       importModuleWithRetry("dist/common/entitlement.js"),
       importModuleWithRetry("dist/common/scholar-links.js"),
+      importModuleWithRetry("dist/common/custom-venues.js"),
     ]);
+    ({ compileCustomVenueIndex } = customVenues);
     ({ isQuickReadLink, firstFileColumnLink } = scholarLinks);
     ({
       addHiddenAuthor,
@@ -147,6 +158,7 @@
       normalizeVenueName,
       normalizeVhbRank,
       qualityBadgesForVenue,
+      customBadgeForVenue,
       venueWeightForVenue
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
@@ -160,10 +172,38 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
-    ({ getEntitlementStatus } = entitlement);
+    ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
+    await loadSignalsModules();
     modulesLoaded = true;
+  }
+  /**
+   * Load the signals modules and look up which new Pro features this user may use.
+   * Never throws: on any failure the features stay off and the page works as before.
+   */
+  async function loadSignalsModules() {
+    try {
+      [signalsUi, reproSignalsMod] = await Promise.all([
+        importModuleWithRetry("dist/content/signals-ui.js"),
+        importModuleWithRetry("dist/common/repro-signals.js")
+      ]);
+      await refreshSignalsAllowed();
+    } catch (e) {
+      console.warn("[SU] signals modules unavailable", e);
+      signalsUi = null;
+      signalsAllowed = {};
+    }
+  }
+  async function refreshSignalsAllowed() {
+    const ids = ["claimEvidenceChips", "reproSignals", "readingOrder"];
+    try {
+      const ent = await getEntitlementStatus({ needPurchased: true });
+      signalsAllowed = Object.fromEntries(ids.map((id) => [id, !!canUseFeature(id, ent)]));
+    } catch {
+      signalsAllowed = {};
+    }
+    return signalsAllowed;
   }
   function safeSessionGet(key) {
     try {
@@ -723,13 +763,17 @@
     const codePatterns = [
       /github\.com/i, /gitlab\.com/i, /bitbucket\.org/i,
       /\bcode\s+repository\b/i, /\breplication\s+package\b/i,
-      /\bcode\s+available\b/i, /\bsource\s+code\b/i, /\bsoftware\s+availability\b/i
+      /\bcode\s+available\b/i, /\bsource\s+code\b/i, /\bsoftware\s+availability\b/i,
+      // Shared host list from src/common/repro-signals.js (adds Hugging Face).
+      ...(reproSignalsMod ? reproSignalsMod.CODE_HOST_REGEXES : [])
     ];
     const dataPatterns = [
       /zenodo\.org/i, /osf\.io/i, /figshare\.com/i, /\bopen\s+science\s+framework\b/i,
       /\bdataset\b/i, /\bsupplementary\s+(?:material|data|information)?\b/i,
       /\bdata\s+availability\b/i, /\bdata\s+available\b/i, /\bdata\s+and\s+code\b/i,
-      /\breplication\s+data\b/i
+      /\breplication\s+data\b/i,
+      // Shared host list from src/common/repro-signals.js (adds Dryad, Dataverse, Kaggle).
+      ...(reproSignalsMod ? reproSignalsMod.DATA_HOST_REGEXES : [])
     ];
     const haystack = [];
     const snippetEl = container.querySelector(".gs_rs");
@@ -4126,6 +4170,8 @@
         rawBadges = qualityBadgesForVenue(venueKey, state.qIndex) || [];
         if (state.venueQualityCache) state.venueQualityCache.set(venueKey, rawBadges);
       }
+      const customBadge = customBadgeForVenue(venueKey, state.customVenue);
+      if (customBadge) rawBadges = [customBadge, ...rawBadges];
     }
     const allowedKinds = state.settings.qualityBadgeKinds;
     const badges = allowedKinds && typeof allowedKinds === "object"
@@ -5422,12 +5468,18 @@
         trajectoryVenueExpected: {},
         hiddenPapers: [],
         hiddenVenues: [],
-        hiddenAuthors: []
+        hiddenAuthors: [],
+        customVenueList: null
       }),
       getLocalCohortCache()
     ]);
     const saved = storageData.savedPapers || {};
     const settings = { ...DEFAULT_SETTINGS, ...(storageData.settings || {}) };
+    // The user's own venue list (options page). Kept apart from the quality index so changing it never rebuilds that cache.
+    const customList = storageData.customVenueList;
+    state.customVenue = customList && Array.isArray(customList.entries) && customList.entries.length
+      ? { name: customList.name || "My list", map: compileCustomVenueIndex(customList.entries) }
+      : null;
     const quartiles = {
       index: storageData.qualityQuartilesIndex || {},
       meta: storageData.qualityQuartilesMeta || null
@@ -5618,7 +5670,7 @@
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
-        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge")
+        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
         .forEach((el) => el.remove());
     } else {
       renderEmergingScore(container, paper, state, isAuthorProfile);
@@ -5628,8 +5680,12 @@
         renderArtifactBadges(container, state);
         renderCodeLinkBadge(container, paper);
         renderVelocity(container, paper, isAuthorProfile);
+        // Pro: claim-evidence chips and reproducibility signals (local, from the snippet and links).
+        if (signalsUi && !isAuthorProfile) {
+          signalsUi.renderRowSignals(container, { settings: state.settings, allowed: signalsAllowed, ownDoi: extractDOIFromResult(container) });
+        }
       } else {
-        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external").forEach((el) => el.remove());
+        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-claim-chips, .su-repro-signals").forEach((el) => el.remove());
       }
     }
     renderAuthorshipHeatmap(container, state, isAuthorProfile);
@@ -7824,6 +7880,18 @@
           openPoPOverlay();
           return;
         }
+        const tenureBtnEl = e.target.closest("[data-tenure-packet]");
+        if (tenureBtnEl) {
+          e.stopPropagation();
+          e.preventDefault();
+          const entitlement = await getEntitlementStatus({ needPurchased: true });
+          if (!canUseFeature("tenurePacket", entitlement)) {
+            chrome.runtime.sendMessage({ action: "openUpsellModal" });
+            return;
+          }
+          await openTenurePacket();
+          return;
+        }
         const narrativeToggle = e.target.closest("[data-narrative-toggle]");
         if (narrativeToggle) {
           e.stopPropagation();
@@ -8731,6 +8799,7 @@
       const popReportBtn = showResearchIntel
         ? `<button type="button" class="su-compare-authors-btn" data-pop-report="1">PoP report</button>`
         : "";
+      const tenureBtn = `<button type="button" class="su-compare-authors-btn" data-tenure-packet="1" title="Build a one-document summary of this profile for a tenure or promotion file">Tenure packet</button>`;
       const activeCoauthor = String(window.suAuthorCoauthorFilter || "").trim();
       const coauthorInsights = window.suState?.authorFeatureToggles?.coauthors !== false;
       const coauthorQuery = coauthorInsights ? String(window.suCoauthorQuery || "") : "";
@@ -8801,7 +8870,7 @@
         ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers. If it doesn’t respond, try clicking again.</div>' : ''}
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
-        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
+        <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${tenureBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
         ${narrativeBlock}
       `;
       window.suLastCoauthorsHtml = coauthorsHtml || "";
@@ -10823,7 +10892,9 @@
         downloadBlob,
         getStorageMap,
         setStorageMap,
-        CLS_BTN_SEC
+        CLS_BTN_SEC,
+        getEntitlementStatus,
+        canUseFeature
       });
     }
     return reviewWorkspaceInstance;
@@ -12690,6 +12761,55 @@
     const overlay = document.getElementById("su-idea-lineage-overlay");
     if (overlay) overlay.classList.remove("su-visible");
   }
+  /**
+   * Read what the profile page already shows plus the stats the extension has
+   * already computed. Makes no requests: nothing here loads more publications.
+   */
+  function collectTenureSnapshot() {
+    const stats = window.suFullAuthorStats || {};
+    const text = (n) => (n && n.textContent ? n.textContent.trim() : "");
+    const sidebarRows = Array.from(document.querySelectorAll("#gsc_rsb_st tbody tr")).map((tr) => [
+      text(tr.querySelector(".gsc_rsb_sc1")),
+      ...Array.from(tr.querySelectorAll(".gsc_rsb_std")).map(text)
+    ]);
+    const sidebarHeaders = Array.from(document.querySelectorAll("#gsc_rsb_st thead th")).map(text);
+    const histRoot = document.querySelector("#gsc_rsb_cit .gsc_md_hist_b") || document.querySelector(".gsc_md_hist_b");
+    const years = histRoot ? Array.from(histRoot.querySelectorAll(".gsc_g_t")).map(text) : [];
+    const counts = histRoot ? Array.from(histRoot.querySelectorAll(".gsc_g_a .gsc_g_al")).map(text) : [];
+    const more = document.getElementById("gsc_bpf_more");
+    const partial = more ? !more.disabled : !!window.suState?.authorStatsPartial;
+    let profileUrl = "";
+    try {
+      const u = new URL(window.location.href);
+      const user = u.searchParams.get("user");
+      if (user) profileUrl = `${u.origin}${u.pathname}?user=${encodeURIComponent(user)}`;
+    } catch (_) {}
+    return {
+      authorName: (extractAuthorName() || window.suState?.authorVariations?.[0] || "").trim(),
+      profileUrl,
+      sidebar: { headers: sidebarHeaders, rows: sidebarRows },
+      histogram: { years, counts },
+      papers: (Array.isArray(stats.papers) ? stats.papers : []).map((p) => ({
+        title: p.title, year: p.year, citations: p.citations, authorsText: p.authorsText
+      })),
+      partial,
+      qualityBadgesEnabled: window.suState?.settings?.showQualityBadges !== false,
+      stats: {
+        hIndex: stats.hIndex, gIndex: stats.gIndex, mIndex: stats.mIndex, h5Index: stats.h5Index,
+        firstYear: stats.firstYear, totalCitations: stats.totalCitations,
+        soloAuthored: stats.soloAuthored, firstAuthor: stats.firstAuthor, lastAuthor: stats.lastAuthor, middleAuthor: stats.middleAuthor,
+        qualityCounts: stats.qualityCounts
+      }
+    };
+  }
+  async function openTenurePacket() {
+    if (!window.suFullAuthorStats) {
+      window.alert("The publication list is still loading. Try again in a moment.");
+      return;
+    }
+    await chrome.storage.local.set({ suTenurePacketDraft: { snapshot: collectTenureSnapshot(), createdAt: Date.now() } });
+    chrome.runtime.sendMessage({ action: "openTenurePacket" });
+  }
   function exportPoPMarkdown(payload) {
     const { authorName, metrics } = payload;
     if (!metrics) return;
@@ -13064,6 +13184,149 @@
       return typeof result === "string" ? result.trim() : null;
     } catch {
       return null;
+    }
+  }
+  // ── Structured triage card (Pro: triageCard) ─────────────────────────────────
+  // Opt-in second line under a result: study design, sample and setting, read from the Scholar snippet
+  // by the on-device Chrome Prompt API. Chrome's built-in AI availability varies by Chrome version, device
+  // and flags, and the API surface has changed between releases, so every step is feature-detected and any
+  // failure leaves the page exactly as it was. Each value is shown only if it appears word for word in the
+  // snippet (see src/common/triage-verify.js); otherwise the line says "not stated in snippet".
+  // Rows are processed lazily as they scroll into view, one model call at a time, and never block rendering.
+  let triageState = null; // { observer, queue, running, cards: Set, opts, LM }
+  const TRIAGE_LABELS = { design: "Design", sample: "Sample", setting: "Setting" };
+  function renderTriageCard(card, result) {
+    card.textContent = "";
+    card.classList.remove("su-triage-pending");
+    for (const f of triageMod.TRIAGE_FIELDS) {
+      const line = document.createElement("div");
+      line.className = "su-triage-line" + (result[f].verified ? "" : " su-triage-missing");
+      const label = document.createElement("span");
+      label.className = "su-triage-label";
+      label.textContent = TRIAGE_LABELS[f] + ": ";
+      const value = document.createElement("span");
+      value.textContent = result[f].text;
+      line.append(label, value);
+      card.appendChild(line);
+    }
+    card.title = "Read from the snippet by an on-device model. A value is shown only if it appears in the snippet text; it can still be the wrong part of the snippet, so check the paper.";
+  }
+  async function triageOneResult(r) {
+    const st = triageState;
+    const snippetText = getSnippetText(r);
+    if (!st || !snippetText || snippetText.length < 40) return;
+    let paperKey = "";
+    try { paperKey = extractPaperFromResultFast(r).key || ""; } catch (_) {}
+    if (!paperKey) return;
+    let card = r.querySelector(".su-triage-card");
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "su-triage-card su-triage-pending";
+      card.textContent = "Reading snippet...";
+      const snippetEl = r.querySelector(".gs_rs");
+      const anchor = r.querySelector(".su-ai-contribution") || snippetEl;
+      if (anchor) anchor.after(card);
+      else (r.querySelector(".gs_ri") || r).appendChild(card);
+      st.cards.add(card);
+    }
+    const cacheKey = triageMod.triageCacheKey(paperKey);
+    try {
+      const cachedRaw = safeSessionGet(cacheKey);
+      if (cachedRaw) {
+        const cached = triageMod.readTriageCache(JSON.parse(cachedRaw), snippetText);
+        if (cached) { renderTriageCard(card, cached); return; }
+      }
+    } catch (_) {}
+    let session = null;
+    try {
+      session = await st.LM.create(st.opts);
+      const out = await session.prompt(triageMod.buildTriagePrompt(snippetText));
+      const result = triageMod.verifyTriage(triageMod.parseTriageResponse(out), snippetText);
+      safeSessionSet(cacheKey, JSON.stringify(triageMod.makeTriageCacheEntry(snippetText, result)));
+      renderTriageCard(card, result);
+    } catch (_) {
+      card.remove();
+      st.cards.delete(card);
+    } finally {
+      try { session?.destroy?.(); } catch (_) {}
+    }
+  }
+  async function drainTriageQueue() {
+    const st = triageState;
+    if (!st || st.running) return; // concurrency limit of 1
+    st.running = true;
+    try {
+      while (triageState === st && st.queue.length) {
+        const r = st.queue.shift();
+        if (!r.isConnected) continue;
+        await triageOneResult(r);
+        // Let the page paint and handle input between model calls.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    } finally {
+      st.running = false;
+    }
+  }
+  function stopTriageCards() {
+    const st = triageState;
+    triageState = null;
+    if (!st) return;
+    st.observer?.disconnect();
+    st.cards.forEach((c) => c.remove());
+    document.querySelectorAll(".su-triage-card").forEach((c) => c.remove());
+  }
+  async function toggleTriageCards(btn) {
+    if (triageState) {
+      stopTriageCards();
+      btn.textContent = "Triage cards (local AI)";
+      return;
+    }
+    const entitlement = await getEntitlementStatus({ needPurchased: true });
+    if (!canUseFeature("triageCard", entitlement)) {
+      chrome.runtime.sendMessage({ action: "openUpsellModal" });
+      return;
+    }
+    const LM = globalThis.LanguageModel || window.LanguageModel;
+    if (!LM?.availability || typeof IntersectionObserver !== "function") {
+      showLocalSummaryMessage("Triage cards need Chrome's built-in Prompt API (Gemini Nano), which this browser does not offer.");
+      return;
+    }
+    const opts = { expectedInputs: [{ type: "text", languages: ["en"] }], expectedOutputs: [{ type: "text", languages: ["en"] }] };
+    let availability;
+    try {
+      availability = await LM.availability(opts);
+    } catch (_) {
+      showLocalSummaryMessage("Triage cards: the on-device model could not be checked on this device.");
+      return;
+    }
+    if (availability !== "available") {
+      showLocalSummaryMessage("Triage cards: the on-device model is not ready on this device (" + availability + "). Nothing was changed.");
+      return;
+    }
+    if (!triageMod) {
+      try {
+        triageMod = await importModuleWithRetry("dist/common/triage-verify.js");
+      } catch (_) {
+        return;
+      }
+    }
+    const { results, isAuthorProfile } = scanResults();
+    if (isAuthorProfile || !results.length) return;
+    const st = { observer: null, queue: [], running: false, cards: new Set(), opts, LM };
+    st.observer = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        st.observer.unobserve(e.target);
+        st.queue.push(e.target);
+      }
+      drainTriageQueue();
+    }, { rootMargin: "200px" });
+    triageState = st;
+    btn.textContent = "Hide triage cards";
+    for (const r of results) {
+      if (r.style.display === "none" || r.classList.contains("su-filtered-out")) continue;
+      if (!r.querySelector(".gs_rs")) continue;
+      st.observer.observe(r);
     }
   }
   async function runLocalSummaries() {
@@ -13799,6 +14062,12 @@
     summarizeBtn.textContent = "Summarize (local AI)";
     summarizeBtn.title = "One-sentence contribution per result using Chrome Prompt API (Gemini Nano). Runs on your device; 100% private.";
     summarizeBtn.addEventListener("click", () => runLocalSummaries());
+    const triageBtn = document.createElement("button");
+    triageBtn.type = "button";
+    triageBtn.className = "su-filter-clear su-summarize-ai su-triage-toggle";
+    triageBtn.textContent = "Triage cards (local AI)";
+    triageBtn.title = "Pro. Adds design, sample and setting under each result, read from the snippet by Chrome's on-device model. A value appears only if it is in the snippet. Nothing leaves your device.";
+    triageBtn.addEventListener("click", () => toggleTriageCards(triageBtn));
     const sortSelect = document.createElement("select");
     sortSelect.className = "su-filter-sort-citations";
     sortSelect.title = "Sort search results by citation count";
@@ -14216,6 +14485,7 @@
       row.appendChild(openPdfBtn);
       row.appendChild(reviewBtn);
       if (summarizeBtn) row.appendChild(summarizeBtn);
+      if (triageBtn) row.appendChild(triageBtn);
     } catch (_) {
       // If any append fails, still try to show the bar with what we have
     }
@@ -14348,6 +14618,16 @@
     body.appendChild(signalsRow);
     body.appendChild(signalsRow2);
     if (showAdvancedFilters) body.appendChild(advRow);
+    // Pro: reading-order control, or a small locked hint with an Unlock button.
+    if (signalsUi) {
+      const signalsToolbarRow = signalsUi.buildSignalsToolbarRow({
+        settings: state.settings,
+        allowed: signalsAllowed,
+        onUnlock: () => chrome.runtime.sendMessage({ action: "openUpsellModal" }),
+        isAllowed: async () => !!(await refreshSignalsAllowed()).readingOrder
+      });
+      if (signalsToolbarRow) body.appendChild(signalsToolbarRow);
+    }
     body.appendChild(sliderRow);
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -15169,7 +15449,7 @@
               if (area !== "local") return;
               if (changes.readingQueue) await ensureReadingQueueSidebar();
               const hiddenChanged = changes.hiddenPapers || changes.hiddenVenues || changes.hiddenAuthors;
-              if (!changes.savedPapers && !changes.settings && !hiddenChanged) return;
+              if (!changes.savedPapers && !changes.settings && !changes.customVenueList && !hiddenChanged) return;
               await refreshState(state);
               if (changes.savedPapers || changes.settings) await ensureSemanticExpansionPanel(state);
               scheduleProcess({ full: true });
@@ -15627,6 +15907,32 @@
       document.removeEventListener("keydown", onVisorKeyDown);
     }
   }
+  // Watch lists (Pro). On a Scholar page visit, and only if the user saved at least one watch item, ask
+  // OpenAlex for recent works, at most once per item per 24 hours. Goes through the service worker like the
+  // other OpenAlex calls. Never fetches Scholar. The gate and the 24-hour rule live in watchlist-runner.js.
+  let watchCheckScheduled = false;
+  async function watchFetchJson(url) {
+    try {
+      const res = await chrome.runtime.sendMessage({ action: "fetchExternal", url, responseType: "json", timeoutMs: 10000 });
+      if (res?.ok) return { ok: true, status: 200, body: res.body };
+      const m = /HTTP (\d{3})/.exec(String(res?.error || ""));
+      return { ok: false, status: m ? Number(m[1]) : 0 };
+    } catch (_) {
+      return { ok: false, status: 0 };
+    }
+  }
+  function scheduleWatchListCheck() {
+    if (watchCheckScheduled) return;
+    watchCheckScheduled = true;
+    setTimeout(async () => {
+      try {
+        const { watchLists } = await chrome.storage.local.get({ watchLists: null });
+        if (!watchLists || !Array.isArray(watchLists.items) || !watchLists.items.length) return;
+        const runner = await importModuleWithRetry("dist/common/watchlist-runner.js");
+        await runner.maybeRunWatchCheck({ fetchJson: watchFetchJson });
+      } catch (_) {}
+    }, 8000);
+  }
   let bootAttempts = 0;
   let bootInFlight = false;
   function scheduleBoot(reason) {
@@ -15636,6 +15942,7 @@
     Promise.resolve()
       .then(() => ensureModulesLoaded())
       .then(() => run())
+      .then(() => scheduleWatchListCheck())
       .catch((e) => {
         console.warn(`[SU] bootstrap attempt ${attempt} failed (${reason})`, e);
         if (attempt >= 2) return;

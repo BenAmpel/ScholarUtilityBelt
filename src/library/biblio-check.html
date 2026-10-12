@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bibliography checker - Scholar Utility Belt</title>
+    <link rel="stylesheet" href="library.css" />
+    <link rel="stylesheet" href="tool-pages.css" />
+  </head>
+  <body>
+    <header>
+      <div class="left">
+        <h1>Bibliography checker</h1>
+        <div class="sub">Checks a reference list against data stored in this extension</div>
+      </div>
+      <div class="right">
+        <a class="btn" href="library.html">Back to library</a>
+      </div>
+    </header>
+
+    <main class="tool-main">
+      <section id="lockedCard" class="tool-card" hidden>
+        <h2 class="tool-h">Pro feature</h2>
+        <p>The bibliography checker is part of Scholar Utility Belt Pro. A trial, purchase or App Pass unlocks it.</p>
+        <button id="unlockPro" class="btn" type="button">Unlock Pro</button>
+      </section>
+
+      <div id="toolBody" hidden>
+        <section class="tool-card">
+          <h2 class="tool-h">Reference list</h2>
+          <p class="sub">Paste a numbered list, an APA-style list or BibTeX, or choose a .bib or .txt file. Nothing leaves this page unless you press the Crossref button below.</p>
+          <label class="sr-only" for="refText">Reference list</label>
+          <textarea id="refText" class="tool-text" rows="12" spellcheck="false" placeholder="[1] Smith, J. (2020). Title of the paper. Journal Name, 12(3), 45-67. https://doi.org/..."></textarea>
+          <div class="tool-row">
+            <button id="runCheck" class="btn" type="button">Check list</button>
+            <label class="btn" for="refFile">Choose file</label>
+            <input id="refFile" type="file" accept=".bib,.txt,.text,text/plain" hidden />
+            <button id="clearAll" class="btn" type="button">Clear</button>
+            <span id="status" class="sub" role="status"></span>
+          </div>
+        </section>
+
+        <section id="results" class="tool-card" hidden>
+          <h2 class="tool-h">Result</h2>
+          <p id="filterNote" class="tool-note"></p>
+          <p class="tool-note">This tool reports what the datasets shipped with the extension contain and nothing else. A venue that is not listed is not listed in those datasets; that says nothing about its quality.</p>
+          <div id="summary"></div>
+          <div class="tool-row">
+            <button id="exportCsv" class="btn" type="button">Export CSV</button>
+          </div>
+
+          <h3 class="tool-h2">Crossref lookup (optional)</h3>
+          <p class="sub">Sends only the DOIs from this list to api.crossref.org, one request per second, up to 200 DOIs, to see whether each DOI exists and whether Crossref lists an update such as a retraction. Crossref sees your IP address.</p>
+          <div class="tool-row">
+            <button id="runCrossref" class="btn" type="button">Check DOIs with Crossref</button>
+            <button id="cancelCrossref" class="btn" type="button" hidden>Stop</button>
+            <span id="crossrefStatus" class="sub" role="status"></span>
+          </div>
+
+          <h3 class="tool-h2">Entries</h3>
+          <div class="tool-scroll">
+            <table id="entryTable" class="tool-table">
+              <thead>
+                <tr><th>#</th><th>Reference</th><th>DOI</th><th>Retraction filter</th><th>Venue read</th><th>Quality badges</th><th>Notes</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="biblio-check.js"></script>
+  </body>
+</html>

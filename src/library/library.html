@@ -13,8 +13,7 @@
         <div class="sub">Local-only list of saved Scholar results</div>
       </div>
       <div class="right">
-        <button id="exportCsv" class="btn">Export CSV</button>
-        <button id="exportBibtex" class="btn">Export BibTeX</button>
+        <a class="btn" href="biblio-check.html">Bibliography checker</a>
         <button id="openOptions">Options</button>
       </div>
     </header>
@@ -44,11 +43,70 @@
           <button id="scanFolder" class="btn full">Scan folder</button>
           <input id="folderPicker" type="file" webkitdirectory multiple hidden />
         </section>
+        <section class="panel export-panel" id="exportGroup" aria-labelledby="exportTitle">
+          <h2 class="panel-title" id="exportTitle">Export</h2>
+          <label class="export-label" for="exportScope">Papers to export</label>
+          <select id="exportScope"></select>
+
+          <h3 class="export-heading">Highlights and notes</h3>
+          <div class="export-row">
+            <button class="btn" data-export="notesMd">Markdown</button>
+            <button class="btn" data-export="notesHtml">HTML</button>
+          </div>
+          <p class="export-note">One document: each paper's citation, your notes and every PDF highlight as a quote.</p>
+
+          <h3 class="export-heading">Zotero</h3>
+          <div class="export-row">
+            <button class="btn" data-export="zoteroRis" data-pro="zoteroExport">RIS <span class="pro-tag">Pro</span></button>
+            <button class="btn" data-export="zoteroCsl" data-pro="zoteroExport">CSL-JSON <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">The Zotero Connector already saves single papers from a page. This is the bulk version: it also carries your tags, notes and collections. RIS keeps notes as child notes and PDF highlights as a second note; CSL-JSON puts your notes in the Extra field. Both files contain your private notes. Import with File, Import in Zotero.</p>
+
+          <h3 class="export-heading">Obsidian or Markdown vault</h3>
+          <div class="export-row">
+            <button class="btn" data-export="obsidianVault" data-pro="obsidianExport">Vault (.zip) <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">One note per paper with YAML properties, your notes, PDF highlights as quoted bullets, and an index note with [[links]] grouped by collection. File names come from the DOI, or from author, year and title, so exporting again overwrites the same files. Editing a title changes that paper's file name.</p>
+
+          <h3 class="export-heading">LaTeX</h3>
+          <div class="export-row">
+            <button class="btn" data-export="latexPack" data-pro="latexPack">Citation pack <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A .bib with citation keys that stay the same on every export, a copy-able \cite list, and a check of your .tex text against your saved papers.</p>
+
+          <h3 class="export-heading">Word and Google Docs</h3>
+          <div class="export-row">
+            <button class="btn" data-export="wordRefList" data-pro="wordRefList">Reference list <span class="pro-tag">Pro</span></button>
+          </div>
+          <p class="export-note">A formatted reference list for the chosen papers, copied with formatting or saved as a .doc file.</p>
+
+          <h3 class="export-heading">Lists</h3>
+          <div class="export-row">
+            <button id="exportCsv" class="btn">CSV</button>
+            <button id="exportBibtex" class="btn">BibTeX</button>
+          </div>
+
+          <p id="exportStatus" class="export-status" role="status" aria-live="polite"></p>
+        </section>
         <section class="panel">
           <h2 class="panel-title">Sharing</h2>
           <button id="exportLibrary" class="btn full">Export library</button>
           <button id="importLibrary" class="btn full">Import library</button>
           <input id="importLibraryFile" type="file" accept="application/json" hidden />
+          <p id="importStatus" class="panel-note" role="status" hidden></p>
+          <button id="undoImport" class="btn full" hidden>Undo last import</button>
+        </section>
+        <section class="panel">
+          <h2 class="panel-title">Collection packets <span class="pro-tag">Pro</span></h2>
+          <p class="panel-note">Share one collection as a small file. Your notes stay out unless you tick the box.</p>
+          <button id="exportPacket" class="btn full">Export packet</button>
+          <button id="importPacket" class="btn full">Import packet</button>
+          <input id="importPacketFile" type="file" accept=".json,application/json" hidden />
+        </section>
+        <section class="panel">
+          <h2 class="panel-title">Watch lists <span class="pro-tag">Pro</span></h2>
+          <p class="panel-note">Save a search or an author name. Once a day, while this page or Scholar is open, recent works are looked up in OpenAlex.</p>
+          <button id="openWatchLists" class="btn full">Open watch lists</button>
         </section>
       </aside>
 
@@ -65,15 +123,61 @@
             <option value="citations">Sort: Citations</option>
           </select>
           <button id="toggleDuplicates" class="btn">Duplicates</button>
+          <button id="findSimilarDuplicates" class="btn" title="Finds near-duplicates such as a preprint and its published version">Possible duplicates</button>
+        </section>
+
+        <section id="toolView" class="tool-view" hidden aria-live="polite">
+          <div class="tool-view-header">
+            <h3 id="toolViewTitle"></h3>
+            <button id="toolViewClose" class="btn">Close</button>
+          </div>
+          <div id="toolViewBody"></div>
         </section>
 
         <section id="activeFilters" class="active-filters"></section>
+
+        <details id="askPanel" class="ask-panel">
+          <summary>Ask my shortlist <span class="ask-tag">Pro, your own API key</span></summary>
+          <p class="sub">Ask one question about saved papers. Only the titles and saved abstract or snippet text of the papers you select, plus your question, go to the provider you chose in Options, and only after you confirm. The extension has no server of its own.</p>
+          <div id="askLocked" hidden>
+            <p class="sub">This is a Pro feature.</p>
+            <button id="askUnlock" type="button" class="btn">Unlock Pro</button>
+          </div>
+          <div id="askForm" hidden>
+            <div class="ask-row">
+              <label for="askScope">Papers</label>
+              <select id="askScope"></select>
+              <span id="askPickedCount" class="sub"></span>
+            </div>
+            <label class="sr-only" for="askQuestion">Question about the selected papers</label>
+            <textarea id="askQuestion" rows="2" placeholder="For example: does this paper report an effect on retention?"></textarea>
+            <div class="ask-row">
+              <button id="askReview" type="button" class="btn">Review what will be sent</button>
+              <button id="askOpenOptions" type="button" class="btn">Provider and key settings</button>
+            </div>
+            <div id="askConfirm" class="ask-confirm" hidden>
+              <div id="askSummary"></div>
+              <details>
+                <summary>Exact text that will be sent</summary>
+                <pre id="askPreview" class="ask-preview"></pre>
+              </details>
+              <div class="ask-row">
+                <button id="askSend" type="button" class="btn">Send</button>
+                <button id="askCancel" type="button" class="btn">Cancel</button>
+              </div>
+            </div>
+            <p id="askMessage" class="ask-message" role="status"></p>
+            <div id="askResults"></div>
+          </div>
+        </details>
+
 
         <section id="list" class="list"></section>
 
         <template id="itemTpl">
           <article class="item">
             <div class="top">
+              <label class="ask-pick-wrap"><input type="checkbox" class="ask-pick" /> <span>Ask</span></label>
               <a class="title" target="_blank" rel="noreferrer"></a>
               <div class="meta"></div>
             </div>
@@ -85,6 +189,7 @@
               <button class="btn" data-act="tags">Tags</button>
               <button class="btn" data-act="notes">Notes</button>
               <button class="btn" data-act="cite">Cite</button>
+              <button class="btn" data-act="similar">Similar</button>
               <button class="btn danger" data-act="remove">Remove</button>
             </div>
             <div class="cite-menu"></div>
@@ -106,6 +211,28 @@
         <div class="modal-row">
           <input id="collectionModalNew" type="text" placeholder="New collection name" />
           <button id="collectionModalAdd" class="btn">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="packetModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="packetModalTitle">
+      <button class="modal-backdrop" data-tool-modal-close="packetModal" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="packetModalTitle">Export collection packet</h3>
+          <button class="btn" data-tool-modal-close="packetModal">Close</button>
+        </div>
+        <div class="packet-form">
+          <label for="packetCollection">Collection</label>
+          <select id="packetCollection"></select>
+          <label for="packetName">Packet name</label>
+          <input id="packetName" type="text" maxlength="80" />
+          <label for="packetFrom">From (your name or lab)</label>
+          <input id="packetFrom" type="text" maxlength="60" />
+          <label class="packet-check"><input id="packetNotes" type="checkbox" /> Include my notes, PDF summaries and highlights</label>
+          <p class="panel-note">Off by default. Local PDF paths are never included. The file carries a checksum that detects accidental damage; it is not a signature.</p>
+          <p id="packetError" class="panel-note packet-error" role="alert" hidden></p>
+          <button id="packetCreate" class="btn">Download packet</button>
         </div>
       </div>
     </div>
@@ -137,6 +264,48 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="latexModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="latexModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="latexModalTitle">LaTeX citation pack</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="latexScope" class="export-note"></p>
+        <p class="export-note">Each paper gets a citation key the first time you export. The key is saved on the paper and never changes, so a .bib exported later still matches your .tex. Your private notes are not written to the .bib.</p>
+        <div class="export-row export-row-spaced">
+          <button id="latexBib" class="btn">Download .bib</button>
+          <button id="latexCopy" class="btn">Copy \cite list</button>
+        </div>
+        <label class="export-label" for="latexInput">Check your document against your saved papers</label>
+        <textarea id="latexInput" class="export-textarea" rows="8" spellcheck="false" placeholder="Paste .tex text, or a list of cite keys separated by commas or lines"></textarea>
+        <div class="export-row export-row-spaced"><button id="latexCheck" class="btn">Check</button></div>
+        <div id="latexResult" class="export-result" aria-live="polite"></div>
+        <p id="latexPromo" class="export-note" hidden><a id="latexPromoLink" href="https://purplelink.llc/moderntex/" target="_blank" rel="noopener noreferrer">Check a .bib or write in LaTeX with ModernTex</a> <button type="button" id="latexPromoDismiss" class="promo-dismiss">Dismiss</button></p>
+      </div>
+    </div>
+
+    <div id="refModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="refModalTitle">
+      <button class="modal-backdrop" data-modal-close="1" aria-label="Close dialog"></button>
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h3 id="refModalTitle">Reference list</h3>
+          <button class="btn" data-modal-close="1">Close</button>
+        </div>
+        <p id="refScope" class="export-note"></p>
+        <label class="export-label" for="refStyle">Style</label>
+        <select id="refStyle"></select>
+        <label class="export-check"><input type="checkbox" id="refQuotes" /> Add a quote sheet from my notes and PDF highlights</label>
+        <label class="export-label" for="refPreview">Preview</label>
+        <pre id="refPreview" class="export-preview" tabindex="0"></pre>
+        <div class="export-row export-row-spaced">
+          <button id="refCopy" class="btn">Copy with formatting</button>
+          <button id="refDoc" class="btn">Download .doc</button>
+        </div>
+        <p class="export-note">Supports APA 7, MLA 9, Chicago 17 (bibliography form) and IEEE, for journal articles, conference papers and preprints. Anything else is formatted as author, year, title and link. Scholar results do not include volume, issue or page numbers, so these are left out. Titles are used as saved: APA and IEEE expect sentence case, so edit them if needed. Author names come from Scholar's author line, which usually gives initials. The preview shows plain text; the copied version has italics and hanging indents. Check each entry against your style guide before you submit.</p>
       </div>
     </div>
 

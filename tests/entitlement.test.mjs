@@ -227,6 +227,25 @@ describe("grandfathering covers legacy Pro features only", () => {
     }
   });
 
+  it("registers reference import as a new feature: locked until a trial, purchase or App Pass", () => {
+    assert.equal(PRO_FEATURES.referenceImport, "new");
+    assert.equal(canUseFeature("referenceImport", free), false);
+    assert.equal(canUseFeature("referenceImport", grandfathered), false);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "grandfathered", purchased: true }), true);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "trial", purchased: true }), true);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "lifetime", purchased: true }), true);
+  });
+
+  it("registers the review tools as new features: locked until a trial, purchase or App Pass", () => {
+    for (const id of ["riskOfBias", "screeningAgreement", "evidenceMatrix", "reviewSnapshots"]) {
+      assert.equal(PRO_FEATURES[id], "new", id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
+  });
+
   it("keeps a new feature locked for a grandfathered user who has not purchased", () => {
     const saved = { ...PRO_FEATURES };
     PRO_FEATURES.__futureFeature = "new";
@@ -241,6 +260,27 @@ describe("grandfathering covers legacy Pro features only", () => {
     }
   });
 
+  it("registers bibliographyCheck and tenurePacket as new Pro features", () => {
+    for (const id of ["bibliographyCheck", "tenurePacket"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true, id);
+    }
+  });
+
+  it("registers the library tools as new Pro features, locked for grandfathered users without a purchase", () => {
+    const grandfatheredOnly = { paid: true, tier: "grandfathered", purchased: false };
+    for (const id of ["collectionPackets", "librarySimilarity", "watchLists"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, free), false);
+      assert.equal(canUseFeature(id, grandfatheredOnly), false);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true);
+    }
+  });
+
   it("locks legacy features for free users and fails closed on unknown ids", () => {
     assert.equal(canUseFeature("compareAuthors", free), false);
     assert.equal(canUseFeature("compareAuthors", { paid: true, tier: "monthly", purchased: true }), true);
@@ -248,7 +288,35 @@ describe("grandfathering covers legacy Pro features only", () => {
     assert.equal(canUseFeature("compareAuthors", undefined), false);
   });
 
+  it("registers the signals features as new Pro features", () => {
+    for (const id of ["claimEvidenceChips", "reproSignals", "readingOrder"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, grandfathered), false);
+      assert.equal(canUseFeature(id, free), false);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true);
+      assert.equal(canUseFeature(id, { paid: true, tier: "app-pass", purchased: true }), true);
+    }
+  });
+
+  it("registers the AI features as new Pro features that grandfathering does not unlock", () => {
+    for (const id of ["triageCard", "askShortlist"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
+  });
+
   it("only knows the two promise tiers", () => {
     for (const kind of Object.values(PRO_FEATURES)) assert.ok(kind === "legacy" || kind === "new");
+  });
+
+  it("registers the library export features as new Pro features", () => {
+    for (const id of ["zoteroExport", "obsidianExport", "latexPack", "wordRefList"]) {
+      assert.equal(PRO_FEATURES[id], "new", id);
+      assert.equal(canUseFeature(id, grandfathered), false, id);
+      assert.equal(canUseFeature(id, free), false, id);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
+    }
   });
 });

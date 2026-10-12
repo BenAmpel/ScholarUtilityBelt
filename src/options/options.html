@@ -105,6 +105,24 @@
         </div>
       </section>
 
+      <!-- ── Your own journal list ─────────────────────────────────── -->
+      <section class="card" id="su-custom-list-card" data-section="custom-list">
+        <h2>Your own journal list</h2>
+        <p class="sub">Upload a CSV of journals or conferences with a tier label, for example your department&rsquo;s A, B and C list. Matching venues get a purple badge with your label next to the built-in ones. Two columns, venue then tier (a header row with <em>venue</em> and <em>tier</em> also works). Up to 5,000 rows. The file is read in your browser and stored only in this browser; nothing is uploaded.</p>
+        <label class="field">
+          <div class="label">List name (shown in the badge tooltip)</div>
+          <input type="text" id="customListName" maxlength="40" placeholder="e.g. Business School list" autocomplete="off" />
+        </label>
+        <label class="field">
+          <div class="label">CSV file</div>
+          <input type="file" id="customListFile" accept=".csv,.tsv,.txt,text/csv,text/plain" />
+        </label>
+        <p id="customListStatus" role="status" aria-live="polite"></p>
+        <div class="actions">
+          <button type="button" id="customListClear" hidden>Remove my list</button>
+        </div>
+      </section>
+
       <!-- ── Appearance ────────────────────────────────────────────── -->
       <section class="card">
         <h2>Appearance</h2>
@@ -264,6 +282,25 @@
         <label class="toggle-row">
           <span>Show <strong>Data &amp; Code</strong> badge next to the title when the snippet or links mention GitHub, Zenodo, OSF, dataset, supplementary, etc. — quick signal for reproducible papers.</span>
           <span class="toggle-switch"><input type="checkbox" id="showArtifactBadge" /><span class="slider"></span></span>
+        </label>
+
+        <label class="toggle-row">
+          <span>Show <strong>claim-evidence chips</strong> (Pro) under a snippet: causal wording with an observational design or none stated, &ldquo;significant&rdquo; with no statistic, a small stated N, novelty wording, no method words. Judged from the snippet only, so a chip is a prompt to check the paper, not a finding.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showClaimEvidenceChips" /><span class="slider"></span></span>
+        </label>
+        <label class="field" for="claimChipMinN">
+          <div class="label">Flag a stated sample size below this number (claim-evidence chips)</div>
+          <input type="number" id="claimChipMinN" min="2" max="10000" step="1" class="input-narrow" />
+        </label>
+
+        <label class="toggle-row">
+          <span>Show <strong>reproducibility signals</strong> (Pro): code links (GitHub, GitLab, Bitbucket, Hugging Face), data links (OSF, Zenodo, figshare, Dryad, Dataverse, Kaggle), a preregistration mention and dataset DOIs. These are signals found in the snippet and links, not a statement that the work is reproducible.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReproSignals" /><span class="slider"></span></span>
+        </label>
+
+        <label class="toggle-row">
+          <span>Show the <strong>reading order</strong> control (Pro) in the results filter panel: re-order results by your own include and exclude terms, then restore Scholar&rsquo;s order. Nothing is hidden.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReadingOrder" /><span class="slider"></span></span>
         </label>
 
         <label class="toggle-row">
@@ -497,6 +534,46 @@
           <span id="status" class="status"></span>
         </div>
         </div>
+      </section>
+
+      <section class="card" data-section="ask-ai" id="askAiCard">
+        <h2>Ask my shortlist (your own API key)</h2>
+        <p class="sub">Pro feature, off by default. In the Library you can ask one question about papers you saved. The paper titles and the saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you choose below, using your own API key. They go nowhere else: this extension has no server of its own and collects no telemetry. Your key is stored only in this browser (chrome.storage.local), is never written to a log, and is sent only to the chosen provider. Nothing is sent until you review the cost estimate and confirm each question.</p>
+        <p class="sub">The provider handles that text under its own terms and privacy policy. Using an API costs money; the estimate shown before you confirm is approximate and is not a bill.</p>
+        <label class="field">
+          <div class="label">Provider</div>
+          <select id="askProvider">
+            <option value="anthropic">Anthropic (api.anthropic.com)</option>
+            <option value="openai">OpenAI (api.openai.com)</option>
+            <option value="gemini">Google Gemini (generativelanguage.googleapis.com)</option>
+          </select>
+        </label>
+        <label class="field">
+          <div class="label">API key</div>
+          <input type="password" id="askApiKey" autocomplete="off" spellcheck="false" placeholder="Paste your own key" />
+        </label>
+        <label class="field">
+          <div class="label">Model name</div>
+          <input type="text" id="askModel" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="spike-params">
+          <label class="spike-param" for="askInPrice">
+            <span class="label">Input price (US$ per million tokens)</span>
+            <input type="number" id="askInPrice" min="0" step="0.01" class="input-narrow" />
+          </label>
+          <label class="spike-param" for="askOutPrice">
+            <span class="label">Output price (US$ per million tokens)</span>
+            <input type="number" id="askOutPrice" min="0" step="0.01" class="input-narrow" />
+          </label>
+        </div>
+        <p class="sub">The prices fill in from a built-in table of starting values that were written from memory and may be out of date. Check your provider's pricing page and edit them here; the estimate uses what you enter.</p>
+        <div class="actions">
+          <button id="askEnable" type="button">Turn on and allow access to the provider</button>
+          <button id="askSave" type="button">Save changes</button>
+          <button id="askDisable" type="button">Turn off and remove key</button>
+          <span id="askStatus" class="status" role="status"></span>
+        </div>
+        <p class="sub" id="askProNote" hidden>This is a Pro feature. <button id="askUnlock" type="button">Unlock Pro</button></p>
       </section>
 
       <section class="card">

@@ -7,11 +7,21 @@ import {
   getSavedPapers,
   getSettings,
   removePaper,
+  saveCitekeys,
   setLibraryState,
   uniqTags,
   upsertPaper
 } from "../common/storage.js";
-import { initPromoCard } from "../common/promo-card.js";
+import { initLatexLink, initPromoCard } from "../common/promo-card.js";
+import { initAskPanel, isPicked, setPicked } from "./ask-panel.js";
+import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
+import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
+import { getLibraryBackup } from "../common/storage.js";
+import { initLibraryTools, showSimilar } from "./library-tools.js";
+import { parseAuthors as parseAuthorsShared, toRecord } from "../common/export-model.js";
+import { createExportUi, downloadText } from "./export-ui.js";
+import { initLatexDialog, initRefListDialog } from "./export-dialogs.js";
+import { formatReference } from "../common/reference-list.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -83,27 +93,7 @@ function hashString(str) {
   return Math.abs(h).toString(36);
 }
 
-function normalizeTitleForMatch(title) {
-  return String(title || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function paperFingerprint(p) {
-  const doi = String(p?.doi || "").toLowerCase().trim();
-  if (doi) return `doi:${doi}`;
-  const t = normalizeTitleForMatch(p?.title || "");
-  return t ? `title:${t}` : `key:${p?.key || ""}`;
-}
-
-function parseAuthors(authorsVenue) {
-  const raw = (authorsVenue || "").split(/\s*-\s*/)[0] || "";
-  return raw
-    .split(/\s*,\s*|\s+and\s+/i)
-    .map((a) => a.trim())
-    .filter(Boolean);
-}
+const parseAuthors = parseAuthorsShared;
 
 function lastName(author) {
   const parts = String(author || "").trim().split(/\s+/);
@@ -173,18 +163,6 @@ function formatRIS(p) {
   return lines.join("\n");
 }
 
-function downloadText(filename, text, mime = "text/plain") {
-  const blob = new Blob([text], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 function escapeCsvField(val) {
   const s = String(val ?? "");
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
@@ -232,6 +210,7 @@ async function copyText(txt) {
 }
 
 let qualityState = null;
+let exportUi = null;
 let impactIndexCache = null;
 let libraryState = null;
 let activePdfKey = null;
@@ -715,6 +694,7 @@ async function render() {
 
   const items = Object.values(saved);
   await renderSidebar(state, items);
+  exportUi.refreshScope(state);
 
   const tagFilters = tagFilter
     ? tagFilter.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
@@ -798,6 +778,12 @@ async function render() {
     node.querySelector(".meta").textContent = metaParts.join(" ");
 
     node.querySelector(".snippet").textContent = p.snippet || "";
+    const askPick = node.querySelector(".ask-pick");
+    if (askPick) {
+      askPick.checked = isPicked(p.key);
+      askPick.setAttribute("aria-label", `Include "${p.title || "untitled"}" in Ask my shortlist`);
+      askPick.addEventListener("change", () => setPicked(p.key, askPick.checked));
+    }
 
     const tagsNode = document.createDocumentFragment();
     (p.tags || []).forEach((t, idx) => {
@@ -881,6 +867,10 @@ async function render() {
           await renderCollectionModal(p, state);
           return;
         }
+        if (act === "similar") {
+          await showSimilar(p);
+          return;
+        }
         if (act === "cite") {
           citeMenu.classList.toggle("open");
           e.stopPropagation();
@@ -936,6 +926,8 @@ document.querySelectorAll("[data-modal-close]").forEach((btn) => {
   btn.addEventListener("click", () => {
     closeModal("collectionModal");
     closeModal("pdfModal");
+    closeModal("latexModal");
+    closeModal("refModal");
   });
 });
 
@@ -1009,15 +1001,13 @@ el("toggleDuplicates").addEventListener("click", async () => {
 });
 
 el("exportCsv").addEventListener("click", async () => {
-  const saved = await getSavedPapers();
-  const papers = Object.values(saved);
+  const papers = await exportUi.selectedPapers();
   const csv = buildCsvExport(papers);
   downloadText(`library-export-${Date.now()}.csv`, csv, "text/csv");
 });
 
 el("exportBibtex").addEventListener("click", async () => {
-  const saved = await getSavedPapers();
-  const papers = Object.values(saved);
+  const papers = await exportUi.selectedPapers();
   const bib = buildBibtexExport(papers);
   downloadText(`library-export-${Date.now()}.bib`, bib, "application/x-bibtex");
 });
@@ -1041,22 +1031,58 @@ el("importLibrary").addEventListener("click", () => {
   el("importLibraryFile").click();
 });
 
+function setImportStatus(message, { showUndo = false } = {}) {
+  const status = el("importStatus");
+  status.textContent = message || "";
+  status.hidden = !message;
+  el("undoImport").hidden = !showUndo;
+}
+
+async function refreshUndoButton() {
+  const backup = await getLibraryBackup();
+  if (backup && el("undoImport").hidden && !el("importStatus").textContent) {
+    const when = fmtDate(backup.at);
+    setImportStatus(`A backup from before the last ${backup.reason} (${when}) is available.`, { showUndo: true });
+  }
+}
+
 el("importLibraryFile").addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
+  e.target.value = "";
   if (!file) return;
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    const saved = await getSavedPapers();
-    const merged = { ...saved, ...(data.savedPapers || {}) };
-    await chrome.storage.local.set({ savedPapers: merged });
-    if (data.libraryState) {
-      await saveLibraryState(data.libraryState);
+    const parsed = parseLibraryFileText(await file.text());
+    if (!parsed.ok) {
+      setImportStatus(`Nothing was imported. ${parsed.error}`);
+      return;
     }
-  } catch (_) {
-    window.alert("Could not import library file.");
+    if (parsed.data && parsed.data.format === "scholar-utility-belt-packet") {
+      setImportStatus("Nothing was imported. This file is a collection packet; use Import packet instead.");
+      return;
+    }
+    const result = await importLibraryPayload(parsed.data, { reason: "import" });
+    if (!result.ok) {
+      setImportStatus(`Nothing was imported. ${result.error}`);
+      return;
+    }
+    setImportStatus(`Import finished: ${describeImportSummary(result.summary)}. Existing papers were merged, not overwritten.`, { showUndo: true });
+  } catch (err) {
+    setImportStatus(`Nothing was imported. ${err && err.message ? err.message : "The file could not be read."}`);
   }
-  e.target.value = "";
+  qualityState = null;
+  libraryState = null;
+  render();
+});
+
+el("undoImport").addEventListener("click", async () => {
+  const ok = window.confirm(
+    "Restore the library to how it was before the last import or merge? Changes made after that point will be lost."
+  );
+  if (!ok) return;
+  const r = await undoLastImport();
+  setImportStatus(r.ok ? "The library was restored from the backup." : r.error);
+  qualityState = null;
+  libraryState = null;
   render();
 });
 
@@ -1081,5 +1107,40 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+initLibraryTools({
+  loadLibraryState,
+  openModal,
+  closeModal,
+  downloadText,
+  setImportStatus,
+  getQualityBadges: async (venue) => {
+    const qs = await ensureQualityState();
+    return qs.show && venue ? qualityBadgesForVenue(venue, qs.qIndex).map((b) => b.text) : [];
+  },
+  refresh: () => {
+    qualityState = null;
+    libraryState = null;
+    return render();
+  }
+});
+
+exportUi = createExportUi({
+  el,
+  cite: (r) => formatReference("apa", r),
+  prepare: async () => { await ensureQualityState(); },
+  getSavedPapers,
+  loadLibraryState,
+  toRecord: (p, state) => toRecord(p, {
+    collections: collectionMap(state),
+    venueOf: (paper) => extractVenueFromAuthorsVenue(paper.authorsVenue),
+    badgesOf: (venue) => (qualityState && qualityState.qIndex ? qualityBadgesForVenue(venue, qualityState.qIndex).map((b) => b.text) : [])
+  })
+});
+initLatexDialog(exportUi, { el, openModal, getSavedPapers, saveCitekeys, copyText });
+initRefListDialog(exportUi, { el, openModal, copyText });
+exportUi.wire();
 render();
+refreshUndoButton();
 initPromoCard();
+initAskPanel().catch(() => {});
+initLatexLink();

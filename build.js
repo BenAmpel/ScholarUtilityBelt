@@ -63,12 +63,68 @@ const TARGETS = [
     args: ['src/common/scholar-links.js', '--bundle=false', '--minify', '--outfile=dist/common/scholar-links.js', '--log-level=warning'],
   },
   {
+    label: 'common/custom-venues.js',
+    args: ['src/common/custom-venues.js', '--bundle=false', '--minify', '--outfile=dist/common/custom-venues.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/reference-import.js',
+    args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/rob.js',
+    args: ['src/common/rob.js', '--bundle=false', '--minify', '--outfile=dist/common/rob.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/screening-agreement.js',
+    args: ['src/common/screening-agreement.js', '--bundle=false', '--minify', '--outfile=dist/common/screening-agreement.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/evidence-matrix.js',
+    args: ['src/common/evidence-matrix.js', '--bundle=false', '--minify', '--outfile=dist/common/evidence-matrix.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/review-snapshots.js',
+    args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/claim-signals.js',
+    args: ['src/common/claim-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/claim-signals.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/repro-signals.js',
+    args: ['src/common/repro-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/repro-signals.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/reading-order.js',
+    args: ['src/common/reading-order.js', '--bundle=false', '--minify', '--outfile=dist/common/reading-order.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },
   {
     label: 'common/entitlement.js',
     args: ['src/common/entitlement.js', '--bundle=false', '--minify', '--outfile=dist/common/entitlement.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/library-merge.js',
+    args: ['src/common/library-merge.js', '--bundle=false', '--minify', '--outfile=dist/common/library-merge.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/library-packet.js',
+    args: ['src/common/library-packet.js', '--bundle=false', '--minify', '--outfile=dist/common/library-packet.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/similarity.js',
+    args: ['src/common/similarity.js', '--bundle=false', '--minify', '--outfile=dist/common/similarity.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/watchlist.js',
+    args: ['src/common/watchlist.js', '--bundle=false', '--minify', '--outfile=dist/common/watchlist.js', '--log-level=warning'],
+  },
+  {
+    label: 'common/watchlist-runner.js',
+    args: ['src/common/watchlist-runner.js', '--bundle=false', '--minify', '--outfile=dist/common/watchlist-runner.js', '--log-level=warning'],
   },
   {
     // Same source, built as a global for the classic (non-module) service
@@ -89,6 +145,16 @@ const TARGETS = [
     args: ['src/common/apppass.js', '--bundle=true', '--format=iife', '--global-name=SUAppPass', '--minify', '--outfile=dist/common/apppass.sw.js', '--log-level=warning'],
   },
   {
+    // Structured triage card helpers, loaded by content.js with import().
+    label: 'common/triage-verify.js',
+    args: ['src/common/triage-verify.js', '--bundle=false', '--minify', '--outfile=dist/common/triage-verify.js', '--log-level=warning'],
+  },
+  {
+    // "Ask my shortlist" provider adapters and verifier as a global for the classic service worker (same reason as above).
+    label: 'common/ask-sw.js',
+    args: ['src/common/ask-sw.js', '--bundle=true', '--format=iife', '--global-name=SUAsk', '--minify', '--outfile=dist/common/ask-sw.js', '--log-level=warning'],
+  },
+  {
     // Third-party library — not minified, so the shipped bytes match what was audited.
     label: 'common/extpay.js',
     args: ['src/common/extpay.js', '--bundle=false', '--minify=false', '--outfile=dist/common/extpay.js', '--log-level=warning'],
@@ -104,6 +170,10 @@ const TARGETS = [
   {
     label: 'content/review-workspace.js',
     args: ['src/content/review-workspace.js', '--bundle=false', '--minify', '--outfile=dist/content/review-workspace.js', '--log-level=warning'],
+  },
+  {
+    label: 'content/signals-ui.js',
+    args: ['src/content/signals-ui.js', '--bundle=false', '--minify', '--outfile=dist/content/signals-ui.js', '--log-level=warning'],
   },
   {
     label: 'content/content-author.js',

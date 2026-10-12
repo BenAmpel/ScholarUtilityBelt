@@ -93,6 +93,11 @@ export const DEFAULT_SETTINGS = {
   openalexApiKey: "",
   showHoverSummary: true,
   showArtifactBadge: true,
+  // Pro features added after launch: each can be switched off here even when unlocked.
+  showClaimEvidenceChips: true,
+  claimChipMinN: 30, // stated sample sizes below this get a chip
+  showReproSignals: true,
+  showReadingOrder: true,
   showCSS: true,
   showAgeBiasHeatmap: true,
   showAuthorshipHeatmap: true,
@@ -199,6 +204,26 @@ export async function getSavedPapers() {
   }
 }
 
+/** The user's own venue list: { name, uploadedAt, entries: [[venue, label], ...] } or null. */
+export async function getCustomVenueList() {
+  try {
+    const { customVenueList } = await chrome.storage.local.get({ customVenueList: null });
+    const list = customVenueList;
+    return list && Array.isArray(list.entries) && list.entries.length ? list : null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+export async function setCustomVenueList(list) {
+  await chrome.storage.local.set({ customVenueList: list });
+}
+
+export async function clearCustomVenueList() {
+  await chrome.storage.local.remove("customVenueList");
+}
+
 export async function getLibraryState() {
   try {
     const { libraryState } = await chrome.storage.local.get({ libraryState: DEFAULT_LIBRARY_STATE });
@@ -238,6 +263,101 @@ export async function upsertPaper(paper) {
     return merged;
   } catch (e) {
     if (isContextInvalidated(e)) return { ...paper, key: paper.key };
+    throw e;
+  }
+}
+
+const WATCH_LISTS_KEY = "watchLists";
+
+/** Raw watch-list state (items, last-seen state, backoff). Callers pass it through normalizeWatchState. */
+export async function getWatchLists() {
+  try {
+    const { [WATCH_LISTS_KEY]: state } = await chrome.storage.local.get({ [WATCH_LISTS_KEY]: null });
+    return state || null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+export async function setWatchLists(state) {
+  try {
+    await chrome.storage.local.set({ [WATCH_LISTS_KEY]: state });
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+const LIBRARY_BACKUP_KEY = "libraryImportBackup";
+
+/** The single pre-import (or pre-merge) backup, or null. Shape: { at, reason, summary, savedPapers, libraryState }. */
+export async function getLibraryBackup() {
+  try {
+    const { [LIBRARY_BACKUP_KEY]: backup } = await chrome.storage.local.get({ [LIBRARY_BACKUP_KEY]: null });
+    return backup && typeof backup === "object" && backup.savedPapers ? backup : null;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+/** Replace the backup with a copy of the current library. Only one backup is kept. */
+export async function saveLibraryBackup(reason, summary) {
+  try {
+    const savedPapers = await getSavedPapers();
+    const libraryState = await getLibraryState();
+    const backup = { at: new Date().toISOString(), reason: String(reason || "import"), summary: summary || null, savedPapers, libraryState };
+    await chrome.storage.local.set({ [LIBRARY_BACKUP_KEY]: backup });
+    return backup;
+  } catch (e) {
+    if (isContextInvalidated(e)) return null;
+    throw e;
+  }
+}
+
+/** Write papers and library state in one call (used by merge-safe import and by undo). */
+export async function replaceLibrary(savedPapers, libraryState) {
+  try {
+    const items = { savedPapers: savedPapers || {} };
+    if (libraryState) items.libraryState = { ...DEFAULT_LIBRARY_STATE, ...libraryState };
+    await chrome.storage.local.set(items);
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+export async function clearLibraryBackup() {
+  try {
+    await chrome.storage.local.remove(LIBRARY_BACKUP_KEY);
+  } catch (e) {
+    if (isContextInvalidated(e)) return;
+    throw e;
+  }
+}
+
+/**
+ * Stores citekeys on saved papers in one write. A paper that already has a citekey is never changed
+ * (keys must stay stable across exports), and a paper that has been removed is not recreated.
+ * @param {Record<string,string>|Map<string,string>} keys storage key -> citekey
+ * @returns {Promise<number>} how many papers received a new key
+ */
+export async function saveCitekeys(keys) {
+  try {
+    const entries = keys instanceof Map ? [...keys] : Object.entries(keys || {});
+    const savedPapers = await getSavedPapers();
+    let n = 0;
+    for (const [key, citekey] of entries) {
+      const p = savedPapers[key];
+      if (!p || p.citekey || !citekey) continue;
+      p.citekey = String(citekey);
+      n++;
+    }
+    if (n) await chrome.storage.local.set({ savedPapers });
+    return n;
+  } catch (e) {
+    if (isContextInvalidated(e)) return 0;
     throw e;
   }
 }

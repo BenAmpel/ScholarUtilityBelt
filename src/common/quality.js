@@ -346,6 +346,20 @@ function findBestMatch(normalizedVenue, map) {
   return null;
 }
 
+/**
+ * Badge for the user's own venue list, or null. `custom` is { name, map } where `map` is
+ * normalised venue to label. Exact match first, then the same prefix match the built-in
+ * lists use. Kept out of compileQualityIndex so editing the list never invalidates its cache.
+ */
+export function customBadgeForVenue(venue, custom) {
+  if (!custom || !custom.map || !custom.map.size) return null;
+  const v = normalizeVenueName(venue);
+  if (!v) return null;
+  const label = custom.map.get(v) || findBestMatch(v, custom.map);
+  if (!label) return null;
+  return { kind: "custom", text: String(label), metadata: { system: `Your list: ${custom.name || "My list"}` } };
+}
+
 // Pre-print server identifiers; display label used for badge. Checked against raw venue string (case-insensitive).
 const PREPRINT_PATTERNS = [
   { pattern: /ssrn\.com|paper\.ssrn|\.ssrn\b|\bssrn\b/i, label: "SSRN" },
