@@ -11758,6 +11758,9 @@
         const names = Array.isArray(parsed?.n) ? parsed.n : (parsed?.names || []);
         const index = new Map();
         for (let i = 0; i < names.length; i++) {
+          // Indexing 900,000 names in one go froze the page for about 3.5 seconds, long enough that the
+          // "Looking up this name" message never painted. Give the page a turn every 20,000 names.
+          if (i > 0 && i % 20000 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
           const norm = normalizeAuthorName(names[i]);
           if (!norm) continue;
           if (index.has(norm)) {
