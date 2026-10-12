@@ -15,6 +15,7 @@ import { initPromoCard } from "../common/promo-card.js";
 import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
 import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
 import { getLibraryBackup } from "../common/storage.js";
+import { initLibraryTools } from "./library-tools.js";
 import {
   compileQualityIndex,
   extractVenueFromAuthorsVenue,
@@ -1103,6 +1104,19 @@ chrome.storage.onChanged.addListener((changes, area) => {
     qualityState = null;
     libraryState = null;
     render();
+  }
+});
+
+initLibraryTools({
+  loadLibraryState,
+  openModal,
+  closeModal,
+  downloadText,
+  setImportStatus,
+  refresh: () => {
+    qualityState = null;
+    libraryState = null;
+    return render();
   }
 });
 

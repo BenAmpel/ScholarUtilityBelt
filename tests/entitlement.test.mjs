@@ -241,6 +241,17 @@ describe("grandfathering covers legacy Pro features only", () => {
     }
   });
 
+  it("registers the library tools as new Pro features, locked for grandfathered users without a purchase", () => {
+    const grandfatheredOnly = { paid: true, tier: "grandfathered", purchased: false };
+    for (const id of ["collectionPackets", "librarySimilarity", "watchLists"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, free), false);
+      assert.equal(canUseFeature(id, grandfatheredOnly), false);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true);
+      assert.equal(canUseFeature(id, { paid: true, tier: "grandfathered", purchased: true }), true);
+    }
+  });
+
   it("locks legacy features for free users and fails closed on unknown ids", () => {
     assert.equal(canUseFeature("compareAuthors", free), false);
     assert.equal(canUseFeature("compareAuthors", { paid: true, tier: "monthly", purchased: true }), true);
