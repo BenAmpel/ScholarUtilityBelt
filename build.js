@@ -103,6 +103,10 @@ const TARGETS = [
     args: ['src/common/pro-prompt.js', '--bundle=false', '--minify', '--outfile=dist/common/pro-prompt.js', '--log-level=warning'],
   },
   {
+    label: 'common/reload-banner.js',
+    args: ['src/common/reload-banner.js', '--bundle=false', '--minify', '--outfile=dist/common/reload-banner.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },

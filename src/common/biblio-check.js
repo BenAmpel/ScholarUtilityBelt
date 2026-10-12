@@ -11,6 +11,11 @@ import { isPreprintVenue, qualityBadgesForVenue } from "./quality.js";
 
 export const MAX_INPUT_CHARS = 2_000_000;
 export const MAX_ENTRIES = 3000;
+export const MAX_LINES = 20_000;
+// A reference that wraps over more than this many lines, or runs past this many characters, is not
+// one reference. Without a cap, text with no years became a single huge entry that took over a minute.
+export const MAX_WRAPPED_LINES = 8;
+export const MAX_ENTRY_CHARS = 2000;
 
 // ---------------------------------------------------------------------------
 // DOI extraction
@@ -122,7 +127,9 @@ function parseBibFields(body) {
 }
 
 export function looksLikeBibtex(text) {
-  return /^\s*@[A-Za-z]+\s*[{(]/m.test(String(text || ""));
+  // "[ \t]*" cannot cross a line break. The old "^\s*" with the m flag re-scanned every run of blank
+  // lines from each line start, which took seconds on a 100 KB paste of mostly blank lines.
+  return /(?:^|\n)[ \t]*@[A-Za-z]+\s*[{(]/.test(String(text || ""));
 }
 
 /** Parse BibTeX source into entries. Ignores @comment, @string, @preamble. */
@@ -171,7 +178,8 @@ function joinLines(lines) {
  */
 export function splitReferences(text) {
   const src = String(text || "").replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ");
-  const lines = src.split("\n");
+  // Pasting a whole document is not a reference list; cap the work instead of freezing the page.
+  const lines = src.split("\n").slice(0, MAX_LINES);
   const numbered = lines.filter((l) => NUMBER_MARKER.test(l)).length;
   let chunks = [];
   if (numbered >= 2) {
@@ -192,19 +200,21 @@ export function splitReferences(text) {
       chunks = blocks.map(joinLines);
     } else {
       let cur = [];
-      const flush = () => { if (cur.length) chunks.push(joinLines(cur)); cur = []; };
+      // Whether the entry being built already has a year, tracked as lines are added. Joining the
+      // whole entry for every line made a long entry quadratic.
+      let curHasYear = false;
+      const flush = () => { if (cur.length) chunks.push(joinLines(cur)); cur = []; curHasYear = false; };
       for (const line of lines) {
         if (!line.trim()) continue;
         const startsNew = !/^\s/.test(line) && AUTHOR_START.test(line.trim());
-        const curHasYear = cur.length > 0 && YEAR_ANYWHERE.test(cur.join(" "));
-        if (cur.length === 0) cur.push(line);
-        else if (startsNew && curHasYear) { flush(); cur.push(line); }
-        else cur.push(line);
+        if (cur.length > 0 && ((startsNew && curHasYear) || cur.length >= MAX_WRAPPED_LINES)) flush();
+        cur.push(line);
+        if (!curHasYear) curHasYear = YEAR_ANYWHERE.test(line);
       }
       flush();
     }
   }
-  return chunks.map((c) => c.trim()).filter((c) => c.length >= 8);
+  return chunks.map((c) => c.trim().slice(0, MAX_ENTRY_CHARS)).filter((c) => c.length >= 8);
 }
 
 // ---------------------------------------------------------------------------

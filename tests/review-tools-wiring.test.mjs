@@ -27,7 +27,8 @@ const ws = createReviewWorkspace({
     r1: { id: "r1", name: "Rev", papers: { p1: { id: "p1", title: "One <b>" , year: "2020" }, p2: { id: "p2", title: "Two", year: "2021" } },
       decisions: { p1: { votes: [{ reviewerId: "you", status: "include" }, { reviewerId: "r2", status: "exclude" }] }, p2: { votes: [{ reviewerId: "you", status: "include" }, { reviewerId: "r2", status: "include" }] } },
       reviewers: [{ id: "you", name: "You" }, { id: "r2", name: "Rae" }], tags: { p1: ["t1"] }, extraction: { p1: { design: "RCT" } } } }),
-  setStorageMap: async (k, m) => { store[k] = JSON.parse(JSON.stringify(m)); }, CLS_BTN_SEC: "btn",
+  setStorageMap: async (k, m) => { store[k] = JSON.parse(JSON.stringify(m)); },
+  setStorageMapEntry: async (k, e, v) => { store[k] = { ...(store[k] || {}), [e]: JSON.parse(JSON.stringify(v)) }; }, CLS_BTN_SEC: "btn",
   getEntitlementStatus: async () => ({ purchased: pro }), canUseFeature: () => pro,
 });
 await ws.open();
@@ -88,5 +89,15 @@ describe("review tools wiring (fake DOM)", () => {
     await change({ rv: "rob-judge", robDomain: "rob2_randomization" }, { value: "high", row });
     assert.equal(store.reviewProjects.r1.rob.papers.p1.reviewers.you.rob2_randomization, "low");
     pro = true;
+  });
+});
+
+describe("saving from this tab", () => {
+  it("does not erase a project another tab saved after this one opened", async () => {
+    store.reviewProjects.r9 = { id: "r9", name: "Other tab", papers: {} };
+    await tabClick("rob");
+    await change({ rv: "rob-judge", robDomain: "rob2_randomization" }, { value: "high", row });
+    assert.ok(store.reviewProjects.r9, "the other tab's project is still there");
+    assert.equal(store.reviewProjects.r1.rob.papers.p1.reviewers.you.rob2_randomization, "high");
   });
 });

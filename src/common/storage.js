@@ -1,8 +1,50 @@
 // Centralized storage helpers.
 // Design goal: no network calls; everything is derived from the currently loaded Scholar DOM.
 
+// ── Write ordering ───────────────────────────────────────────────────────────
+// Almost every setter below reads a whole map, changes one entry and writes the map back.
+// Run in parallel (the content script saves once per result row), those calls overwrite each
+// other: ten parallel writes kept two. Each read-modify-write takes a per-key lock. Web Locks
+// order the writers of every Scholar tab; where they are missing a promise chain does the same
+// inside one context. (The library page is a different origin, so it is not covered.)
+const lockTails = new Map();
+export function withStorageLock(name, fn) {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : null;
+  if (locks && typeof locks.request === "function") {
+    return locks.request(`su-storage:${name}`, () => fn());
+  }
+  const prev = lockTails.get(name) || Promise.resolve();
+  const run = prev.then(() => fn(), () => fn());
+  const tail = run.catch(() => {});
+  lockTails.set(name, tail);
+  tail.then(() => { if (lockTails.get(name) === tail) lockTails.delete(name); });
+  return run;
+}
+
+// ── Reload signal ────────────────────────────────────────────────────────────
+// After an extension update an open Scholar tab keeps running the old script, and every write
+// fails with "context invalidated". The setters stay quiet so the page does not break, but the
+// user must be told that nothing is being saved: this lets the page show a reload banner once.
+let invalidatedFired = false;
+const invalidatedListeners = [];
+export function onContextInvalidated(cb) {
+  if (typeof cb !== "function") return;
+  if (invalidatedFired) { try { cb(); } catch { /* listener errors must not break storage */ } return; }
+  invalidatedListeners.push(cb);
+}
+function fireInvalidated() {
+  if (invalidatedFired) return;
+  invalidatedFired = true;
+  for (const cb of invalidatedListeners.splice(0)) { try { cb(); } catch { /* ignore */ } }
+}
+
 /** True when the extension was reloaded/updated and chrome.* APIs are no longer valid. */
 function isContextInvalidated(e) {
+  const hit = contextInvalidatedMessage(e);
+  if (hit) fireInvalidated();
+  return hit;
+}
+function contextInvalidatedMessage(e) {
   if (!e) return false;
   const msg = String(e?.message ?? e?.toString?.() ?? "").toLowerCase();
   return (
@@ -249,18 +291,20 @@ export async function setLibraryState(next) {
 export async function upsertPaper(paper) {
   if (!paper || !paper.key) throw new Error("paper.key is required");
   try {
-    const savedPapers = await getSavedPapers();
-    const existing = savedPapers[paper.key];
-    const merged = {
-      ...existing,
-      ...paper,
-      key: paper.key,
-      savedAt: existing?.savedAt || paper.savedAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    savedPapers[paper.key] = merged;
-    await chrome.storage.local.set({ savedPapers });
-    return merged;
+    return await withStorageLock("savedPapers", async () => {
+      const savedPapers = await getSavedPapers();
+      const existing = savedPapers[paper.key];
+      const merged = {
+        ...existing,
+        ...paper,
+        key: paper.key,
+        savedAt: existing?.savedAt || paper.savedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      savedPapers[paper.key] = merged;
+      await chrome.storage.local.set({ savedPapers });
+      return merged;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return { ...paper, key: paper.key };
     throw e;
@@ -345,17 +389,19 @@ export async function clearLibraryBackup() {
  */
 export async function saveCitekeys(keys) {
   try {
-    const entries = keys instanceof Map ? [...keys] : Object.entries(keys || {});
-    const savedPapers = await getSavedPapers();
-    let n = 0;
-    for (const [key, citekey] of entries) {
-      const p = savedPapers[key];
-      if (!p || p.citekey || !citekey) continue;
-      p.citekey = String(citekey);
-      n++;
-    }
-    if (n) await chrome.storage.local.set({ savedPapers });
-    return n;
+    return await withStorageLock("savedPapers", async () => {
+      const entries = keys instanceof Map ? [...keys] : Object.entries(keys || {});
+      const savedPapers = await getSavedPapers();
+      let n = 0;
+      for (const [key, citekey] of entries) {
+        const p = savedPapers[key];
+        if (!p || p.citekey || !citekey) continue;
+        p.citekey = String(citekey);
+        n++;
+      }
+      if (n) await chrome.storage.local.set({ savedPapers });
+      return n;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return 0;
     throw e;
@@ -364,11 +410,13 @@ export async function saveCitekeys(keys) {
 
 export async function removePaper(key) {
   try {
-    const savedPapers = await getSavedPapers();
-    if (!savedPapers[key]) return false;
-    delete savedPapers[key];
-    await chrome.storage.local.set({ savedPapers });
-    return true;
+    return await withStorageLock("savedPapers", async () => {
+      const savedPapers = await getSavedPapers();
+      if (!savedPapers[key]) return false;
+      delete savedPapers[key];
+      await chrome.storage.local.set({ savedPapers });
+      return true;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return false;
     throw e;
@@ -461,16 +509,18 @@ export async function getReadingQueue() {
 export async function addToReadingQueue(item) {
   if (!item || typeof item.title !== "string" || typeof item.link !== "string") return null;
   try {
-    const queue = await getReadingQueue();
-    const entry = {
-      id: item.id || `q:${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      title: String(item.title).trim() || "Untitled",
-      link: String(item.link).trim(),
-      searchQuery: String(item.searchQuery || "").trim()
-    };
-    queue.push(entry);
-    await chrome.storage.local.set({ [READING_QUEUE_KEY]: queue });
-    return entry;
+    return await withStorageLock(READING_QUEUE_KEY, async () => {
+      const queue = await getReadingQueue();
+      const entry = {
+        id: item.id || `q:${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        title: String(item.title).trim() || "Untitled",
+        link: String(item.link).trim(),
+        searchQuery: String(item.searchQuery || "").trim()
+      };
+      queue.push(entry);
+      await chrome.storage.local.set({ [READING_QUEUE_KEY]: queue });
+      return entry;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return null;
     throw e;
@@ -503,10 +553,12 @@ export async function getReadingLoadPageCounts() {
 export async function setReadingLoadPageCount(paperKey, pages) {
   if (!paperKey || typeof pages !== "number" || pages < 1) return;
   try {
-    const counts = await getReadingLoadPageCounts();
-    if (counts[paperKey] === pages) return;
-    counts[paperKey] = pages;
-    await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: counts });
+    return await withStorageLock(READING_LOAD_PAGES_KEY, async () => {
+      const counts = await getReadingLoadPageCounts();
+      if (counts[paperKey] === pages) return;
+      counts[paperKey] = pages;
+      await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: counts });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -550,10 +602,12 @@ export async function getHiddenAuthors() {
 export async function addHiddenPaper(key) {
   if (!key) return;
   try {
-    const list = await getHiddenPapers();
-    if (list.includes(key)) return;
-    list.push(key);
-    await chrome.storage.local.set({ [HIDDEN_PAPERS_KEY]: list });
+    return await withStorageLock(HIDDEN_PAPERS_KEY, async () => {
+      const list = await getHiddenPapers();
+      if (list.includes(key)) return;
+      list.push(key);
+      await chrome.storage.local.set({ [HIDDEN_PAPERS_KEY]: list });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -563,10 +617,12 @@ export async function addHiddenPaper(key) {
 export async function addHiddenVenue(venueNormalized) {
   if (!venueNormalized) return;
   try {
-    const list = await getHiddenVenues();
-    if (list.includes(venueNormalized)) return;
-    list.push(venueNormalized);
-    await chrome.storage.local.set({ [HIDDEN_VENUES_KEY]: list });
+    return await withStorageLock(HIDDEN_VENUES_KEY, async () => {
+      const list = await getHiddenVenues();
+      if (list.includes(venueNormalized)) return;
+      list.push(venueNormalized);
+      await chrome.storage.local.set({ [HIDDEN_VENUES_KEY]: list });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -576,10 +632,12 @@ export async function addHiddenVenue(venueNormalized) {
 export async function addHiddenAuthor(authorNormalized) {
   if (!authorNormalized) return;
   try {
-    const list = await getHiddenAuthors();
-    if (list.includes(authorNormalized)) return;
-    list.push(authorNormalized);
-    await chrome.storage.local.set({ [HIDDEN_AUTHORS_KEY]: list });
+    return await withStorageLock(HIDDEN_AUTHORS_KEY, async () => {
+      const list = await getHiddenAuthors();
+      if (list.includes(authorNormalized)) return;
+      list.push(authorNormalized);
+      await chrome.storage.local.set({ [HIDDEN_AUTHORS_KEY]: list });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -588,11 +646,13 @@ export async function addHiddenAuthor(authorNormalized) {
 
 export async function removeHiddenPaper(key) {
   try {
-    const list = await getHiddenPapers();
-    const next = list.filter((k) => k !== key);
-    if (next.length === list.length) return false;
-    await chrome.storage.local.set({ [HIDDEN_PAPERS_KEY]: next });
-    return true;
+    return await withStorageLock(HIDDEN_PAPERS_KEY, async () => {
+      const list = await getHiddenPapers();
+      const next = list.filter((k) => k !== key);
+      if (next.length === list.length) return false;
+      await chrome.storage.local.set({ [HIDDEN_PAPERS_KEY]: next });
+      return true;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return false;
     throw e;
@@ -601,11 +661,13 @@ export async function removeHiddenPaper(key) {
 
 export async function removeHiddenVenue(venueNormalized) {
   try {
-    const list = await getHiddenVenues();
-    const next = list.filter((v) => v !== venueNormalized);
-    if (next.length === list.length) return false;
-    await chrome.storage.local.set({ [HIDDEN_VENUES_KEY]: next });
-    return true;
+    return await withStorageLock(HIDDEN_VENUES_KEY, async () => {
+      const list = await getHiddenVenues();
+      const next = list.filter((v) => v !== venueNormalized);
+      if (next.length === list.length) return false;
+      await chrome.storage.local.set({ [HIDDEN_VENUES_KEY]: next });
+      return true;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return false;
     throw e;
@@ -614,11 +676,13 @@ export async function removeHiddenVenue(venueNormalized) {
 
 export async function removeHiddenAuthor(authorNormalized) {
   try {
-    const list = await getHiddenAuthors();
-    const next = list.filter((a) => a !== authorNormalized);
-    if (next.length === list.length) return false;
-    await chrome.storage.local.set({ [HIDDEN_AUTHORS_KEY]: next });
-    return true;
+    return await withStorageLock(HIDDEN_AUTHORS_KEY, async () => {
+      const list = await getHiddenAuthors();
+      const next = list.filter((a) => a !== authorNormalized);
+      if (next.length === list.length) return false;
+      await chrome.storage.local.set({ [HIDDEN_AUTHORS_KEY]: next });
+      return true;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return false;
     throw e;
@@ -668,17 +732,19 @@ export async function getPageVisitCache() {
 
 export async function setPageVisitCacheEntry(pageKey, seenKeys, timestamp) {
   try {
-    const cache = await getPageVisitCache();
-    const nextEntry = {
-      seenKeys: Array.isArray(seenKeys) ? seenKeys : [],
-      timestamp: timestamp || new Date().toISOString()
-    };
-    const existing = cache[pageKey];
-    if (existing && existing.timestamp === nextEntry.timestamp && sameStringArray(existing.seenKeys, nextEntry.seenKeys)) {
-      return;
-    }
-    cache[pageKey] = nextEntry;
-    await chrome.storage.local.set({ [PAGE_VISIT_CACHE_KEY]: cache });
+    return await withStorageLock(PAGE_VISIT_CACHE_KEY, async () => {
+      const cache = await getPageVisitCache();
+      const nextEntry = {
+        seenKeys: Array.isArray(seenKeys) ? seenKeys : [],
+        timestamp: timestamp || new Date().toISOString()
+      };
+      const existing = cache[pageKey];
+      if (existing && existing.timestamp === nextEntry.timestamp && sameStringArray(existing.seenKeys, nextEntry.seenKeys)) {
+        return;
+      }
+      cache[pageKey] = nextEntry;
+      await chrome.storage.local.set({ [PAGE_VISIT_CACHE_KEY]: cache });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -698,22 +764,24 @@ export async function getCitationSnapshots() {
 
 export async function setCitationSnapshot(clusterId, citations, date) {
   try {
-    const snap = await getCitationSnapshots();
-    const entry = snap[clusterId] && typeof snap[clusterId] === "object" ? snap[clusterId] : {};
-    const history = Array.isArray(entry.history) ? entry.history.slice() : [];
-    if (entry.citations != null && entry.date && history.length === 0) {
-      history.push({ citations: Number(entry.citations), date: entry.date });
-    }
-    const next = { citations: Number(citations), date: date || new Date().toISOString() };
-    const last = history[history.length - 1];
-    if (!last || last.citations !== next.citations || last.date !== next.date) {
-      history.push(next);
-    }
-    const trimmed = history.slice(-3);
-    const nextEntry = { citations: next.citations, date: next.date, history: trimmed };
-    if (sameJsonValue(entry, nextEntry)) return;
-    snap[clusterId] = nextEntry;
-    await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: snap });
+    return await withStorageLock(CITATION_SNAPSHOTS_KEY, async () => {
+      const snap = await getCitationSnapshots();
+      const entry = snap[clusterId] && typeof snap[clusterId] === "object" ? snap[clusterId] : {};
+      const history = Array.isArray(entry.history) ? entry.history.slice() : [];
+      if (entry.citations != null && entry.date && history.length === 0) {
+        history.push({ citations: Number(entry.citations), date: entry.date });
+      }
+      const next = { citations: Number(citations), date: date || new Date().toISOString() };
+      const last = history[history.length - 1];
+      if (!last || last.citations !== next.citations || last.date !== next.date) {
+        history.push(next);
+      }
+      const trimmed = history.slice(-3);
+      const nextEntry = { citations: next.citations, date: next.date, history: trimmed };
+      if (sameJsonValue(entry, nextEntry)) return;
+      snap[clusterId] = nextEntry;
+      await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: snap });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -832,14 +900,16 @@ export async function getAuthorHIndexSnapshots() {
 export async function setAuthorHIndexSnapshot(profileUrl, hIndex) {
   if (!profileUrl || typeof hIndex !== "number") return;
   try {
-    const data = await getAuthorHIndexSnapshots();
-    const list = Array.isArray(data[profileUrl]) ? data[profileUrl] : [];
-    const now = new Date();
-    const cutoff = new Date(now.getFullYear(), now.getMonth() - HINDEX_SNAPSHOT_MAX_AGE_MONTHS, 1).toISOString();
-    list.push({ date: now.toISOString(), hIndex });
-    const pruned = list.filter((e) => e.date >= cutoff).slice(-50);
-    data[profileUrl] = pruned;
-    await chrome.storage.local.set({ [AUTHOR_HINDEX_SNAPSHOTS_KEY]: data });
+    return await withStorageLock(AUTHOR_HINDEX_SNAPSHOTS_KEY, async () => {
+      const data = await getAuthorHIndexSnapshots();
+      const list = Array.isArray(data[profileUrl]) ? data[profileUrl] : [];
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - HINDEX_SNAPSHOT_MAX_AGE_MONTHS, 1).toISOString();
+      list.push({ date: now.toISOString(), hIndex });
+      const pruned = list.filter((e) => e.date >= cutoff).slice(-50);
+      data[profileUrl] = pruned;
+      await chrome.storage.local.set({ [AUTHOR_HINDEX_SNAPSHOTS_KEY]: data });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
@@ -907,10 +977,12 @@ export async function getStorageMapEntry(storageKey, entryKey, defaults) {
 
 export async function setStorageMapEntry(storageKey, entryKey, value) {
   try {
-    const stored = await chrome.storage.local.get({ [storageKey]: {} });
-    const map = stored[storageKey] || {};
-    map[entryKey] = value;
-    await chrome.storage.local.set({ [storageKey]: map });
+    return await withStorageLock(storageKey, async () => {
+      const stored = await chrome.storage.local.get({ [storageKey]: {} });
+      const map = stored[storageKey] || {};
+      map[entryKey] = value;
+      await chrome.storage.local.set({ [storageKey]: map });
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;

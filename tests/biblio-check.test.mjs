@@ -343,3 +343,47 @@ describe("input guards", () => {
     assert.equal(B.parseReferenceList(many).length, B.MAX_ENTRIES);
   });
 });
+
+describe("pasted input that used to freeze the page", () => {
+  const timed = (text) => {
+    const t = performance.now();
+    const out = B.parseReferenceList(text);
+    return { ms: performance.now() - t, out };
+  };
+  // Before the fix these took 4 s, 23 s, 75 s and 171 s. The limit is generous so slow CI does not flake.
+  it("a paste of 50,000 blank lines", () => {
+    const { ms, out } = timed("\n".repeat(50000));
+    assert.ok(ms < 1500, `took ${ms} ms`);
+    assert.equal(out.length, 0);
+  });
+  it("180 KB of blank-ish lines", () => {
+    const { ms } = timed("\n \n".repeat(60000));
+    assert.ok(ms < 1500, `took ${ms} ms`);
+  });
+  it("20,000 lines with no years", () => {
+    const text = Array.from({ length: 20000 }, (_, i) => `Author${i}, A. Some title without a year number ${i}`).join("\n");
+    const { ms, out } = timed(text);
+    assert.ok(ms < 3000, `took ${ms} ms`);
+    assert.ok(out.length > 100 && out.length <= 3000);
+  });
+  it("100,000 short lines", () => {
+    const { ms } = timed(Array.from({ length: 100000 }, (_, i) => `line ${i}`).join("\n"));
+    assert.ok(ms < 3000, `took ${ms} ms`);
+  });
+  it("still joins a wrapped reference and splits normal lists", () => {
+    const wrapped = "Smith, J. (2020). A very long title that wraps\nonto a second line. Journal of Stuff, 12(3), 45-67.\nJones, K. (2019). Another paper. Other Journal, 4, 1-9.";
+    const out = B.parseReferenceList(wrapped);
+    assert.equal(out.length, 2);
+    const normal = Array.from({ length: 500 }, (_, i) => `Smith, J. (20${10 + (i % 14)}). A study of things ${i}. Journal of Stuff, 12(3), 45-67.`).join("\n");
+    assert.equal(B.parseReferenceList(normal).length, 500);
+  });
+  it("still detects BibTeX after blank lines or indentation, and rejects prose with an @ sign", () => {
+    assert.equal(B.looksLikeBibtex("\n\n   @article{k, title={x}}"), true);
+    assert.equal(B.looksLikeBibtex("@book(k, title={x})"), true);
+    assert.equal(B.looksLikeBibtex("email me at a@b.com or see @home"), false);
+  });
+  it("caps the size of one reference", () => {
+    const long = `Smith, J. (2020). ${"word ".repeat(1000)}`;
+    assert.ok(B.splitReferences(long)[0].length <= 2000);
+  });
+});

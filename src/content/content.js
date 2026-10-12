@@ -25,6 +25,7 @@
   let getReadingLoadPageCounts;
   let getReadingQueue;
   let getSavedPapers;
+  let onContextInvalidated;
   let getSettings;
   let removePaper;
   let setAuthorHIndexSnapshot;
@@ -79,8 +80,22 @@
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
+  // Resolves with `fallback` if the promise is slow or fails. Entitlement lookups can wait on
+  // ExtensionPay's server, which has no timeout of its own; page boot must not wait on it.
+  function withTimeout(promise, ms, fallback) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(fallback), ms);
+      Promise.resolve(promise).then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        () => { clearTimeout(timer); resolve(fallback); }
+      );
+    });
+  }
+  const ENTITLEMENT_BOOT_TIMEOUT_MS = 3000;
   async function refreshEntitlementCache() {
-    cachedEntitlement = await getEntitlementStatus();
+    // On a timeout the cache stays as it was (empty on first load): this page treats the user as
+    // free for now rather than holding up every free feature. The next lookup updates it.
+    cachedEntitlement = await withTimeout(getEntitlementStatus(), ENTITLEMENT_BOOT_TIMEOUT_MS, cachedEntitlement);
     return cachedEntitlement;
   }
   async function importModuleWithRetry(path, attempts = 2) {
@@ -105,7 +120,7 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
@@ -113,6 +128,8 @@
       importModuleWithRetry("dist/common/entitlement.js"),
       importModuleWithRetry("dist/common/scholar-links.js"),
       importModuleWithRetry("dist/common/custom-venues.js"),
+      // Loaded now, not on demand: after an extension update new imports no longer work.
+      importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
     ({ isQuickReadLink, firstFileColumnLink } = scholarLinks);
@@ -137,6 +154,7 @@
       getReadingLoadPageCounts,
       getReadingQueue,
       getSavedPapers,
+      onContextInvalidated,
       getSettings,
       removePaper,
       setAuthorHIndexSnapshot,
@@ -158,6 +176,8 @@
       upsertPaper,
       DEFAULT_SETTINGS
     } = storage);
+    // Tell the user once when this tab can no longer save because the extension was updated.
+    onContextInvalidated(() => reloadBanner.showReloadBanner());
     ({
       compileQualityIndex,
       extractVenueFromAuthorsVenue,
@@ -181,8 +201,8 @@
     } = dataLoader);
     ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
-    await refreshEntitlementCache();
-    await loadSignalsModules();
+    // Independent of each other, so run together instead of one after the other.
+    await Promise.all([refreshEntitlementCache(), loadSignalsModules()]);
     modulesLoaded = true;
   }
   /**
@@ -205,8 +225,9 @@
   async function refreshSignalsAllowed() {
     const ids = ["claimEvidenceChips", "reproSignals", "readingOrder"];
     try {
-      const ent = await getEntitlementStatus({ needPurchased: true });
-      signalsAllowed = Object.fromEntries(ids.map((id) => [id, !!canUseFeature(id, ent)]));
+      const ent = await withTimeout(getEntitlementStatus({ needPurchased: true }), ENTITLEMENT_BOOT_TIMEOUT_MS, null);
+      // No answer in time: the signals stay off for this page load rather than guessing.
+      signalsAllowed = ent ? Object.fromEntries(ids.map((id) => [id, !!canUseFeature(id, ent)])) : {};
     } catch {
       signalsAllowed = {};
     }
@@ -8250,6 +8271,12 @@
             return;
           }
           if (e.target.closest("#su-lineage-overlay")) return;
+          const lookupBtn = e.target.closest("[data-lineage-lookup]");
+          if (lookupBtn) {
+            e.preventDefault();
+            startGenealogyLookup();
+            return;
+          }
           const openBtn = e.target.closest("[data-lineage-open]");
           if (openBtn) {
             e.preventDefault();
@@ -9535,20 +9562,28 @@
       : "";
     const authorName = (window.suState?.authorVariations?.[0] || extractAuthorName() || "").trim();
     const authorVariations = window.suState?.authorVariations || (authorName ? generateAuthorNameVariations(authorName) : []);
-    ensureGenealogyMatchAsync(authorName, authorVariations);
+    // The lineage dataset is large (7.6 MB compressed, about 18 MB of names to parse and index), so it is
+    // not loaded on every author profile any more. The card offers a lookup and loads it on request.
     const genealogyMatch = getGenealogyMatchState();
-    const genealogyKey = genealogyMatch?.datasetKey || "merged";
-    const genealogyLabel = GENEALOGY_SOURCES[genealogyKey]?.label || "Academic lineage";
-    const genealogyHtml = genealogyMatch?.status === "ready" && genealogyMatch?.matchIndex != null
-      ? `<div class="su-right-card su-lineage-card">
+    const lineageCard = (inner) => `<div class="su-right-card su-lineage-card">
           <div class="su-right-title">Academic lineage</div>
-          <div class="su-lineage-card-body">
+          <div class="su-lineage-card-body">${inner}</div>
+        </div>`;
+    const genealogyReady = genealogyMatch?.status === "ready" && genealogyMatch?.matchIndex != null;
+    const genealogyHtml = !authorName
+      ? ""
+      : genealogyReady
+        ? lineageCard(`
             <div class="su-lineage-card-name">${escapeHtml(genealogyMatch.matchName || authorName)}</div>
             <div class="su-lineage-card-meta">Advisor–student genealogy</div>
-            <button type="button" class="su-graph-btn" data-lineage-open="1">View lineage</button>
-          </div>
-        </div>`
-      : "";
+            <button type="button" class="su-graph-btn" data-lineage-open="1">View lineage</button>`)
+        : genealogyMatch?.status === "loading"
+          ? lineageCard('<div class="su-lineage-card-meta" role="status">Looking up this name…</div>')
+          : genealogyMatch?.status === "unmatched"
+            ? lineageCard('<div class="su-lineage-card-meta">No advisor–student record found for this name.</div>')
+            : lineageCard(`
+                <div class="su-lineage-card-meta">Advisor–student genealogy, from a dataset of about 900,000 researchers bundled with the extension. It loads only when you ask.</div>
+                <button type="button" class="su-graph-btn" data-lineage-lookup="1">Look up lineage</button>`);
     container.innerHTML = `
       ${graphHtml}
       ${genealogyHtml}
@@ -10899,6 +10934,7 @@
         downloadBlob,
         getStorageMap,
         setStorageMap,
+        setStorageMapEntry,
         CLS_BTN_SEC,
         getEntitlementStatus,
         canUseFeature
@@ -11684,35 +11720,55 @@
     const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
     return await new Response(stream).text();
   }
-  async function ensureGenealogyNamesLoaded(key) {
+  function ensureGenealogyNamesLoaded(key) {
     const source = GENEALOGY_SOURCES[key];
-    if (!source) throw new Error("Unknown genealogy source.");
+    if (!source) return Promise.reject(new Error("Unknown genealogy source."));
     const data = getGenealogyDatasetState(key);
-    if (data.status === "ready" || data.status === "loading") return data;
+    if (data.status === "ready") return Promise.resolve(data);
+    // Callers that arrive while the load is running wait for it. Before, they got the empty
+    // dataset straight away, and a failed load left the status stuck on "loading" until reload.
+    if (data.loading) return data.loading;
     data.status = "loading";
-    const url = chrome.runtime.getURL(source.namesUrl);
-    const raw = await fetchGzipText(url);
-    const parsed = JSON.parse(raw || "{}");
-    const names = Array.isArray(parsed?.n) ? parsed.n : (parsed?.names || []);
-    const index = new Map();
-    for (let i = 0; i < names.length; i++) {
-      const norm = normalizeAuthorName(names[i]);
-      if (!norm) continue;
-      if (index.has(norm)) {
-        const existing = index.get(norm);
-        if (Array.isArray(existing)) {
-          existing.push(i);
-        } else {
-          index.set(norm, [existing, i]);
+    data.loading = (async () => {
+      try {
+        const raw = await fetchGzipText(chrome.runtime.getURL(source.namesUrl));
+        const parsed = JSON.parse(raw || "{}");
+        const names = Array.isArray(parsed?.n) ? parsed.n : (parsed?.names || []);
+        const index = new Map();
+        for (let i = 0; i < names.length; i++) {
+          const norm = normalizeAuthorName(names[i]);
+          if (!norm) continue;
+          if (index.has(norm)) {
+            const existing = index.get(norm);
+            if (Array.isArray(existing)) {
+              existing.push(i);
+            } else {
+              index.set(norm, [existing, i]);
+            }
+          } else {
+            index.set(norm, i);
+          }
         }
-      } else {
-        index.set(norm, i);
+        data.names = names;
+        data.nameIndex = index;
+        data.status = "ready";
+        return data;
+      } catch (e) {
+        data.status = "idle";
+        throw e;
+      } finally {
+        data.loading = null;
       }
-    }
-    data.names = names;
-    data.nameIndex = index;
-    data.status = "ready";
-    return data;
+    })();
+    return data.loading;
+  }
+  /** The author profile's "Look up lineage" button: start the match and show the loading state at once. */
+  function startGenealogyLookup() {
+    const authorName = (window.suState?.authorVariations?.[0] || extractAuthorName() || "").trim();
+    const authorVariations = window.suState?.authorVariations || (authorName ? generateAuthorNameVariations(authorName) : []);
+    if (!authorName) return;
+    ensureGenealogyMatchAsync(authorName, authorVariations);
+    if (window.suFullAuthorStats) renderRightPanel(window.suFullAuthorStats, window.suLastCoauthorsHtml || "");
   }
   function normalizeFullNameForMatch(name) {
     return stripTrailingSuffixTokens(stripNameCredentials(String(name || "")))
@@ -11773,16 +11829,15 @@
         match.datasetKey = "";
       })
       .catch(() => {
-        match.status = "unmatched";
+        // The dataset could not be loaded: offer the lookup again instead of saying the name has no record.
+        match.status = "idle";
         match.matchIndex = null;
         match.matchName = "";
         match.datasetKey = "";
       })
       .finally(() => {
-        if (match.status === "ready") {
-          if (window.suFullAuthorStats) {
-            renderRightPanel(window.suFullAuthorStats, window.suLastCoauthorsHtml || "");
-          }
+        if (window.suFullAuthorStats) {
+          renderRightPanel(window.suFullAuthorStats, window.suLastCoauthorsHtml || "");
         }
       });
   }

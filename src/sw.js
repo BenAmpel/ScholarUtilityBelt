@@ -59,13 +59,21 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // Dynamic import() is disallowed in a classic (non-module) service worker
 // per the HTML spec, so entitlement.js is loaded the same way, as a global
 // (SUEntitlement), rather than via import().
+// extpay.js and entitlement.sw.js are required: without them nothing below can work. The others
+// are optional features, loaded one at a time so a missing or broken file turns off only that
+// feature (each use below already sits in a try/catch or .catch) instead of stopping the worker
+// from registering any handler at all.
 importScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
-  chrome.runtime.getURL("dist/common/entitlement.sw.js"),
-  chrome.runtime.getURL("dist/common/apppass.sw.js"),
-  chrome.runtime.getURL("dist/common/install-pages.sw.js"),
-  chrome.runtime.getURL("dist/common/ask-sw.js")
+  chrome.runtime.getURL("dist/common/entitlement.sw.js")
 );
+for (const optional of ["apppass.sw.js", "install-pages.sw.js", "ask-sw.js"]) {
+  try {
+    importScripts(chrome.runtime.getURL(`dist/common/${optional}`));
+  } catch (e) {
+    console.warn(`[SU] optional script ${optional} failed to load; that feature is off`, e);
+  }
+}
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();
@@ -75,6 +83,38 @@ extpay.startBackground();
 // the user's joinapppass.com cookie, and the server counts those checks as "used
 // today" for revenue sharing, so it must never run for someone who didn't ask.
 let appPassInFlight = null;
+
+// ExtensionPay lookup that survives being offline or hanging. ExtPay throws when it cannot reach
+// its server and has no timeout, which used to leave a paying user on the free plan. A live answer
+// is remembered (time only; ExtPay stores the user itself) and, when the lookup fails or takes more
+// than 8 s, the last stored user is used for up to EXTPAY_OFFLINE_GRACE_DAYS.
+async function getExtpayUserOrCached(localExtpay) {
+  try {
+    const user = await Promise.race([
+      localExtpay.getUser(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("ExtensionPay timed out")), 8000)),
+    ]);
+    chrome.storage.local.set({ suExtpayOkAt: Date.now() }).catch(() => {});
+    return user;
+  } catch {
+    try {
+      const [sync, local] = await Promise.all([
+        chrome.storage.sync.get("extensionpay_user").catch(() => ({})),
+        chrome.storage.local.get(["extensionpay_user", "suExtpayOkAt"]).catch(() => ({})),
+      ]);
+      const cached = sync.extensionpay_user || local.extensionpay_user || null;
+      let okAt = local.suExtpayOkAt ?? null;
+      if (cached && okAt == null) {
+        // No live lookup has been recorded yet (first run after this update): start the grace period now.
+        okAt = Date.now();
+        chrome.storage.local.set({ suExtpayOkAt: okAt }).catch(() => {});
+      }
+      return SUEntitlement.offlineExtpayUser(cached, okAt);
+    } catch {
+      return null;
+    }
+  }
+}
 
 async function resolveAppPass({ force = false } = {}) {
   const { appPassOptIn, appPassCache } = await chrome.storage.local.get(["appPassOptIn", "appPassCache"]);
@@ -229,7 +269,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         // Re-declare extpay locally: per ExtPay's Manifest V3 documentation,
         // the outer `extpay` const can be undefined inside message callbacks.
         const localExtpay = ExtPay(EXTPAY_ID);
-        const user = await localExtpay.getUser();
+        const user = await getExtpayUserOrCached(localExtpay);
         // Someone who already paid, or is mid-trial, never triggers an App Pass check.
         const appPass = user?.paid || isTrialActive(user) ? null : await resolveAppPass().catch(() => null);
         sendResponse(describeEntitlement({ grandfathered: !!grandfathered, extpayUser: user, appPass }));
@@ -296,7 +336,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg.confirmed !== true) { sendResponse({ ok: false, error: "Not confirmed. Nothing was sent." }); return; }
       const { grandfathered } = await chrome.storage.local.get("grandfathered");
       const localExtpay = ExtPay(EXTPAY_ID);
-      const user = await localExtpay.getUser().catch(() => null);
+      const user = await getExtpayUserOrCached(localExtpay);
       const appPass = user?.paid || SUEntitlement.isTrialActive(user) ? null : await resolveAppPass().catch(() => null);
       const ent = SUEntitlement.describeEntitlement({ grandfathered: !!grandfathered, extpayUser: user, appPass });
       if (!SUEntitlement.canUseFeature("askShortlist", ent)) { sendResponse({ ok: false, error: "Ask my shortlist is a Pro feature." }); return; }
