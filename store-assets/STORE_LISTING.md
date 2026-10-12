@@ -1,4 +1,4 @@
-# Chrome Web Store Listing — Scholar Utility Belt v0.8.0
+# Chrome Web Store Listing — Scholar Utility Belt v1.0.0
 
 ## Extension Name (45 char max)
 Scholar Utility Belt — Journal Quality Badges
@@ -38,7 +38,7 @@ One-click Save to library, BibTeX export, abstract preview, DOI lookup, and code
 Full dark theme that matches Scholar's interface, with all badges and panels adapting automatically.
 
 ★ PRO (OPTIONAL)
-Everything above is free. Scholar Utility Belt Pro adds author compare, paper idea lineage (how a paper's ideas trace back through its citations), extended bibliometrics, narrative CV, a systematic-review workspace, a citation-graph overlay, a Publish-or-Perish report, and two optional AI features (see below). Try it free for 14 days, buy it once or subscribe, or unlock it with an App Pass if you already have one. If you installed before Pro launched, the Pro features that existed then stay free for you forever.
+Everything above is free. Scholar Utility Belt Pro adds author compare, paper idea lineage (how a paper's ideas trace back through its citations), extended bibliometrics, narrative CV, a systematic-review workspace, a citation-graph overlay, a Publish-or-Perish report, plus, since 1.0.0, reference import with a search log, a risk-of-bias grid, screening agreement and evidence matrix for reviews, claim-evidence chips, reproducibility signals and a reading order for results, Zotero, Obsidian, LaTeX and Word exports, collection packets, a similar-paper and duplicate finder, watch lists, a bibliography checker, a tenure packet, and two optional AI features (see below). Try it free for 14 days, buy it once or subscribe, or unlock it with an App Pass if you already have one. If you installed before Pro launched, the Pro features that existed then stay free for you forever.
 
 ★ OPTIONAL AI FEATURES (PRO, OFF BY DEFAULT)
 Triage cards show study design, sample and setting under a result, read from the snippet by Chrome's built-in on-device model where your Chrome offers one; a value appears only if it is in the snippet. Ask my shortlist lets you ask one question about papers you saved, using your own Anthropic, OpenAI or Google Gemini API key. If you use it, the titles and saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you chose, only after you review the cost estimate and confirm. Each quoted sentence in the answer is checked against the saved text.
@@ -112,14 +112,14 @@ English
 ### Privacy Policy URL
 https://purplelink.llc/privacy/#scholar-utility-belt
 
-The page exists and covers the extension, ExtensionPay and the lookup services. Before submitting 0.8.0 re-read it against the list below: it does not yet name arXiv, DataCite or SCImago, and it has no paragraph on the optional AI provider flow (Ask my shortlist) or on the "Look up extra signals" switch. That page lives in the Purplelink site repo.
+The page exists and covers the extension, ExtensionPay and the lookup services. Before submitting 1.0.0 re-read it against the list below: it does not yet name arXiv, DataCite or SCImago, and it has no paragraph on the optional AI provider flow (Ask my shortlist) or on the "Look up extra signals" switch. That page lives in the Purplelink site repo.
 
 ### Support URL / Homepage
 https://github.com/BenAmpel/ScholarUtilityBelt
 
 ---
 
-## Privacy tab: changes to re-check in the Web Store dashboard before submitting 0.7.0 through 0.8.0
+## Privacy tab: changes to re-check in the Web Store dashboard before submitting 1.0.0 (it covers 0.7.0 to 1.0.0)
 
 Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the install and uninstall pages. Review the dashboard's Privacy practices tab (the listing's existing answers stay unless they conflict):
 
@@ -127,9 +127,17 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 - **Authentication information.** The opt-in App Pass check sends the user's joinapppass.com login cookie to joinapppass.com with each check.
 - **Remote hosts contacted for these flows.** extensionpay.com (trial, purchase, entitlement check) and joinapppass.com (App Pass, opt-in only).
 - **Certifications.** None of this data is sold, used for purposes unrelated to the extension's single purpose, or used for creditworthiness or lending.
-- **Single purpose / permissions.** No manifest permission or host permission changed in 0.7.0 or 0.8.0. 0.8.0 narrows `web_accessible_resources` from a wildcard over `dist/common/` to the files the content script imports, so extension internals such as the payment client are no longer exposed to Scholar's pages. Two optional permissions are requested at runtime and only on a user action: all sites (publisher PDF page counts, hover summaries, Copy BibTeX) and one AI provider's API host (Ask my shortlist).
-- **Remote hosts (0.8.0).** The README's host table lists every host contacted, what is sent and when. CatalyzeX was removed in 0.8.0: the extension no longer sends result titles or URLs to catalyzex.com, and the "Code" badge it drew is gone (the local Data and Code badge, which reads the result's own links, stays). The per-result lookups in the detailed view (Crossref, OpenCitations, DataCite, Unpaywall, Semantic Scholar, arXiv, Europe PMC, NCBI) have an Options switch, "Look up extra signals", on by default.
+- **Single purpose / permissions.** No manifest permission or host permission changed from 0.7.0 to 1.0.0. 1.0.0 narrows `web_accessible_resources` from a wildcard over `dist/common/` to the files the content script imports, so extension internals such as the payment client are no longer exposed to Scholar's pages. Two optional permissions are requested at runtime and only on a user action: all sites (publisher PDF page counts, hover summaries, Copy BibTeX) and one AI provider's API host (Ask my shortlist).
+- **Remote hosts (1.0.0).** The README's host table lists every host contacted, what is sent and when. CatalyzeX was removed in 1.0.0: the extension no longer sends result titles or URLs to catalyzex.com, and the "Code" badge it drew is gone (the local Data and Code badge, which reads the result's own links, stays). The per-result lookups in the detailed view (Crossref, OpenCitations, DataCite, Unpaywall, Semantic Scholar, arXiv, Europe PMC, NCBI) have an Options switch, "Look up extra signals", on by default.
 - **Promo card (0.7.2).** The settings page and the library page show a dismissible card, on macOS only, that links to purplelink.llc/moderntex/ (a plain link with utm tags; the extension makes no request and sends nothing). The only thing stored is one flag in chrome.storage.local that the card was dismissed. It never appears on Google Scholar pages. No manifest permission or host permission changed. In the Privacy practices tab nothing new is collected; no change is needed.
 - **Install and uninstall pages (0.7.1).** The extension opens one getting-started page on purplelink.llc once, on a fresh install, and sets Chrome's uninstall page to a short page there. The extension sends no data and the data-collection answers do not change; the two page visits are counted by the site's first-party, cookieless analytics (docs/install-pages.md). The site's privacy page and the listing text must say the same.
 - **Optional AI features (triage cards, Ask my shortlist).** Triage cards run on the device (Chrome's built-in Prompt API) and send nothing. Ask my shortlist, when the user turns it on, sends the user's question and the titles and saved abstract or snippet text of the papers they select to the AI provider they chose (Anthropic, OpenAI or Google Gemini), using an API key they paste in Options. That is user content sent to a third party at the user's request, so in the Privacy practices tab review "Website content" and "User activity" (the selected paper text and question) and the disclosure that it is used only to produce the answer the user asked for and is not sold or used for other purposes. The key is stored in chrome.storage.local only and is sent only to the chosen provider. The provider host (api.anthropic.com, api.openai.com or generativelanguage.googleapis.com) is requested at runtime from the manifest's existing optional host permissions when the user turns the feature on; the required permissions and host permissions did not change, but check that "Host permission justification" still reads accurately. The extension still has no project-run backend and no telemetry.
 - **Privacy policy URL.** It must describe the flows above, including the AI provider flow; the README's "A note on the Pro tier" section has the wording.
+
+---
+
+## Release notes for 1.0.0 (paste into the dashboard's "What's new")
+
+Free: your own journal list (upload a CSV of venues and tier labels); Scholar's Quick read link stays visible; library and popup imports now merge instead of overwriting, with a backup and undo; BibTeX export writes the right entry type with venue, tags and abstract; an Options switch for the extra per-result lookups; the CatalyzeX Code badge is removed (it sent result titles to catalyzex.com); the advisor and student dataset loads only when you ask; fixes for lost saves, a freeze in the bibliography checker and a sort loop.
+
+Pro (14-day free trial, purchase or App Pass, for everyone): reference import with a search log, risk-of-bias grid, screening agreement and evidence matrix, review snapshots; claim-evidence chips, reproducibility signals and reading order; Zotero, Obsidian, LaTeX and Word exports; collection packets, similar papers and duplicates, watch lists; bibliography checker; tenure packet; optional AI (on-device triage card, and Ask my shortlist with your own API key).
