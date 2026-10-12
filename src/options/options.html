@@ -267,6 +267,25 @@
         </label>
 
         <label class="toggle-row">
+          <span>Show <strong>claim-evidence chips</strong> (Pro) under a snippet: causal wording with an observational design or none stated, &ldquo;significant&rdquo; with no statistic, a small stated N, novelty wording, no method words. Judged from the snippet only, so a chip is a prompt to check the paper, not a finding.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showClaimEvidenceChips" /><span class="slider"></span></span>
+        </label>
+        <label class="field" for="claimChipMinN">
+          <div class="label">Flag a stated sample size below this number (claim-evidence chips)</div>
+          <input type="number" id="claimChipMinN" min="2" max="10000" step="1" class="input-narrow" />
+        </label>
+
+        <label class="toggle-row">
+          <span>Show <strong>reproducibility signals</strong> (Pro): code links (GitHub, GitLab, Bitbucket, Hugging Face), data links (OSF, Zenodo, figshare, Dryad, Dataverse, Kaggle), a preregistration mention and dataset DOIs. These are signals found in the snippet and links, not a statement that the work is reproducible.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReproSignals" /><span class="slider"></span></span>
+        </label>
+
+        <label class="toggle-row">
+          <span>Show the <strong>reading order</strong> control (Pro) in the results filter panel: re-order results by your own include and exclude terms, then restore Scholar&rsquo;s order. Nothing is hidden.</span>
+          <span class="toggle-switch"><input type="checkbox" id="showReadingOrder" /><span class="slider"></span></span>
+        </label>
+
+        <label class="toggle-row">
           <span>Show <strong>Contribution Signal Score (CSS)</strong> (0–100): composite of citation velocity (log-normalized), venue tier weight, and artifact novelty.</span>
           <span class="toggle-switch"><input type="checkbox" id="showCSS" /><span class="slider"></span></span>
         </label>

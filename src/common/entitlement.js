@@ -86,6 +86,10 @@ export const PRO_FEATURES = {
   reviewWorkspace: "legacy",
   citationGraph: "legacy",
   popReport: "legacy",
+  // Added after Pro launched: unlocked by a trial, purchase or App Pass for everyone, grandfathered or not.
+  claimEvidenceChips: "new",
+  reproSignals: "new",
+  readingOrder: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */

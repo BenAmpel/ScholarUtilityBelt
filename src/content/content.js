@@ -65,6 +65,12 @@
   let trendTracker_initTrendPanel;
   let trendTracker_destroyTrendPanel;
   let getEntitlementStatus;
+  let canUseFeature;
+  // Pro signals (claim chips, reproducibility signals, reading order). Loaded in
+  // loadSignalsModules(); null/empty means "not available", and rows render without them.
+  let signalsUi = null;
+  let reproSignalsMod = null;
+  let signalsAllowed = {};
   let trialDays = 14; // overwritten with entitlement.TRIAL_DAYS once the module loads
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
@@ -160,10 +166,38 @@
       checkRetractionStatus,
       loadTorturedPhrases
     } = dataLoader);
-    ({ getEntitlementStatus } = entitlement);
+    ({ getEntitlementStatus, canUseFeature } = entitlement);
     if (Number.isFinite(entitlement.TRIAL_DAYS)) trialDays = entitlement.TRIAL_DAYS;
     await refreshEntitlementCache();
+    await loadSignalsModules();
     modulesLoaded = true;
+  }
+  /**
+   * Load the signals modules and look up which new Pro features this user may use.
+   * Never throws: on any failure the features stay off and the page works as before.
+   */
+  async function loadSignalsModules() {
+    try {
+      [signalsUi, reproSignalsMod] = await Promise.all([
+        importModuleWithRetry("dist/content/signals-ui.js"),
+        importModuleWithRetry("dist/common/repro-signals.js")
+      ]);
+      await refreshSignalsAllowed();
+    } catch (e) {
+      console.warn("[SU] signals modules unavailable", e);
+      signalsUi = null;
+      signalsAllowed = {};
+    }
+  }
+  async function refreshSignalsAllowed() {
+    const ids = ["claimEvidenceChips", "reproSignals", "readingOrder"];
+    try {
+      const ent = await getEntitlementStatus({ needPurchased: true });
+      signalsAllowed = Object.fromEntries(ids.map((id) => [id, !!canUseFeature(id, ent)]));
+    } catch {
+      signalsAllowed = {};
+    }
+    return signalsAllowed;
   }
   function safeSessionGet(key) {
     try {
@@ -723,13 +757,17 @@
     const codePatterns = [
       /github\.com/i, /gitlab\.com/i, /bitbucket\.org/i,
       /\bcode\s+repository\b/i, /\breplication\s+package\b/i,
-      /\bcode\s+available\b/i, /\bsource\s+code\b/i, /\bsoftware\s+availability\b/i
+      /\bcode\s+available\b/i, /\bsource\s+code\b/i, /\bsoftware\s+availability\b/i,
+      // Shared host list from src/common/repro-signals.js (adds Hugging Face).
+      ...(reproSignalsMod ? reproSignalsMod.CODE_HOST_REGEXES : [])
     ];
     const dataPatterns = [
       /zenodo\.org/i, /osf\.io/i, /figshare\.com/i, /\bopen\s+science\s+framework\b/i,
       /\bdataset\b/i, /\bsupplementary\s+(?:material|data|information)?\b/i,
       /\bdata\s+availability\b/i, /\bdata\s+available\b/i, /\bdata\s+and\s+code\b/i,
-      /\breplication\s+data\b/i
+      /\breplication\s+data\b/i,
+      // Shared host list from src/common/repro-signals.js (adds Dryad, Dataverse, Kaggle).
+      ...(reproSignalsMod ? reproSignalsMod.DATA_HOST_REGEXES : [])
     ];
     const haystack = [];
     const snippetEl = container.querySelector(".gs_rs");
@@ -5618,7 +5656,7 @@
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
-        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge")
+        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
         .forEach((el) => el.remove());
     } else {
       renderEmergingScore(container, paper, state, isAuthorProfile);
@@ -5628,8 +5666,12 @@
         renderArtifactBadges(container, state);
         renderCodeLinkBadge(container, paper);
         renderVelocity(container, paper, isAuthorProfile);
+        // Pro: claim-evidence chips and reproducibility signals (local, from the snippet and links).
+        if (signalsUi && !isAuthorProfile) {
+          signalsUi.renderRowSignals(container, { settings: state.settings, allowed: signalsAllowed, ownDoi: extractDOIFromResult(container) });
+        }
       } else {
-        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external").forEach((el) => el.remove());
+        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-claim-chips, .su-repro-signals").forEach((el) => el.remove());
       }
     }
     renderAuthorshipHeatmap(container, state, isAuthorProfile);
@@ -14348,6 +14390,16 @@
     body.appendChild(signalsRow);
     body.appendChild(signalsRow2);
     if (showAdvancedFilters) body.appendChild(advRow);
+    // Pro: reading-order control, or a small locked hint with an Unlock button.
+    if (signalsUi) {
+      const signalsToolbarRow = signalsUi.buildSignalsToolbarRow({
+        settings: state.settings,
+        allowed: signalsAllowed,
+        onUnlock: () => chrome.runtime.sendMessage({ action: "openUpsellModal" }),
+        isAllowed: async () => !!(await refreshSignalsAllowed()).readingOrder
+      });
+      if (signalsToolbarRow) body.appendChild(signalsToolbarRow);
+    }
     body.appendChild(sliderRow);
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();

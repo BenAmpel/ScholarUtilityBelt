@@ -214,6 +214,10 @@ async function load() {
   el("emergingScoreMinCohort").value = String(s.emergingScoreMinCohort ?? 5);
   el("showRetractionWatch").checked = !!s.showRetractionWatch;
   el("showArtifactBadge").checked = !!s.showArtifactBadge;
+  el("showClaimEvidenceChips").checked = s.showClaimEvidenceChips !== false;
+  el("claimChipMinN").value = String(s.claimChipMinN ?? 30);
+  el("showReproSignals").checked = s.showReproSignals !== false;
+  el("showReadingOrder").checked = s.showReadingOrder !== false;
   el("showCSS").checked = !!s.showCSS;
   el("showAgeBiasHeatmap").checked = !!s.showAgeBiasHeatmap;
   el("showAuthorshipHeatmap").checked = !!s.showAuthorshipHeatmap;
@@ -675,6 +679,10 @@ async function handleSave() {
     emergingScoreMinCohort: Math.max(3, Math.min(50, parseInt(el("emergingScoreMinCohort").value, 10) || 5)),
     showRetractionWatch: el("showRetractionWatch").checked,
     showArtifactBadge: el("showArtifactBadge").checked,
+    showClaimEvidenceChips: el("showClaimEvidenceChips").checked,
+    claimChipMinN: Math.max(2, Math.min(10000, parseInt(el("claimChipMinN").value, 10) || 30)),
+    showReproSignals: el("showReproSignals").checked,
+    showReadingOrder: el("showReadingOrder").checked,
     showCSS: el("showCSS").checked,
     showAgeBiasHeatmap: el("showAgeBiasHeatmap").checked,
     showAuthorshipHeatmap: el("showAuthorshipHeatmap").checked,

@@ -248,6 +248,16 @@ describe("grandfathering covers legacy Pro features only", () => {
     assert.equal(canUseFeature("compareAuthors", undefined), false);
   });
 
+  it("registers the signals features as new Pro features", () => {
+    for (const id of ["claimEvidenceChips", "reproSignals", "readingOrder"]) {
+      assert.equal(PRO_FEATURES[id], "new");
+      assert.equal(canUseFeature(id, grandfathered), false);
+      assert.equal(canUseFeature(id, free), false);
+      assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true);
+      assert.equal(canUseFeature(id, { paid: true, tier: "app-pass", purchased: true }), true);
+    }
+  });
+
   it("only knows the two promise tiers", () => {
     for (const kind of Object.values(PRO_FEATURES)) assert.ok(kind === "legacy" || kind === "new");
   });
