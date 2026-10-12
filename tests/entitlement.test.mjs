@@ -227,6 +227,15 @@ describe("grandfathering covers legacy Pro features only", () => {
     }
   });
 
+  it("registers reference import as a new feature: locked until a trial, purchase or App Pass", () => {
+    assert.equal(PRO_FEATURES.referenceImport, "new");
+    assert.equal(canUseFeature("referenceImport", free), false);
+    assert.equal(canUseFeature("referenceImport", grandfathered), false);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "grandfathered", purchased: true }), true);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "trial", purchased: true }), true);
+    assert.equal(canUseFeature("referenceImport", { paid: true, tier: "lifetime", purchased: true }), true);
+  });
+
   it("keeps a new feature locked for a grandfathered user who has not purchased", () => {
     const saved = { ...PRO_FEATURES };
     PRO_FEATURES.__futureFeature = "new";

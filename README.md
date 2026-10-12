@@ -45,6 +45,7 @@ The extension layers paper triage, venue quality signals, lightweight bibliometr
 - [x] Systematic-review workspace: multi-reviewer screening, PICO fields, PRISMA flow diagrams, and CSV/BibTeX/Markdown export
 - [x] Publish-or-Perish-style report with peer-cohort benchmarking
 - [x] Your own journal list: upload a CSV of venues and tier labels (a department or institutional list) and matching venues get a badge with your label; free for everyone, stored only in your browser
+- [x] Reference import for the review workspace (Pro, unlocked by trial, purchase or App Pass): bring RIS or BibTeX exports from PubMed, Scopus, Web of Science or a reference manager into a review project, matched by DOI then title, with a search log for the PRISMA-S methods section
 - [x] Local saved-paper library with notes, tags, collections, export/import
 - [x] Configurable options page for feature toggles, quality sources, and enrichment behavior
 

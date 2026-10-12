@@ -65,6 +65,8 @@ const TARGETS = [
   {
     label: 'common/custom-venues.js',
     args: ['src/common/custom-venues.js', '--bundle=false', '--minify', '--outfile=dist/common/custom-venues.js', '--log-level=warning'],
+    label: 'common/reference-import.js',
+    args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
   },
   {
     label: 'common/quality.js',
