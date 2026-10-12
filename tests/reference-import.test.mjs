@@ -134,7 +134,7 @@ describe("parseBibtex", () => {
 
 describe("parseReferences", () => {
   it("returns an error for unknown formats and empty results", () => {
-    assert.match(parseReferences("hello", "x.txt").error, /RIS or BibTeX/);
+    assert.match(parseReferences("hello", "x.txt").error, /RIS, BibTeX/);
     assert.match(parseReferences("TY  - JOUR\nER  - ", "x.ris").error, /No records/);
   });
   it("returns the detected format and records", () => {
@@ -174,5 +174,130 @@ describe("search log helpers", () => {
     assert.equal(totalRecordsFromSearchLog(undefined), 0);
     assert.equal(hashId("abc"), hashId("abc"));
     assert.notEqual(hashId("abc"), hashId("abd"));
+  });
+});
+
+// ---------------------------------------------------------- MEDLINE (.nbib)
+
+const { parseMedline } = await import("../src/common/reference-import.js");
+
+// Written to look like a PubMed "Save > Format: PubMed" export: padded four-character tags,
+// continuation lines indented by six spaces, repeated AU/FAU/AID/MH tags.
+const NBIB = [
+  "PMID- 33301246",
+  "OWN - NLM",
+  "STAT- MEDLINE",
+  "DP  - 2021 Mar 15",
+  "TI  - Safety and efficacy of the BNT162b2 mRNA vaccine against SARS-CoV-2 in adults: a",
+  "      systematic review of randomised trials.",
+  "PG  - 1-12",
+  "AB  - BACKGROUND: Trials reported high efficacy. METHODS: We searched three",
+  "      databases. RESULTS: Efficacy was 95%.",
+  "FAU - Polack, Fernando P",
+  "AU  - Polack FP",
+  "FAU - Thomas, Stephen J",
+  "AU  - Thomas SJ",
+  "FAU - Jean-Pierre, Marie-Claire",
+  "AU  - Jean-Pierre MC",
+  "AD  - Some University.",
+  "LA  - eng",
+  "PT  - Journal Article",
+  "PT  - Systematic Review",
+  "TA  - Lancet Infect Dis",
+  "JT  - The Lancet. Infectious diseases",
+  "AID - S1473-3099(21)00001-2 [pii]",
+  "AID - 10.1016/S1473-3099(21)00001-2 [doi]",
+  "LID - 10.1016/S1473-3099(21)00001-2 [doi]",
+  "MH  - Adult",
+  "MH  - *COVID-19 Vaccines/administration & dosage",
+  "OT  - mRNA",
+  "SO  - Lancet Infect Dis. 2021 Mar 15;21(3):1-12. doi: 10.1016/S1473-3099(21)00001-2.",
+  "",
+  "PMID- 28000001",
+  "TI  - A study with no abstract and old-style author initials only",
+  "AU  - Nguyen TT",
+  "AU  - O'Brien K",
+  "AU  - van der Berg J",
+  "DP  - 1998 Dec",
+  "TA  - J Clin Epidemiol",
+  "AID - 12345678 [pii]",
+  "SO  - J Clin Epidemiol. 1998 Dec;51(12):1-5. doi: 10.1000/ABC.99",
+  "",
+  "",
+  "PMID- 9",
+  "OWN - NLM",
+  "AB  - A record that has an abstract but no title.",
+].join("\n");
+
+describe("detectReferenceFormat (MEDLINE)", () => {
+  it("sniffs PMID lines with or without the padded tag, and the .nbib extension", () => {
+    assert.equal(detectReferenceFormat(NBIB, "pubmed-export.txt"), "medline");
+    assert.equal(detectReferenceFormat("PMID - 123\nTI  - x", "a.txt"), "medline");
+    assert.equal(detectReferenceFormat("﻿PMID- 123\nTI  - x"), "medline");
+    assert.equal(detectReferenceFormat("", "citation.nbib"), "medline");
+    assert.equal(detectReferenceFormat(RIS, "x.nbib"), "ris", "content beats the extension");
+  });
+});
+
+describe("parseMedline", () => {
+  const { records, skipped } = parseMedline(NBIB);
+  it("reads records and skips one with no title", () => {
+    assert.equal(records.length, 2);
+    assert.equal(skipped, 1);
+  });
+  it("joins wrapped titles and abstracts", () => {
+    assert.equal(records[0].title, "Safety and efficacy of the BNT162b2 mRNA vaccine against SARS-CoV-2 in adults: a systematic review of randomised trials.");
+    assert.match(records[0].abstract, /^BACKGROUND: Trials reported high efficacy\. METHODS: We searched three databases\. RESULTS/);
+  });
+  it("uses FAU for authors in the same style as RIS, and falls back to AU initials", () => {
+    assert.equal(records[0].authors, "FP Polack, SJ Thomas, MC Jean-Pierre");
+    assert.equal(records[1].authors, "TT Nguyen, K O'Brien, J van der Berg");
+  });
+  it("takes year, venue, DOI, keywords, pmid and source", () => {
+    assert.equal(records[0].year, "2021");
+    assert.equal(records[0].venue, "The Lancet. Infectious diseases");
+    assert.equal(records[0].doi, "10.1016/s1473-3099(21)00001-2");
+    assert.deepEqual(records[0].keywords, ["Adult", "COVID-19 Vaccines/administration & dosage", "mRNA"]);
+    assert.equal(records[0].pmid, "33301246");
+    assert.equal(records[0].sourceDb, "PubMed");
+    assert.equal(records[0].url, "https://pubmed.ncbi.nlm.nih.gov/33301246/");
+  });
+  it("copes with a missing abstract, a pii-only AID, a DOI found only in SO, and TA as venue", () => {
+    assert.equal(records[1].abstract, "");
+    assert.equal(records[1].venue, "J Clin Epidemiol");
+    assert.equal(records[1].doi, "10.1000/abc.99");
+    assert.equal(records[1].year, "1998");
+  });
+  it("handles CRLF line endings and a missing trailing blank line", () => {
+    const crlf = NBIB.replace(/\n/g, "\r\n");
+    const r = parseMedline(crlf);
+    assert.equal(r.records.length, 2);
+    assert.equal(r.records[0].title, records[0].title);
+    assert.equal(r.skipped, 1);
+  });
+  it("starts a new record at a PMID line even without a blank line", () => {
+    const r = parseMedline("PMID- 1\nTI  - One\nPMID- 2\nTI  - Two");
+    assert.deepEqual(r.records.map((x) => x.title), ["One", "Two"]);
+  });
+  it("tolerates malformed input without throwing", () => {
+    assert.deepEqual(parseMedline(""), { records: [], skipped: 0 });
+    assert.deepEqual(parseMedline("hello\nthis is not medline\n\n???"), { records: [], skipped: 0 });
+    const r = parseMedline("PMID- x\nTI  - \nAU  - \n\nTI  - Orphan fields, no PMID\nDP  - n.d.\nJT  -");
+    assert.equal(r.records.length, 1);
+    assert.equal(r.records[0].title, "Orphan fields, no PMID");
+    assert.equal(r.records[0].year, "");
+    assert.equal(r.records[0].pmid, "");
+    assert.equal(r.skipped, 1);
+  });
+  it("is reached through parseReferences and reports the format", () => {
+    const p = parseReferences(NBIB, "pubmed-result.nbib");
+    assert.equal(p.format, "medline");
+    assert.equal(p.records.length, 2);
+    assert.equal(p.error, "");
+    assert.match(parseReferences("nothing useful", "x.txt").error, /MEDLINE/);
+  });
+  it("appears in the search log as its own format", () => {
+    const csv = searchLogToCsv([{ database: "PubMed", fileName: "a.nbib", format: "medline", recordsInFile: 2, added: 2, duplicates: 0 }]);
+    assert.match(csv.split("\n")[1], /^PubMed,,,a\.nbib,medline,2,2,0$/);
   });
 });

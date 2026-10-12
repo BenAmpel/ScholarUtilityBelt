@@ -25,7 +25,7 @@ import {
 import {
   ROB_NOTICE, ROB_LEVELS, ROB_LEVEL_LABELS, ROB_TEMPLATES, normalizeRob, templateFor, setJudgement, setOverall,
   setPaperTemplate, setDefaultTemplate, addCustomDomain, renameCustomDomain, removeCustomDomain,
-  summarizePaper, robToCsv, robToMarkdown, robValueText
+  summarizePaper, robToCsv, robToMarkdown, robValueText, CHECK_ANSWERS, CHECK_LABELS
 } from "../common/rob.js";
 import {
   MAYBE_MODES, computeAgreement, latestResolution, appendResolution, methodsParagraph, resolutionsToCsv
@@ -225,12 +225,15 @@ export function createReviewWorkspace(deps) {
     for (const p of papers) {
       if (!p || !p.title) continue;
       const fp = paperFingerprint(p);
-      if (project.fingerprints?.[fp]) {
+      // A PubMed id (from .nbib imports) is a second key: it also catches a record whose DOI or title differs.
+      const pmKey = p.pmid ? `pmid:${p.pmid}` : "";
+      const hitKey = project.fingerprints?.[fp] ? fp : (pmKey && project.fingerprints?.[pmKey] ? pmKey : "");
+      if (hitKey) {
         duplicates += 1;
         project.duplicates = Array.isArray(project.duplicates) ? project.duplicates : [];
         project.duplicates.push({
-          fingerprint: fp,
-          existingId: project.fingerprints[fp],
+          fingerprint: hitKey,
+          existingId: project.fingerprints[hitKey],
           paper: { ...p },
           addedAt: new Date().toISOString()
         });
@@ -238,6 +241,7 @@ export function createReviewWorkspace(deps) {
       }
       project.papers[p.id] = p;
       project.fingerprints[fp] = p.id;
+      if (pmKey) project.fingerprints[pmKey] = p.id;
       added += 1;
     }
     project.dedupeCount = (project.dedupeCount || 0) + duplicates;
@@ -613,7 +617,8 @@ export function createReviewWorkspace(deps) {
       citations: 0,
       abstract: rec.abstract,
       source: "import",
-      importDb: database
+      importDb: database,
+      ...(rec.pmid ? { pmid: rec.pmid } : {})
     };
   }
   async function refreshImportEntitlement(state) {
@@ -630,7 +635,7 @@ export function createReviewWorkspace(deps) {
       return `
         <div class="su-review-import">
           <h3>Import references <span class="su-review-pro-tag">Pro</span></h3>
-          <p class="su-review-muted">Import RIS or BibTeX exports from PubMed, Scopus, Web of Science, Embase or a reference manager, match them against the records already in this project, and keep a search log for your PRISMA-S methods section. It is part of the extension and unlocked with a free trial, a purchase or App Pass.</p>
+          <p class="su-review-muted">Import RIS, BibTeX or PubMed .nbib exports from PubMed, Scopus, Web of Science, Embase or a reference manager, match them against the records already in this project, and keep a search log for your PRISMA-S methods section. It is part of the extension and unlocked with a free trial, a purchase or App Pass.</p>
           <div class="su-review-actions">
             <button type="button" class="su-graph-btn" data-review-unlock="1" data-feature="referenceImport">Unlock Pro</button>
           </div>
@@ -651,7 +656,7 @@ export function createReviewWorkspace(deps) {
       </tr>`).join("");
     return `
       <div class="su-review-import">
-        <p class="su-review-muted">Import a RIS or BibTeX export from a database or reference manager. Records are matched to this project by DOI, then by title, so papers already added from Google Scholar are not repeated. Each import is added to the search log below. Files are read in your browser and nothing is uploaded.</p>
+        <p class="su-review-muted">Import a RIS, BibTeX or PubMed MEDLINE (.nbib) export from a database or reference manager. Records are matched to this project by DOI, then by title, so papers already added from Google Scholar are not repeated. Each import is added to the search log below. Files are read in your browser and nothing is uploaded.</p>
         <div class="su-review-import-form">
           <label>Database or source
             <input type="text" id="su-review-imp-db" class="su-review-input" list="su-review-imp-dbs" maxlength="80" autocomplete="off" />
@@ -663,8 +668,8 @@ export function createReviewWorkspace(deps) {
           <label>Search string, exactly as run
             <textarea id="su-review-imp-query" class="su-review-input" rows="3" maxlength="4000"></textarea>
           </label>
-          <label>File (.ris, .bib)
-            <input type="file" id="su-review-ref-file" accept=".ris,.bib,.bibtex,.txt,text/plain" />
+          <label>File (.ris, .bib, .nbib)
+            <input type="file" id="su-review-ref-file" accept=".ris,.bib,.bibtex,.nbib,.txt,text/plain" />
           </label>
           <div class="su-review-actions">
             <button type="button" class="su-graph-btn" data-review-run-import="1">Import references</button>
@@ -693,7 +698,7 @@ export function createReviewWorkspace(deps) {
     const searchedOn = String(overlay.querySelector("#su-review-imp-date")?.value || "").trim();
     const query = String(overlay.querySelector("#su-review-imp-query")?.value || "").trim();
     const file = overlay.querySelector("#su-review-ref-file")?.files?.[0];
-    if (!file) return setStatus("Choose a RIS or BibTeX file first.");
+    if (!file) return setStatus("Choose a RIS, BibTeX or .nbib file first.");
     if (!database) return setStatus("Say which database or source this file came from. It goes in the search log.");
     if (file.size > MAX_FILE_BYTES) return setStatus("That file is over 25 MB. Export it in smaller batches.");
     let parsed;
@@ -736,7 +741,7 @@ export function createReviewWorkspace(deps) {
   const PRO_TABS = { rob: "riskOfBias", agreement: "screeningAgreement", matrix: "evidenceMatrix", snapshots: "reviewSnapshots" };
   const PRO_ACTION_FEATURE = { rob: "riskOfBias", agr: "screeningAgreement", mx: "evidenceMatrix", snap: "reviewSnapshots" };
   const PRO_BLURBS = {
-    riskOfBias: ["Risk of bias grid", "Record your own risk-of-bias judgement per paper, per domain and per reviewer, using RoB 2, ROBINS-I, Newcastle-Ottawa star counts or a checklist you edit. Export to CSV or Markdown."],
+    riskOfBias: ["Risk of bias grid", "Record your own risk-of-bias judgement per paper, per domain and per reviewer, using RoB 2, ROBINS-I, Newcastle-Ottawa star counts, JBI-style design checklists (yes, no, unclear, not applicable) or a checklist you edit. Export to CSV or Markdown."],
     screeningAgreement: ["Screening agreement", "Percent agreement and Cohen's kappa between two reviewers, a list of their disagreements with a resolution log, and a methods paragraph with the numbers."],
     evidenceMatrix: ["Evidence matrix", "Papers as rows and concept columns you define from extraction fields, tags and notes. Sort, group, and export to Markdown, CSV or a Word-friendly HTML table."],
     reviewSnapshots: ["Snapshots and change log", "Save named snapshots of your review work, restore one when you need to, and keep a log of every screening decision change."]
@@ -788,6 +793,7 @@ export function createReviewWorkspace(deps) {
     const ids = includedPaperIds(project);
     const shown = ids.slice(0, 60);
     const levelOptions = [["", "Not assessed"], ...ROB_LEVELS.map((l) => [l, ROB_LEVEL_LABELS[l]])];
+    const checkOptions = [["", "Not assessed"], ...CHECK_ANSWERS.map((a) => [a, CHECK_LABELS[a]])];
     const templateOptions = Object.values(ROB_TEMPLATES).map((t) => [t.id, t.label]);
     const cards = shown.map((id) => {
       const paper = project.papers[id] || {};
@@ -799,7 +805,7 @@ export function createReviewWorkspace(deps) {
       const domainRows = template.domains.map((d) => {
         const choices = template.scale === "stars"
           ? [["", "Not assessed"], ...Array.from({ length: (d.maxStars || 0) + 1 }, (_, n) => [String(n), `${n} of ${d.maxStars}`])]
-          : levelOptions;
+          : template.scale === "checklist" ? checkOptions : levelOptions; // checklist: yes / no / unclear / not applicable
         const current = mine[d.key] === undefined ? "" : String(mine[d.key]);
         const otherText = blind ? "" : others.map((r) => {
           const t = robValueText(template, entry.reviewers?.[r.id]?.[d.key]);
@@ -813,6 +819,8 @@ export function createReviewWorkspace(deps) {
       }).join("") || '<div class="su-review-muted">This checklist has no domains yet. Add some under custom checklist domains above.</div>';
       const tallies = summary.byReviewer.map((t) => template.scale === "stars"
         ? `${t.name}: ${t.stars} of ${t.maxStars} stars (${t.assessed} of ${t.assessed + t.notAssessed} domains assessed)`
+        : template.scale === "checklist"
+        ? `${t.name}: yes count ${t.yes} of ${t.assessed + t.notAssessed} items (a count, not a judgement); ${t.no} no, ${t.unclear} unclear, ${t.na} not applicable, ${t.notAssessed} not assessed`
         : `${t.name}: ${t.low} low, ${t.some} some concerns, ${t.high} high, ${t.notAssessed} not assessed`).join(" | ");
       const differs = !blind && summary.differing ? ` ${summary.differing} domain${summary.differing === 1 ? "" : "s"} differ between reviewers.` : "";
       return `<div class="su-review-card su-review-rob-paper" data-review-id="${escapeHtml(id)}">

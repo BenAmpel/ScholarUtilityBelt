@@ -1,5 +1,6 @@
 /**
- * Parsing for reference-manager and database exports (RIS and BibTeX) into plain
+ * Parsing for reference-manager and database exports (RIS, BibTeX and PubMed
+ * MEDLINE/.nbib) into plain
  * records, plus the PRISMA-S search-log helpers. Pure functions: no DOM, no
  * storage, no network. The review workspace turns records into project papers.
  */
@@ -7,13 +8,16 @@
 export const MAX_RECORDS = 20000;
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
-/** "ris", "bibtex" or "" from the file's own content (the file name is only a hint). */
+/** "ris", "bibtex", "medline" or "" from the file's own content (the file name is only a hint). */
 export function detectReferenceFormat(text, fileName = "") {
   const head = String(text ?? "").replace(/^\uFEFF/, "").slice(0, 4000);
   if (/^\s*TY {2}- /m.test(head)) return "ris";
   if (/^\s*@\w+\s*[{(]/m.test(head)) return "bibtex";
+  // PubMed's MEDLINE format: "PMID- 12345" (the tag is padded to four characters; some tools write "PMID - ").
+  if (/^\s*PMID ?- /m.test(head)) return "medline";
   if (/\.ris$/i.test(fileName)) return "ris";
   if (/\.bib(tex)?$/i.test(fileName)) return "bibtex";
+  if (/\.nbib$/i.test(fileName)) return "medline";
   return "";
 }
 
@@ -93,6 +97,73 @@ export function parseRis(text) {
       abstract: get("AB", "N2"),
       keywords: fields.filter(([t]) => t === "KW").map(([, v]) => clean(v)).filter(Boolean),
       sourceDb: get("DB", "DP"),
+    });
+  }
+  return { records, skipped };
+}
+
+// ------------------------------------------------------------ MEDLINE
+
+// "TAG - value": the tag is 2 to 4 characters padded with spaces to four, then "- ".
+const MEDLINE_LINE = /^([A-Z][A-Z0-9]{1,3}) *-(?: (.*)|)$/;
+
+/** "Smith JA" becomes "JA Smith", matching formatAuthor's output; a full "Last, First" goes through formatAuthor. */
+function formatMedlineAuthor(raw) {
+  const a = clean(raw);
+  if (a.includes(",")) return formatAuthor(a);
+  const m = a.match(/^(.+?)\s+([A-Z]{1,5})$/);
+  return m ? `${m[2]} ${m[1]}` : a;
+}
+
+/**
+ * Parses PubMed MEDLINE text (.nbib or "MEDLINE" format). Records are separated
+ * by blank lines (a new PMID line also starts one), values wrap onto lines
+ * indented by six spaces, and tags repeat. Returns { records, skipped }, where
+ * skipped counts records with no title. Text that has no tag lines at all
+ * (stray lines between records) is ignored rather than counted.
+ */
+export function parseMedline(text) {
+  const lines = String(text ?? "").replace(/^\uFEFF/, "").split(/\r\n|\n|\r/);
+  const entries = [];
+  let cur = null;
+  for (const line of lines) {
+    if (!line.trim()) { cur = null; continue; }
+    const m = line.match(MEDLINE_LINE);
+    if (m) {
+      const tag = m[1];
+      if (!cur || (tag === "PMID" && cur.some(([t]) => t === "PMID"))) { cur = []; entries.push(cur); }
+      cur.push([tag, m[2] ?? ""]);
+    } else if (cur && /^\s/.test(line)) {
+      const last = cur[cur.length - 1];
+      last[1] = `${last[1]} ${line.trim()}`;
+    }
+  }
+  const records = [];
+  let skipped = 0;
+  for (const fields of entries) {
+    const all = (...tags) => fields.filter(([t]) => tags.includes(t)).map(([, v]) => clean(v)).filter(Boolean);
+    // Tags are tried in the order given (JT before TA), not in file order.
+    const first = (...tags) => tags.map((t) => all(t)[0]).find(Boolean) || "";
+    const title = first("TI", "BTI");
+    if (!title) { skipped++; continue; }
+    const pmid = (first("PMID").match(/\d+/) || [""])[0];
+    const full = all("FAU");
+    const authors = (full.length ? full : all("AU")).map(formatMedlineAuthor).concat(all("CN")).filter(Boolean);
+    // AID and LID carry "10.xxxx/yyyy [doi]" next to PII and other identifiers; only the [doi] one is a DOI.
+    const doiIds = all("AID", "LID").filter((v) => /\[doi\]\s*$/i.test(v)).map(normalizeDoi);
+    const doiFromSo = normalizeDoi((first("SO").match(/doi:\s*(\S+)/i) || [])[1]);
+    const keywords = [...new Set(all("MH", "OT").map((k) => k.replace(/^\*+/, "")))];
+    records.push({
+      title,
+      authors: authors.join(", "),
+      year: yearOf(first("DP")) || yearOf(first("DEP").replace(/^(\d{4})(\d\d)(\d\d)$/, "$1 $2 $3")) || yearOf(first("EDAT")),
+      venue: first("JT", "TA"),
+      doi: doiIds.find(Boolean) || doiFromSo,
+      url: pmid ? `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` : "",
+      abstract: first("AB"),
+      keywords,
+      sourceDb: "PubMed",
+      pmid,
     });
   }
   return { records, skipped };
@@ -195,9 +266,9 @@ export function parseBibtex(text) {
 export function parseReferences(text, fileName = "") {
   const format = detectReferenceFormat(text, fileName);
   if (!format) {
-    return { format: "", records: [], skipped: 0, truncated: false, error: "Not a RIS or BibTeX file. Export from your database as RIS or BibTeX and try again." };
+    return { format: "", records: [], skipped: 0, truncated: false, error: "Not a RIS, BibTeX or PubMed MEDLINE (.nbib) file. Export from your database as RIS, BibTeX or, from PubMed, as a citation file (.nbib) and try again." };
   }
-  const parsed = format === "ris" ? parseRis(text) : parseBibtex(text);
+  const parsed = format === "ris" ? parseRis(text) : format === "medline" ? parseMedline(text) : parseBibtex(text);
   let { records } = parsed;
   const truncated = records.length > MAX_RECORDS;
   if (truncated) records = records.slice(0, MAX_RECORDS);

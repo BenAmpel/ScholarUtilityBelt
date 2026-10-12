@@ -18,15 +18,33 @@
  *     customDomains: [{ key, label }],
  *     papers: { [paperId]: { template?, reviewers: { [reviewerId]: { [domainKey]: value } }, overall: { judgement, note } } }
  *   }
- * `value` is "low" | "some" | "high" for judgement templates and an integer
- * star count for the star template. A missing key means "not assessed".
+ * `value` is "low" | "some" | "high" for judgement templates, an integer
+ * star count for the star template and "yes" | "no" | "unclear" | "na" for
+ * the checklist templates (jbi_*). A missing key means "not assessed".
  */
 
-export const ROB_NOTICE = "This grid only records your own judgement. Apply the official tool (RoB 2, ROBINS-I or the Newcastle-Ottawa Scale) using its guidance; the names here are short labels, not the official wording, and nothing is judged for you.";
+export const ROB_NOTICE = "This grid only records your own judgement. Apply the official tool (RoB 2, ROBINS-I, the Newcastle-Ottawa Scale or a JBI critical appraisal checklist) using its guidance; the names here are short labels, not the official wording, and nothing is judged for you.";
 
 export const ROB_LEVELS = ["low", "some", "high"];
 export const ROB_LEVEL_LABELS = { low: "Low", some: "Some concerns", high: "High" };
 export const MAX_CUSTOM_DOMAINS = 30;
+
+// Checklist templates (scale "checklist") take one of these answers per item.
+export const CHECK_ANSWERS = ["yes", "no", "unclear", "na"];
+export const CHECK_LABELS = { yes: "Yes", no: "No", unclear: "Unclear", na: "Not applicable" };
+
+/*
+ * JBI-style design-specific checklists. Each item below is a SHORT original
+ * paraphrase of what the appraisal question asks, written for this grid; it
+ * is not the official JBI text. The item lists, their order and the item
+ * counts (analytical cross-sectional 8, cohort 11, randomized controlled trial
+ * 13, case-control 10) are FROM RECALL: verify them against the official JBI
+ * critical appraisal checklists before release. The grid records the user's
+ * answers only; no overall judgement is computed from them.
+ */
+function checklist(id, label, prefix, short, items) {
+  return { id, label, short, scale: "checklist", domains: items.map((text, i) => ({ key: `${prefix}_${i + 1}`, label: `${i + 1}. ${text}` })) };
+}
 
 export const ROB_TEMPLATES = {
   rob2: {
@@ -65,6 +83,56 @@ export const ROB_TEMPLATES = {
       { key: "nos_outcome", label: "Outcome", maxStars: 3 }
     ]
   },
+  jbi_xs: checklist("jbi_xs", "JBI-style checklist: analytical cross-sectional", "jbixs", "Cross-sectional", [
+    "Inclusion criteria clearly defined",
+    "Participants and setting described in enough detail",
+    "Exposure measured in a valid and reliable way",
+    "Objective, standard criteria used to measure the condition",
+    "Confounding factors identified",
+    "Strategies for dealing with confounders stated",
+    "Outcomes measured in a valid and reliable way",
+    "Appropriate statistical analysis used"
+  ]),
+  jbi_cohort: checklist("jbi_cohort", "JBI-style checklist: cohort", "jbico", "Cohort", [
+    "Groups similar and recruited from the same population",
+    "Exposure measured the same way for both groups",
+    "Exposure measured in a valid and reliable way",
+    "Confounding factors identified",
+    "Strategies for dealing with confounders stated",
+    "Groups free of the outcome at the start",
+    "Outcomes measured in a valid and reliable way",
+    "Follow-up time reported and long enough for outcomes to occur",
+    "Follow-up complete, or reasons for loss described",
+    "Strategies to address incomplete follow-up used",
+    "Appropriate statistical analysis used"
+  ]),
+  jbi_rct: checklist("jbi_rct", "JBI-style checklist: randomized controlled trial", "jbirc", "RCT", [
+    "True randomization used to assign participants",
+    "Allocation to groups concealed",
+    "Groups similar at baseline",
+    "Participants blind to their assignment",
+    "Those delivering the treatment blind to assignment",
+    "Outcome assessors blind to assignment",
+    "Groups treated identically apart from the intervention",
+    "Follow-up complete, or differences in loss described and analysed",
+    "Participants analysed in the groups they were randomized to",
+    "Outcomes measured the same way for all groups",
+    "Outcomes measured in a reliable way",
+    "Appropriate statistical analysis used",
+    "Trial design appropriate, with deviations from it accounted for"
+  ]),
+  jbi_cc: checklist("jbi_cc", "JBI-style checklist: case-control", "jbicc", "Case-control", [
+    "Cases and controls comparable apart from the disease",
+    "Cases and controls matched appropriately",
+    "Same criteria used to identify cases and controls",
+    "Exposure measured in a standard, valid and reliable way",
+    "Exposure measured the same way for cases and controls",
+    "Confounding factors identified",
+    "Strategies for dealing with confounders stated",
+    "Outcomes assessed in a standard, valid and reliable way",
+    "Exposure period long enough to be meaningful",
+    "Appropriate statistical analysis used"
+  ]),
   custom: {
     id: "custom",
     label: "Custom checklist (edit the domains)",
@@ -114,6 +182,7 @@ function paperEntry(rob, paperId) {
 /** Whether `value` is a legal answer for that domain of that template. */
 export function isValidValue(template, domain, value) {
   if (template.scale === "stars") return Number.isInteger(value) && value >= 0 && value <= (domain.maxStars || 0);
+  if (template.scale === "checklist") return CHECK_ANSWERS.includes(value);
   return ROB_LEVELS.includes(value);
 }
 
@@ -205,12 +274,15 @@ export function summarizePaper(rob, paperId, reviewers) {
   const byReviewer = [];
   for (const rev of reviewers || []) {
     const answers = isObj(entry.reviewers?.[rev.id]) ? entry.reviewers[rev.id] : {};
-    const tally = { reviewerId: rev.id, name: rev.name || rev.id, assessed: 0, notAssessed: 0, low: 0, some: 0, high: 0, stars: 0, maxStars: 0 };
+    const tally = { reviewerId: rev.id, name: rev.name || rev.id, assessed: 0, notAssessed: 0, low: 0, some: 0, high: 0, stars: 0, maxStars: 0, yes: 0, no: 0, unclear: 0, na: 0 };
     for (const d of template.domains) {
       const v = answers[d.key];
       if (template.scale === "stars") {
         tally.maxStars += d.maxStars || 0;
         if (isValidValue(template, d, v)) { tally.assessed += 1; tally.stars += v; } else tally.notAssessed += 1;
+      } else if (template.scale === "checklist") {
+        // Counts of each answer only. "yes" is a tally, not a quality score.
+        if (CHECK_ANSWERS.includes(v)) { tally.assessed += 1; tally[v] += 1; } else tally.notAssessed += 1;
       } else if (ROB_LEVELS.includes(v)) { tally.assessed += 1; tally[v] += 1; } else tally.notAssessed += 1;
     }
     byReviewer.push(tally);
@@ -226,6 +298,7 @@ export function summarizePaper(rob, paperId, reviewers) {
 /** Display text for one stored answer: the level label, the star count, or "" when not assessed. */
 export function robValueText(template, v) {
   if (template.scale === "stars") return Number.isInteger(v) ? String(v) : "";
+  if (template.scale === "checklist") return CHECK_LABELS[v] || "";
   return ROB_LEVEL_LABELS[v] || "";
 }
 
@@ -248,7 +321,9 @@ function exportRows(rob, paperIds, papers, reviewers) {
       rows.push({
         id, title: papers?.[id]?.title || "", year: papers?.[id]?.year || "",
         template, reviewer: rev.name || rev.id,
-        cells: template.domains.map((d) => ({ label: d.label, text: robValueText(template, answers[d.key]) })),
+        // Several checklists share item wording, so CSV columns for them carry the design name.
+        cells: template.domains.map((d) => ({ label: template.scale === "checklist" ? `${template.short}: ${d.label}` : d.label, text: robValueText(template, answers[d.key]) })),
+        yesCount: template.scale === "checklist" ? template.domains.filter((d) => answers[d.key] === "yes").length : null,
         overall: ROB_LEVEL_LABELS[entry.overall?.judgement] || "",
         note: entry.overall?.note || ""
       });
@@ -262,10 +337,12 @@ export function robToCsv({ rob, paperIds, papers, reviewers }) {
   const rows = exportRows(rob, paperIds || [], papers, reviewers || []);
   const labels = [];
   rows.forEach((row) => row.cells.forEach((c) => { if (!labels.includes(c.label)) labels.push(c.label); }));
-  const header = ["Title", "Year", "Template", "Reviewer", ...labels, "Overall (set by you)", "Overall note"];
+  // The yes-count column appears only when a checklist template is in use, so older exports keep their shape.
+  const withYes = rows.some((row) => row.yesCount !== null);
+  const header = ["Title", "Year", "Template", "Reviewer", ...labels, ...(withYes ? ["Yes count (a count only)"] : []), "Overall (set by you)", "Overall note"];
   const lines = [header];
   rows.forEach((row) => {
-    lines.push([row.title, row.year, row.template.label, row.reviewer, ...labels.map((l) => row.cells.find((c) => c.label === l)?.text ?? ""), row.overall, row.note]);
+    lines.push([row.title, row.year, row.template.label, row.reviewer, ...labels.map((l) => row.cells.find((c) => c.label === l)?.text ?? ""), ...(withYes ? [row.yesCount === null ? "" : row.yesCount] : []), row.overall, row.note]);
   });
   return lines.map((l) => l.map(csvCell).join(",")).join("\n");
 }
@@ -280,11 +357,14 @@ export function robToMarkdown({ rob, paperIds, papers, reviewers, title }) {
   for (const [, group] of byTemplate) {
     const t = group[0].template;
     out.push(`## ${t.label}`, "");
-    const header = ["Paper", "Reviewer", ...t.domains.map((d) => (t.scale === "stars" ? `${d.label} (max ${d.maxStars})` : d.label)), "Overall (set by you)", "Note"];
+    const isCheck = t.scale === "checklist";
+    // Checklist items are long, so the table uses Q1..Qn columns and lists the items once above it.
+    if (isCheck) out.push(...t.domains.map((d) => `- Q${d.label.replace(/\.\s/, ": ")}`), "");
+    const header = ["Paper", "Reviewer", ...t.domains.map((d, i) => (isCheck ? `Q${i + 1}` : t.scale === "stars" ? `${d.label} (max ${d.maxStars})` : d.label)), ...(isCheck ? ["Yes count (a count only)"] : []), "Overall (set by you)", "Note"];
     out.push(`| ${header.map(mdCell).join(" | ")} |`, `| ${header.map(() => "---").join(" | ")} |`);
     group.forEach((row) => {
       const paper = `${row.title || "Untitled"}${row.year ? ` (${row.year})` : ""}`;
-      out.push(`| ${[paper, row.reviewer, ...row.cells.map((c) => c.text), row.overall, row.note].map(mdCell).join(" | ")} |`);
+      out.push(`| ${[paper, row.reviewer, ...row.cells.map((c) => c.text), ...(isCheck ? [row.yesCount] : []), row.overall, row.note].map(mdCell).join(" | ")} |`);
     });
     out.push("");
   }
