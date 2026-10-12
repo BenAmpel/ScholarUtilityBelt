@@ -38,6 +38,39 @@ function fireInvalidated() {
   for (const cb of invalidatedListeners.splice(0)) { try { cb(); } catch { /* ignore */ } }
 }
 
+// ── Caps for maps that gain a key per page, paper or author visited ──────────
+// unlimitedStorage means a full disk is the only limit, so these used to grow for as long as the
+// extension was installed. Each cap keeps the most recent entries; the numbers are far above what a
+// person reads in a few months, so normal use never loses anything.
+export const PAGE_VISIT_CACHE_MAX = 300;
+export const CITATION_SNAPSHOTS_MAX = 5000;
+export const READING_LOAD_PAGES_MAX = 5000;
+export const AUTHOR_HINDEX_PROFILES_MAX = 200;
+
+/**
+ * Returns `map` with at most `max` entries, keeping the ones with the highest `score(entry)` (ties keep
+ * the later-inserted key). Returns the same object when it is already small enough, so callers can skip a write.
+ */
+export function capRecordCount(map, max, score) {
+  if (!map || typeof map !== "object") return {};
+  const keys = Object.keys(map);
+  if (keys.length <= max) return map;
+  const ranked = keys.map((key, i) => ({ key, i, s: Number(score ? score(map[key], key) : 0) || 0 }));
+  ranked.sort((a, b) => b.s - a.s || b.i - a.i);
+  const keep = new Set(ranked.slice(0, max).map((r) => r.key));
+  const out = {};
+  for (const key of keys) if (keep.has(key)) out[key] = map[key];
+  return out;
+}
+
+/** True when `everyMs` has passed since `lastMs` (0 or missing means never run). A time in the future (clock change) counts as due. */
+export function isDue(lastMs, everyMs = 24 * 60 * 60 * 1000, now = Date.now()) {
+  const last = Number(lastMs);
+  if (!(last > 0)) return true;
+  if (last > now + 60 * 1000) return true;
+  return now - last >= everyMs;
+}
+
 /** True when the extension was reloaded/updated and chrome.* APIs are no longer valid. */
 function isContextInvalidated(e) {
   const hit = contextInvalidatedMessage(e);
@@ -560,7 +593,8 @@ export async function setReadingLoadPageCount(paperKey, pages) {
       const counts = await getReadingLoadPageCounts();
       if (counts[paperKey] === pages) return;
       counts[paperKey] = pages;
-      await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: counts });
+      // No timestamp on these, so when over the cap the keys added last are kept.
+      await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: capRecordCount(counts, READING_LOAD_PAGES_MAX, null) });
     });
   } catch (e) {
     if (isContextInvalidated(e)) return;
@@ -746,7 +780,8 @@ export async function setPageVisitCacheEntry(pageKey, seenKeys, timestamp) {
         return;
       }
       cache[pageKey] = nextEntry;
-      await chrome.storage.local.set({ [PAGE_VISIT_CACHE_KEY]: cache });
+      const recent = capRecordCount(cache, PAGE_VISIT_CACHE_MAX, (e) => Date.parse(e && e.timestamp) || 0);
+      await chrome.storage.local.set({ [PAGE_VISIT_CACHE_KEY]: recent });
     });
   } catch (e) {
     if (isContextInvalidated(e)) return;
@@ -783,7 +818,8 @@ export async function setCitationSnapshot(clusterId, citations, date) {
       const nextEntry = { citations: next.citations, date: next.date, history: trimmed };
       if (sameJsonValue(entry, nextEntry)) return;
       snap[clusterId] = nextEntry;
-      await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: snap });
+      const recent = capRecordCount(snap, CITATION_SNAPSHOTS_MAX, (e) => Date.parse(e && e.date) || 0);
+      await chrome.storage.local.set({ [CITATION_SNAPSHOTS_KEY]: recent });
     });
   } catch (e) {
     if (isContextInvalidated(e)) return;
@@ -911,7 +947,8 @@ export async function setAuthorHIndexSnapshot(profileUrl, hIndex) {
       list.push({ date: now.toISOString(), hIndex });
       const pruned = list.filter((e) => e.date >= cutoff).slice(-50);
       data[profileUrl] = pruned;
-      await chrome.storage.local.set({ [AUTHOR_HINDEX_SNAPSHOTS_KEY]: data });
+      const recent = capRecordCount(data, AUTHOR_HINDEX_PROFILES_MAX, (list) => (Array.isArray(list) && list.length ? Date.parse(list[list.length - 1].date) || 0 : 0));
+      await chrome.storage.local.set({ [AUTHOR_HINDEX_SNAPSHOTS_KEY]: recent });
     });
   } catch (e) {
     if (isContextInvalidated(e)) return;
