@@ -1,6 +1,7 @@
 // Bibliography checker page (Pro). All checks run locally against data shipped
 // with the extension. The only network call is the optional Crossref lookup,
 // which runs after an explicit click.
+import { showProPrompt } from "../common/pro-prompt.js";
 import { getQualityJcrIndex, getQualityQuartilesIndex, getSettings } from "../common/storage.js";
 import { compileQualityIndex } from "../common/quality.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
@@ -203,7 +204,7 @@ async function init() {
     .catch(() => false);
   if (!allowed) {
     el("lockedCard").hidden = false;
-    el("unlockPro").addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+    el("unlockPro").addEventListener("click", () => showProPrompt({ featureId: "bibliographyCheck" }));
     return;
   }
   el("toolBody").hidden = false;

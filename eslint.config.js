@@ -98,6 +98,7 @@ module.exports = [
       "src/common/quality.js",
       "src/common/scholar-links.js",
       "src/common/bibtex.js",
+      "src/common/pro-prompt.js",
       "src/common/custom-venues.js",
       "src/common/reference-import.js",
       "src/common/reference-import.js",

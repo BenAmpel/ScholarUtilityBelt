@@ -99,6 +99,10 @@ const TARGETS = [
     args: ['src/common/reading-order.js', '--bundle=false', '--minify', '--outfile=dist/common/reading-order.js', '--log-level=warning'],
   },
   {
+    label: 'common/pro-prompt.js',
+    args: ['src/common/pro-prompt.js', '--bundle=false', '--minify', '--outfile=dist/common/pro-prompt.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },

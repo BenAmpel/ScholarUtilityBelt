@@ -1,6 +1,7 @@
 // Library page tools: collection packets, similarity and duplicates, watch lists.
 // Logic lives in ../common/*.js (pure, tested); this file only wires it to the page.
 
+import { showProPrompt } from "../common/pro-prompt.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import { importLibraryPayload, mergeDuplicatesInStorage } from "../common/library-import.js";
 import { describeImportSummary } from "../common/library-merge.js";
@@ -60,7 +61,7 @@ export async function requirePro(featureId, label) {
   add(body, "p", `${label} is part of Pro. A trial, a purchase or an App Pass unlocks it. Nothing on this page changes until then.`, "panel-note");
   const btn = add(body, "button", "Unlock Pro", "btn");
   btn.type = "button";
-  btn.addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+  btn.addEventListener("click", () => showProPrompt({ featureId }));
   return false;
 }
 

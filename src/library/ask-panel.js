@@ -4,6 +4,7 @@
 // That shows the provider, the number of papers, a token and cost estimate and the exact text. Nothing leaves
 // the machine until the user presses Send. The request itself is made by the service worker, which reads the
 // key from chrome.storage.local; this page never sees the key's value in a response.
+import { showProPrompt } from "../common/pro-prompt.js";
 import { getLibraryState, getSavedPapers } from "../common/storage.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import {
@@ -184,7 +185,7 @@ export async function initAskPanel() {
   }
   $("askLocked").hidden = allowed;
   $("askForm").hidden = !allowed;
-  $("askUnlock").addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+  $("askUnlock").addEventListener("click", () => showProPrompt({ featureId: "askShortlist" }));
   $("askOpenOptions").addEventListener("click", () => chrome.runtime.sendMessage({ action: "openOptionsPage" }));
   $("askReview").addEventListener("click", () => reviewRequest().catch(() => msg("Could not prepare the request.")));
   $("askCancel").addEventListener("click", () => {

@@ -2,6 +2,7 @@
 // The key is kept only in chrome.storage.local under ASK_CONFIG_KEY. The provider's host is requested as an
 // optional host permission when the user turns the feature on (a click is the user gesture), and removed
 // when they turn it off. Nothing is requested in the manifest's required permissions.
+import { showProPrompt } from "../common/pro-prompt.js";
 import { ASK_CONFIG_KEY, DEFAULT_PRICES, normalizeAskConfig } from "../common/ask-verify.js";
 import { getProvider } from "../common/ask-provider.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
@@ -49,7 +50,7 @@ export async function initAskSettings() {
   say(cfg.enabled ? "On." : "Off.");
   $("askProNote").hidden = allowed;
   $("askEnable").disabled = !allowed;
-  $("askUnlock").addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+  $("askUnlock").addEventListener("click", () => showProPrompt({ featureId: "askShortlist" }));
 
   $("askProvider").addEventListener("change", () => {
     // Switching provider loads that provider's starting model and prices; the key is not carried across.

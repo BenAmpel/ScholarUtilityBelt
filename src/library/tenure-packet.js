@@ -1,5 +1,6 @@
 // Tenure packet page (Pro). Reads the snapshot the Scholar profile content
 // script saved, builds the document, and offers .docx and print/PDF output.
+import { showProPrompt } from "../common/pro-prompt.js";
 import { canUseFeature, getEntitlementStatus } from "../common/entitlement.js";
 import { buildDocx } from "../common/docx-writer.js";
 import { buildTenurePacket, packetFileName, packetToHtml } from "../common/tenure-packet.js";
@@ -24,7 +25,7 @@ async function init() {
     .catch(() => false);
   if (!allowed) {
     el("lockedCard").hidden = false;
-    el("unlockPro").addEventListener("click", () => chrome.runtime.sendMessage({ action: "openUpsellModal" }));
+    el("unlockPro").addEventListener("click", () => showProPrompt({ featureId: "tenurePacket" }));
     return;
   }
   const draft = await chrome.storage.local.get({ [DRAFT_KEY]: null })
