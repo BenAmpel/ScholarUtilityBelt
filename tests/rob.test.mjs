@@ -212,9 +212,9 @@ describe("JBI-style checklist templates", () => {
     const lines = csv.split("\n");
     assert.equal(lines.length, 3);
     assert.match(lines[0], /Yes count \(a count only\)/);
-    const header = lines[0].split(",");
-    const row = lines[1].split(",");
-    assert.equal(row[header.indexOf("Yes count (a count only)")], "1");
+    // Yes count is followed by the overall judgement and note (both empty here); item text may contain commas.
+    assert.match(lines[0], /Yes count \(a count only\),Overall \(set by you\),Overall note$/);
+    assert.match(lines[1], /,1,,$/);
     assert.match(lines[1], /Not applicable/);
     const md = robToMarkdown({ ...input, title: "Quality" });
     assert.match(md, /## JBI-style checklist: analytical cross-sectional/);
