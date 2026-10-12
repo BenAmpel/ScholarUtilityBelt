@@ -1,3 +1,4 @@
+import { buildBibTeXEntry } from "../common/bibtex.js";
 import {
   csvToTags,
   getLibraryState,
@@ -143,9 +144,19 @@ function formatChicago(p) {
 }
 
 function formatBibTeX(p) {
-  const authors = parseAuthors(p.authorsVenue).join(" and ");
-  const key = `${lastName(parseAuthors(p.authorsVenue)[0] || "key")}${p.year || ""}${hashString(p.title || "")}`.slice(0, 30);
-  return `@article{${key},\n  title={${p.title || ""}},\n  author={${authors}},\n  year={${p.year || ""}},\n  doi={${p.doi || ""}},\n  url={${p.url || ""}}\n}`;
+  const authors = parseAuthors(p.authorsVenue);
+  const key = `${lastName(authors[0] || "key")}${p.year || ""}${hashString(p.title || "")}`.slice(0, 30);
+  return buildBibTeXEntry({
+    key,
+    title: p.title,
+    authors,
+    year: p.year,
+    venue: p.venue || extractVenueFromAuthorsVenue(p.authorsVenue) || "",
+    doi: p.doi,
+    url: p.url,
+    tags: p.tags,
+    abstract: p.abstract
+  });
 }
 
 function formatRIS(p) {

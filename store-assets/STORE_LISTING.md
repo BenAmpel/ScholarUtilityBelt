@@ -8,7 +8,7 @@ Journal & conference rankings (ABDC, FT50, UTD24, VHB, CORE), citation analytics
 
 ## Detailed Description
 
-Scholar Utility Belt adds journal quality badges, citation analytics, author metrics, academic lineage trees, and research trend tracking directly to Google Scholar — no extra tabs, no manual lookups.
+Scholar Utility Belt adds journal quality badges, citation analytics, author metrics, advisor–student genealogy trees, and research trend tracking directly to Google Scholar — no extra tabs, no manual lookups.
 
 ★ JOURNAL QUALITY BADGES
 See ABDC, FT50, UTD24, VHB, SJR Quartile (Q1–Q4), ERA, ABS, CORE, CCF, Norwegian Register, FNEGE, and Impact Factor rankings as color-coded badges on every search result and author profile page. Instantly identify top-tier publications without leaving Scholar.
@@ -19,7 +19,7 @@ Each paper shows citations per year with trend arrows (↑ accelerating, → sta
 ★ AUTHOR PROFILE METRICS
 On any Scholar author page, see computed h-index, m-index, L-index, g-index, hI-norm, self-citation rate, publication quality breakdown (how many Q1, FT50, UTD24 papers), and coauthor analytics — all calculated in real time.
 
-★ ACADEMIC LINEAGE TREES
+★ ADVISOR–STUDENT GENEALOGY
 Trace advisor–student genealogy across generations. See who advised whom in an interactive tree view with 900,000+ researchers from Academic Family Tree, Mathematics Genealogy Project, and institutional repository data.
 
 ★ QUERY TREND TRACKER
@@ -35,7 +35,7 @@ One-click Save to library, BibTeX export, abstract preview, DOI lookup, and code
 Full dark theme that matches Scholar's interface, with all badges and panels adapting automatically.
 
 ★ PRO (OPTIONAL)
-Everything above is free. Scholar Utility Belt Pro adds author compare, citation lineage, extended bibliometrics, narrative CV, a systematic-review workspace, a citation-graph overlay, and a Publish-or-Perish report. Try it free for 14 days, buy it once or subscribe, or unlock it with an App Pass if you already have one. If you installed before Pro launched, the Pro features that existed then stay free for you forever.
+Everything above is free. Scholar Utility Belt Pro adds author compare, paper idea lineage (how a paper's ideas trace back through its citations), extended bibliometrics, narrative CV, a systematic-review workspace, a citation-graph overlay, and a Publish-or-Perish report. Try it free for 14 days, buy it once or subscribe, or unlock it with an App Pass if you already have one. If you installed before Pro launched, the Pro features that existed then stay free for you forever.
 
 ★ PRIVACY-FIRST
 All ranking data is bundled locally — no API calls needed for quality badges. External lookups (OpenAlex, Crossref, Unpaywall) only happen when features are enabled and never send personal data. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. App Pass is off by default and contacts joinapppass.com only after you turn it on.
@@ -82,7 +82,7 @@ English
 ### Screenshots (1280×800, PNG)
 1. screenshot-1-1280x800.png — Quality Badges on search results
 2. screenshot-2-1280x800.png — Author profile analytics
-3. screenshot-3-1280x800.png — Academic lineage tree
+3. screenshot-3-1280x800.png — Advisor–student genealogy tree
 4. screenshot-4-1280x800.png — Trend tracker panel
 5. screenshot-5-1280x800.png — Dark mode + quick actions
 
