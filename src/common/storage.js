@@ -918,7 +918,7 @@ export async function setAuthorHIndexSnapshot(profileUrl, hIndex) {
 
 // External signals (Crossref/OpenCitations/DataCite) cache
 const EXTERNAL_SIGNAL_CACHE_KEY = "externalSignalCacheV1";
-const EXTERNAL_SIGNAL_CACHE_MAX = 3000;
+const EXTERNAL_SIGNAL_CACHE_MAX = 1500;
 
 function pruneExternalSignalCache(cache) {
   if (!cache || typeof cache !== "object") return {};

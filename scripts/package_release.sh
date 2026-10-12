@@ -17,6 +17,9 @@ rm -f "${ZIP_PATH}"
 
 pushd "${ROOT_DIR}" >/dev/null
 
+# The manifest loads src/content/* only through dist/, so the unminified copies are left out
+# (src/content/data-loader.js stays: the library page imports it). The predatory-venue lists
+# are not read by any code. Together that is about a quarter of a megabyte compressed.
 # dist/ is what the manifest actually loads for content scripts — rebuild it
 # fresh so the zip can never ship stale bundles.
 node build.js
@@ -46,7 +49,21 @@ zip -r "${ZIP_PATH}" \
   "src/data/econ_genealogy.edges.bin.gz" \
   "src/data/econ_genealogy.names.json.gz" \
   "src/data/se_genealogy.edges.bin.gz" \
-  "src/data/se_genealogy.names.json.gz"
+  "src/data/se_genealogy.names.json.gz" \
+  "src/data/predatory_venues.txt" \
+  "src/data/predatory_venues_bealls.txt" \
+  "src/data/predatory_venues_predatoryjournals.txt" \
+  "src/content/content.js" \
+  "src/content/content.css" \
+  "src/content/content-early.js" \
+  "src/content/content-author.js" \
+  "src/content/dom-cache.js" \
+  "src/content/genealogy-lineage.js" \
+  "src/content/review-workspace.js" \
+  "src/content/signals-ui.js" \
+  "src/content/trend-methods.js" \
+  "src/content/trend-tracker.js" \
+  "src/content/worker.js"
 
 popd >/dev/null
 

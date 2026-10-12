@@ -29,9 +29,11 @@ export async function loadEraAndNorwegian() {
   let absIndex = new Map();
   try {
     const base = chrome.runtime.getURL("src/data/");
-    const [eraText, absText] = await Promise.all([
+    // The 1 MB Norwegian register is fetched together with the other two, not after them.
+    const [eraText, absText, norJson] = await Promise.all([
       fetch(base + "era2023.txt").then((r) => (r.ok ? r.text() : "")).catch(() => ""),
-      fetch(base + "abs2024.csv").then((r) => (r.ok ? r.text() : "")).catch(() => "")
+      fetch(base + "abs2024.csv").then((r) => (r.ok ? r.text() : "")).catch(() => ""),
+      fetch(base + "norwegian_compact.json").then((r) => (r.ok ? r.json() : null)).catch(() => null)
     ]);
 
     for (const line of (eraText || "").split(/\r?\n/)) {
@@ -43,7 +45,6 @@ export async function loadEraAndNorwegian() {
 
     let norwegianLoaded = false;
     try {
-      const norJson = await fetch(base + "norwegian_compact.json").then((r) => r.ok ? r.json() : null).catch(() => null);
       if (norJson && typeof norJson === "object") {
         for (const [key, level] of Object.entries(norJson)) {
           if (level === "1" || level === "2") norwegianMap.set(key, level);

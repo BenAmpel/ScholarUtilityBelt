@@ -636,14 +636,19 @@
     el.__suFloatingTooltip = tip;
     tip.__suOwner = el;
     if (!window.__suFloatingTooltipObserver) {
+      // Sweep for tooltips whose owner row was removed. Mutation records arrive in bursts (every row
+      // render, and this function's own appendChild), so run one sweep a second after the last burst
+      // instead of a full querySelectorAll per record.
+      let tooltipSweepTimer = null;
       window.__suFloatingTooltipObserver = new MutationObserver(() => {
-        const tips = document.querySelectorAll(".su-floating-tooltip");
-        for (const t of tips) {
-          const owner = t.__suOwner;
-          if (owner && !owner.isConnected) {
-            t.remove();
+        if (tooltipSweepTimer) return;
+        tooltipSweepTimer = setTimeout(() => {
+          tooltipSweepTimer = null;
+          for (const t of document.querySelectorAll(".su-floating-tooltip")) {
+            const owner = t.__suOwner;
+            if (owner && !owner.isConnected) t.remove();
           }
-        }
+        }, 1000);
       });
       window.__suFloatingTooltipObserver.observe(document.body, { childList: true, subtree: true });
     }
@@ -832,6 +837,16 @@
     dblp_sparql: 7 * 24 * 60 * 60 * 1000,
     s2: 30 * 24 * 60 * 60 * 1000
   };
+  // A lookup that failed for a reason that may pass (offline, rate limit, server error, timeout) is
+  // remembered for this long, not for the 30 to 180 days above. "Not found" (404, 410) and real
+  // answers keep the long TTL. Before, any failure was cached as "no data" for the full TTL, so one
+  // 429 or a dropped connection hid a paper's open-access, funder and DataCite badges for months.
+  const EXTERNAL_SIGNAL_ERROR_TTL_MS = 10 * 60 * 1000;
+  let externalFetchFailures = 0;
+  function noteExternalFetchFailure(error) {
+    if (/\bHTTP (404|410)\b/.test(String(error || ""))) return; // a definite "not found"
+    externalFetchFailures += 1;
+  }
   const OPENALEX_CACHE_VERSION = 2;
   const OPENALEX_RATE_LIMIT_TTL_MS = 15 * 60 * 1000;
   let externalSignalCache = null;
@@ -893,8 +908,9 @@
         if (res.status === 429 && String(url).includes("api.openalex.org")) {
           markOpenAlexRateLimited();
         }
+        noteExternalFetchFailure(`HTTP ${res.status}`);
       }
-    } catch (_) {}
+    } catch (_) { noteExternalFetchFailure("network"); }
     try {
       const res = await chrome.runtime.sendMessage({
         action: "fetchExternal",
@@ -907,7 +923,8 @@
       if (res?.error && String(url).includes("api.openalex.org") && String(res.error).includes("429")) {
         markOpenAlexRateLimited();
       }
-    } catch (_) {}
+      noteExternalFetchFailure(res?.error || "no response");
+    } catch (_) { noteExternalFetchFailure("message failed"); }
     return null;
   }
   async function fetchExternalText(url, { timeoutMs = 10000, headers = null, preferBackground = true } = {}) {
@@ -919,8 +936,9 @@
         const res = await fetch(url, { credentials: "omit", headers: headers || {}, signal: ctrl.signal });
         clearTimeout(t);
         if (res.ok) return await res.text();
+        noteExternalFetchFailure(`HTTP ${res.status}`);
       }
-    } catch (_) {}
+    } catch (_) { noteExternalFetchFailure("network"); }
     try {
       const res = await chrome.runtime.sendMessage({
         action: "fetchExternal",
@@ -930,7 +948,8 @@
         headers: headers || {}
       });
       if (res?.ok) return res.body;
-    } catch (_) {}
+      noteExternalFetchFailure(res?.error || "no response");
+    } catch (_) { noteExternalFetchFailure("message failed"); }
     return null;
   }
   async function ensureExternalSignalCacheLoaded() {
@@ -942,7 +961,7 @@
     if (!key || !provider || !externalSignalCache) return null;
     const entry = externalSignalCache[key]?.[provider];
     if (!entry || typeof entry !== "object") return null;
-    const ttl = EXTERNAL_SIGNAL_TTLS[provider] || EXTERNAL_SIGNAL_TTLS.crossref;
+    const ttl = entry.err ? EXTERNAL_SIGNAL_ERROR_TTL_MS : (EXTERNAL_SIGNAL_TTLS[provider] || EXTERNAL_SIGNAL_TTLS.crossref);
     const ts = Number(entry.ts) || 0;
     if (ts && Date.now() - ts > ttl) return null;
     return entry;
@@ -954,13 +973,13 @@
       if (externalSignalCache) {
         setExternalSignalCache(externalSignalCache).catch(() => {});
       }
-    }, 1200);
+    }, 8000); // the whole cache is rewritten each time, so batch lookups that finish close together
   }
-  function setExternalSignalEntry(key, provider, data) {
+  function setExternalSignalEntry(key, provider, data, { transient = false } = {}) {
     if (!key || !provider) return;
     if (!externalSignalCache) externalSignalCache = {};
     if (!externalSignalCache[key]) externalSignalCache[key] = {};
-    externalSignalCache[key][provider] = { ts: Date.now(), data: data == null ? null : data };
+    externalSignalCache[key][provider] = { ts: Date.now(), data: data == null ? null : data, ...(transient ? { err: 1 } : {}) };
     scheduleExternalSignalSave();
   }
   function scheduleExternalSignalReapply() {
@@ -1735,10 +1754,12 @@
     markProviderUsed(job.provider);
     (async () => {
       try {
+        const failuresBefore = externalFetchFailures;
         const data = await job.fetcher(job.lookup);
-        setExternalSignalEntry(job.key, job.provider, data);
+        // Empty because the request failed (not because nothing exists): remember it only briefly.
+        setExternalSignalEntry(job.key, job.provider, data, { transient: data == null && externalFetchFailures > failuresBefore });
       } catch {
-        setExternalSignalEntry(job.key, job.provider, null);
+        setExternalSignalEntry(job.key, job.provider, null, { transient: true });
       } finally {
         externalSignalActive -= 1;
         externalSignalInFlight.delete(job.inflightKey);
@@ -4453,6 +4474,17 @@
     }
     return false;
   }
+  /**
+   * Moves `desired` into `parent` in that order, but only if the order actually differs from `current`.
+   * Re-appending rows that are already in place still fires childList mutations, which the page
+   * observer reads as a structural change and answers with another full pass, which sorts again:
+   * a loop for as long as a sort was switched on.
+   */
+  function reorderIfChanged(parent, desired, current) {
+    if (desired.length === current.length && desired.every((el, i) => el === current[i])) return false;
+    desired.forEach((el) => parent.appendChild(el));
+    return true;
+  }
   function applyAuthorSort() {
     const tbody = document.getElementById("gsc_a_b");
     if (!tbody) return;
@@ -4471,12 +4503,12 @@
         return { tr, velocity };
       });
       withVelocity.sort((a, b) => b.velocity - a.velocity);
-      withVelocity.forEach(({ tr }) => tbody.appendChild(tr));
+      reorderIfChanged(tbody, withVelocity.map(({ tr }) => tr), rows);
     } else {
       if (window.suAuthorRowsOriginalOrder && window.suAuthorRowsOriginalOrder.length > 0) {
         const savedSet = new Set(window.suAuthorRowsOriginalOrder);
-        window.suAuthorRowsOriginalOrder.forEach((tr) => tbody.appendChild(tr));
-        rows.forEach((tr) => { if (!savedSet.has(tr)) tbody.appendChild(tr); });
+        const desired = window.suAuthorRowsOriginalOrder.concat(rows.filter((tr) => !savedSet.has(tr)));
+        reorderIfChanged(tbody, desired.filter((tr) => tr.parentNode === tbody), rows);
       }
     }
   }
@@ -5607,12 +5639,13 @@
     state.hiddenPapers = new Set(hiddenPapers);
     state.hiddenVenues = new Set(hiddenVenues);
     state.hiddenAuthors = new Set(hiddenAuthors);
-    if (settings.showRetractionWatch) {
-      state.retractionBloom = await loadRetractionBloom();
-    } else {
-      state.retractionBloom = null;
-    }
-    state.torturedPhrases = settings.showTorturedPhrases !== false ? await loadTorturedPhrases() : null;
+    // The two datasets do not depend on each other: load them together.
+    const [retractionBloom, torturedPhrases] = await Promise.all([
+      settings.showRetractionWatch ? loadRetractionBloom() : null,
+      settings.showTorturedPhrases !== false ? loadTorturedPhrases() : null
+    ]);
+    state.retractionBloom = retractionBloom || null;
+    state.torturedPhrases = torturedPhrases || null;
     applyTheme(settings.theme);
     applyBadgePalette(settings.badgePalette);
     const themeBtn = document.getElementById("su-theme-toggle");
@@ -6114,19 +6147,27 @@
       }
     }
   }
+  /**
+   * Clicks "Show more" once and waits for the answer. Returns true when more remain, false when the
+   * list has ended, and null when Scholar did not answer in time (slow connection, captcha, rate
+   * limit). Before, a fixed one-second wait read a button that was still disabled mid-load as "no
+   * more", so a slow load was reported as a complete profile and the stats were wrong.
+   */
   async function loadAllPublications() {
-    // Find the "Show more" button
     const showMoreBtn = document.getElementById("gsc_bpf_more");
     if (!showMoreBtn || showMoreBtn.disabled) {
       return false; // No more to load or button doesn't exist
     }
-    // Click the button
+    const before = scanResults().results.length;
     showMoreBtn.click();
-    // Wait for new publications to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Check if button is still enabled (more to load)
-    const stillMore = document.getElementById("gsc_bpf_more") && !document.getElementById("gsc_bpf_more").disabled;
-    return stillMore;
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const btn = document.getElementById("gsc_bpf_more");
+      if (!btn) return false;
+      if (scanResults().results.length > before) return !btn.disabled; // rows arrived: re-enabled means more
+    }
+    return null;
   }
   async function loadAllPublicationsRecursively(opts = {}) {
     const cfg = typeof opts === "number" ? { maxAttempts: opts } : (opts || {});
@@ -6141,6 +6182,9 @@
       }
       const hasMore = await loadAllPublications();
       const nextCount = scanResults().results.length;
+      if (hasMore === null) {
+        return { status: "partial", reason: "timeout", count: nextCount };
+      }
       if (!hasMore) {
         return { status: "complete", count: nextCount };
       }
@@ -13812,15 +13856,13 @@
     if (!container) return;
     const rows = Array.from(container.children).filter((el) => el.classList && el.classList.contains("gs_r"));
     if (rows.length === 0) return;
-    const getCite = (r) => getCitationCountFromResult(r) ?? 0;
-    rows.sort((a, b) => {
-      const ca = getCite(a);
-      const cb = getCite(b);
-      if (mode === "high") return cb - ca;
-      if (mode === "low") return ca - cb;
-      return 0;
+    // Read each row's count once (the comparator used to re-parse the row on every comparison).
+    const keyed = rows.map((r, i) => ({ r, i, c: getCitationCountFromResult(r) ?? 0 }));
+    keyed.sort((a, b) => {
+      const d = mode === "high" ? b.c - a.c : mode === "low" ? a.c - b.c : 0;
+      return d || a.i - b.i; // equal counts keep Scholar's order, so a second pass changes nothing
     });
-    rows.forEach((r) => container.appendChild(r));
+    reorderIfChanged(container, keyed.map((k) => k.r), rows);
   }
   function ensureFilterBar(state) {
     const q = getScholarSearchQuery();
@@ -15293,10 +15335,15 @@
         const visibleAuthorResults = results.filter(
           (r) => r.style.display !== "none" && !r.classList.contains("su-filtered-out")
         );
-        if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled) {
+        if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled && state.authorAutoLoadRunning) {
+          // A load-all is already in progress. Each "Show more" adds rows and triggers another pass,
+          // which used to start another loop on top of the running one.
+        } else if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled) {
+          state.authorAutoLoadRunning = true;
           renderAuthorStats({ qualityCounts: { q1: 0, a: 0, vhb: 0, utd24: 0, ft50: 0, abs4star: 0 }, totalPublications: 0, totalCitations: 0, avgCitations: 0, recentActivity: { last5Years: 0 } }, true);
           const runLoadAll = () => {
             loadAllPublicationsRecursively({ maxPubs: AUTHOR_AUTOLOAD_MAX }).then(async (loadResult) => {
+              state.authorAutoLoadRunning = false;
               const fullyLoaded = loadResult && loadResult.status === "complete";
               state.allPublicationsLoaded = fullyLoaded;
               state.authorStatsPartial = !fullyLoaded;
@@ -15337,6 +15384,7 @@
               const fullStats = computeAuthorStats(visible, state, window.suAuthorPositionFilter);
               await renderAuthorStatsWithGrowth(fullStats);
             }).catch(async () => {
+              state.authorAutoLoadRunning = false;
               state.authorStatsPartial = true;
               state.authorAutoLoadDisabled = true;
               const fullStats = computeAuthorStats(visibleAuthorResults, state, window.suAuthorPositionFilter);
@@ -15597,8 +15645,12 @@
           const paper = isAuthorProfile ? getCachedAuthorPaper(row) : extractPaperFromResult(row);
           const best = getBestPdfUrl(row);
           const pdfData = best?.url ? { pdfUrl: best.url, pdfLabel: best.label } : {};
-          upsertPaper({ ...paper, ...pdfData, sourcePageUrl: window.location.href, savedAt: paper.savedAt || new Date().toISOString() });
-          refreshState(state).then(() => window.suProcessAll?.());
+          // Refresh only after the save has finished. It used to run at once, so the page often
+          // re-read storage before the paper was written, and a failed save was an unhandled rejection.
+          upsertPaper({ ...paper, ...pdfData, sourcePageUrl: window.location.href, savedAt: paper.savedAt || new Date().toISOString() })
+            .then(() => refreshState(state))
+            .then(() => window.suProcessAll?.())
+            .catch(() => {});
           updateKeyboardHighlight();
         } catch {}
         return;
@@ -15803,6 +15855,9 @@
       const row = e.target?.closest?.(".gs_r");
       if (!row) return;
       if (!window.suState?.settings?.showHoverSummary) return;
+      // Already waiting on, or showing, this row: skip the URL parsing the pointer would repeat on
+      // every element it crosses inside the row.
+      if (snippetHoverRow === row) return;
       const titleLink = row.querySelector(".gs_rt a");
       let url = titleLink?.href || "";
       if (!url) return;
@@ -15825,7 +15880,9 @@
       snippetHoverTimer = setTimeout(async () => {
         snippetHoverTimer = null;
         const cached = snippetCache.get(url);
-        let summary = cached ?? null;
+        // `cached ?? null` turned a cache miss (undefined) into null, so the fetch below never ran
+        // and the hover summary never appeared. null stays "tried, nothing found".
+        let summary = cached;
         if (summary === undefined) {
           try {
             const res = await chrome.runtime.sendMessage({ action: "fetchSnippet", url });
