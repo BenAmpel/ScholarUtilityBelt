@@ -98,6 +98,8 @@ export const PRO_FEATURES = {
   // Optional on-device and bring-your-own-key AI features. Not grandfathered.
   triageCard: "new",
   askShortlist: "new",
+  bibliographyCheck: "new",
+  tenurePacket: "new",
 };
 
 /** Unknown feature ids fail closed. `entitlement` must have been fetched with needPurchased for "new" features. */
