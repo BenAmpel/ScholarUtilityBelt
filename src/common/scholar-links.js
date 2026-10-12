@@ -25,3 +25,17 @@ export function firstFileColumnLink(anchors) {
   }
   return null;
 }
+
+/**
+ * Tells a normal Scholar response from Google's "we are limiting you" answers: HTTP 429, a redirect to
+ * the /sorry/ page, or a CAPTCHA page (which can come back as 200 with a form). Returns "rate_limit",
+ * "captcha", or null for an ordinary response. The extension only reports this to the user; it never
+ * tries to solve or get around the check.
+ */
+export function classifyScholarResponse({ status, url, html } = {}) {
+  if (/\/sorry\//i.test(String(url || ""))) return "captcha";
+  const body = String(html || "").slice(0, 200000);
+  if (/id=["']gs_captcha|g-recaptcha|name=["']captcha["']|unusual traffic from your computer|not a robot/i.test(body)) return "captcha";
+  if (Number(status) === 429) return "rate_limit";
+  return null;
+}

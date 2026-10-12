@@ -26,6 +26,7 @@
   let getReadingQueue;
   let getSavedPapers;
   let onContextInvalidated;
+  let isDue;
   let getSettings;
   let removePaper;
   let setAuthorHIndexSnapshot;
@@ -79,6 +80,7 @@
   let cachedEntitlement = null;
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
+  let classifyScholarResponse = () => null;
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
   // Resolves with `fallback` if the promise is slow or fails. Entitlement lookups can wait on
   // ExtensionPay's server, which has no timeout of its own; page boot must not wait on it.
@@ -132,7 +134,7 @@
       importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
-    ({ isQuickReadLink, firstFileColumnLink } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -155,6 +157,7 @@
       getReadingQueue,
       getSavedPapers,
       onContextInvalidated,
+      isDue,
       getSettings,
       removePaper,
       setAuthorHIndexSnapshot,
@@ -382,6 +385,20 @@
   const AUTHOR_GRAPH_COLLECTIONS_KEY = "authorGraphCollections";
   const AUTHOR_GRAPH_STATE_KEY = "authorGraphStates";
   const AUTHOR_GRAPH_ALERTS_KEY = "authorGraphAlerts";
+  const GRAPH_MONITOR_LAST_RUN_KEY = "graphMonitorLastRun";
+  /**
+   * Runs the citation-graph monitors, at most once every 24 hours, when a Scholar page opens and at
+   * least one monitor is switched on. A timed check would need the "alarms" permission, which would
+   * show every existing user a new permission prompt, so the check rides on normal browsing instead.
+   */
+  async function maybeRunGraphMonitorCheck() {
+    const monitors = await getStorageMap(AUTHOR_GRAPH_ALERTS_KEY);
+    if (!Object.values(monitors || {}).some((m) => m && m.enabled)) return;
+    const last = await getStorageValue(GRAPH_MONITOR_LAST_RUN_KEY, 0);
+    if (!isDue(last)) return;
+    await setStorageValue(GRAPH_MONITOR_LAST_RUN_KEY, Date.now()); // claim it first so other open tabs skip
+    await chrome.runtime.sendMessage({ action: "graphMonitorCheck", authorId: "" });
+  }
   const POP_PEER_CACHE_KEY = "popPeerCache";
   const POP_PEER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const POP_CONCEPT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -2110,6 +2127,7 @@
     const yearMax = f.yearMax ? parseInt(f.yearMax, 10) : null;
     const venueKw = (f.venueKeyword || "").trim().toLowerCase();
     const hasPdf = !!f.hasPdf;
+    const hasQuickRead = !!f.hasQuickRead;
     const hasCode = !!f.hasCode;
     const qualityFilter = (f.qualityFilter || "").trim();
     const hasFullText = !!f.hasFullText;
@@ -2136,6 +2154,7 @@
       yearMax != null ||
       venueKw.length > 0 ||
       hasPdf ||
+      hasQuickRead ||
       hasCode ||
       qualityFilter.length > 0 ||
       hasFullText ||
@@ -2201,6 +2220,11 @@
         }
       }
       if (hasPdf && !getBestPdfUrl(r)) {
+        r.classList.add("su-filtered-out");
+        continue;
+      }
+      // Rows where Scholar offers its Quick read link (signed-in users only; the link is Google's, we only look for it).
+      if (hasQuickRead && !Array.from(r.querySelectorAll(".gs_or_ggsm a, .gs_ggs a")).some(isQuickReadLink)) {
         r.classList.add("su-filtered-out");
         continue;
       }
@@ -4617,15 +4641,31 @@
     el.style.gridRow = slot.row;
     if (el.parentElement !== grid) grid.appendChild(el);
   }
-  function sizeAuthorBadgeGrid(grid, row) {
-    if (!grid || !row) return;
+  // The cited-by and year columns are the same width in every row of the table, but this used to
+  // measure them for each row. Measuring right after another row's style write forces a fresh layout
+  // each time (on a 1,000-paper profile, a thousand layouts). Measure once, reuse for a moment, and
+  // measure again later in case the window was resized.
+  let authorColumnWidths = null;
+  let authorColumnWidthsTimer = null;
+  function measureAuthorColumns(row) {
+    if (authorColumnWidths) return authorColumnWidths;
     const citedCell = row.querySelector(".gsc_a_c");
     const yearCell = row.querySelector(".gsc_a_y");
-    if (!citedCell || !yearCell) return;
+    if (!citedCell || !yearCell) return null;
     const citedWidth = Math.round(citedCell.getBoundingClientRect().width);
     const yearWidth = Math.round(yearCell.getBoundingClientRect().width);
     const total = citedWidth + yearWidth;
-    if (!Number.isFinite(total) || total <= 0) return;
+    if (!Number.isFinite(total) || total <= 0) return null; // a hidden row measures 0: do not remember that
+    authorColumnWidths = { citedWidth, total };
+    clearTimeout(authorColumnWidthsTimer);
+    authorColumnWidthsTimer = setTimeout(() => { authorColumnWidths = null; }, 150);
+    return authorColumnWidths;
+  }
+  function sizeAuthorBadgeGrid(grid, row) {
+    if (!grid || !row) return;
+    const widths = measureAuthorColumns(row);
+    if (!widths) return;
+    const { citedWidth, total } = widths;
     grid.style.width = `${total}px`;
     grid.style.maxWidth = `${total}px`;
     grid.style.marginLeft = `-${citedWidth}px`;
@@ -13592,8 +13632,11 @@
       } finally {
         clearTimeout(timer);
       }
+      const html = await res.text().catch(() => "");
+      // Scholar answers rapid page loads with 429 or a CAPTCHA. Say so instead of looking like nothing happened.
+      const blocked = classifyScholarResponse({ status: res.status, url: res.url, html });
+      if (blocked) return { added: 0, visible: 0, hasMore: true, blocked };
       if (!res.ok) return { added: 0, visible: 0, hasMore: true };
-      const html = await res.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
       const mid = doc.querySelector("#gs_res_ccl_mid");
@@ -13815,6 +13858,7 @@
       yearMax: "",
       venueKeyword: "",
       hasPdf: false,
+      hasQuickRead: false,
       hasCode: false,
       qualityFilter: "",
       hasFullText: false,
@@ -13868,6 +13912,15 @@
     pdfLabel.className = "su-filter-label";
     pdfLabel.appendChild(pdfCheck);
     pdfLabel.appendChild(document.createTextNode(" PDF"));
+    const qrCheck = document.createElement("input");
+    qrCheck.type = "checkbox";
+    qrCheck.checked = !!f.hasQuickRead;
+    qrCheck.title = "Only results that have Scholar's Quick read link (you must be signed in to Google Scholar)";
+    qrCheck.className = "su-filter-check";
+    const qrLabel = document.createElement("label");
+    qrLabel.className = "su-filter-label";
+    qrLabel.appendChild(qrCheck);
+    qrLabel.appendChild(document.createTextNode(" Quick read"));
     const codeCheck = document.createElement("input");
     codeCheck.type = "checkbox";
     codeCheck.checked = !!f.hasCode;
@@ -14137,18 +14190,27 @@
       loadMoreBtn.textContent = "Loading…";
       let totalAdded = 0;
       let lastVisible = 0;
+      let blockedBy = null;
       for (let i = 0; i < maxPages; i++) {
         const next = getNextPageUrl();
         if (!next) break;
         const out = await fetchNextPageAndStitch(state);
         totalAdded += out.added;
         lastVisible = out.visible;
+        if (out.blocked) { blockedBy = out.blocked; break; }
         if (!out.hasMore || out.added === 0) break;
         await new Promise((r) => setTimeout(r, delayMs));
       }
       loadMoreBtn.disabled = false;
-      loadMoreBtn.textContent = totalAdded ? `Loaded ${totalAdded} more (${lastVisible} match)` : "Load more pages";
-      if (totalAdded) setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 3000);
+      if (blockedBy) {
+        loadMoreBtn.textContent = blockedBy === "captcha"
+          ? "Scholar is asking for a check. Open a Scholar page, complete it, then try again."
+          : "Scholar is limiting requests. Wait a few minutes, then try again.";
+        setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 8000);
+      } else {
+        loadMoreBtn.textContent = totalAdded ? `Loaded ${totalAdded} more (${lastVisible} match)` : "Load more pages";
+        if (totalAdded) setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 3000);
+      }
     });
     const MAX_BATCH_PDFS = 25;
     const openTabsInBackground = async (urls) => {
@@ -14233,6 +14295,7 @@
       yearMax: yearMaxEl.value.trim(),
       venueKeyword: venueEl.value.trim(),
       hasPdf: pdfCheck.checked,
+      hasQuickRead: qrCheck.checked,
       hasCode: codeCheck.checked,
       qualityFilter: qualitySelect.value || "",
       hasFullText: fullTextCheck.checked,
@@ -14294,6 +14357,7 @@
         state.filters.yearMax = next.yearMax;
         state.filters.venueKeyword = next.venueKeyword;
         state.filters.hasPdf = next.hasPdf;
+        state.filters.hasQuickRead = next.hasQuickRead;
         state.filters.hasCode = next.hasCode;
         state.filters.qualityFilter = next.qualityFilter;
         state.filters.hasFullText = next.hasFullText;
@@ -14343,7 +14407,7 @@
       updateToggleLabel();
       scheduleFilterApply();
     };
-    [yearMinEl, yearMaxEl, venueEl, pdfCheck, codeCheck, qualitySelect, fullTextCheck, fundingCheck, updatesCheck, openCiteCheck, datasetCheck, softwareCheck, oaCheck, preprintCheck, pubmedCheck, pmcCheck, meshCheck, citeEl, authorEl, maxCiteEl, citesPerYearEl, inflMinEl, inflMaxEl, affiliationEl, funderEl].forEach((el) => {
+    [yearMinEl, yearMaxEl, venueEl, pdfCheck, qrCheck, codeCheck, qualitySelect, fullTextCheck, fundingCheck, updatesCheck, openCiteCheck, datasetCheck, softwareCheck, oaCheck, preprintCheck, pubmedCheck, pmcCheck, meshCheck, citeEl, authorEl, maxCiteEl, citesPerYearEl, inflMinEl, inflMaxEl, affiliationEl, funderEl].forEach((el) => {
       el.addEventListener("input", onFilterInput);
       el.addEventListener("change", updateStateAndApply);
     });
@@ -14354,6 +14418,7 @@
       citeEl.value = vals.minCitations || "";
       authorEl.value = vals.authorMatch || "";
       pdfCheck.checked = !!vals.hasPdf;
+      qrCheck.checked = !!vals.hasQuickRead;
       codeCheck.checked = !!vals.hasCode;
       qualitySelect.value = vals.qualityFilter || "";
       fullTextCheck.checked = !!vals.hasFullText;
@@ -14404,6 +14469,7 @@
         state.filters.yearMin = state.filters.yearMax = "";
         state.filters.venueKeyword = state.filters.authorMatch = "";
         state.filters.hasPdf = false;
+        state.filters.hasQuickRead = false;
         state.filters.hasCode = false;
         state.filters.qualityFilter = "";
         state.filters.hasFullText = false;
@@ -14429,6 +14495,7 @@
           yearMax: "",
           venueKeyword: "",
           hasPdf: false,
+          hasQuickRead: false,
           hasCode: false,
           qualityFilter: "",
           hasFullText: false,
@@ -14467,6 +14534,7 @@
           g.yearMax,
           g.venueKeyword,
           g.hasPdf,
+          g.hasQuickRead,
           g.hasCode,
           g.qualityFilter,
           g.hasFullText,
@@ -14499,7 +14567,7 @@
       const current = readFilterValues();
       const active = def.isActive(current);
       const next = { ...current };
-      const boolKeys = new Set(["hasPdf", "hasCode"]);
+      const boolKeys = new Set(["hasPdf", "hasQuickRead", "hasCode"]);
       for (const [key, value] of Object.entries(def.patch || {})) {
         if (active) {
           next[key] = boolKeys.has(key) ? false : "";
@@ -14518,6 +14586,7 @@
       row.appendChild(qualitySelect);
       row.appendChild(venueEl);
       row.appendChild(pdfLabel);
+      row.appendChild(qrLabel);
       row.appendChild(codeLabel);
       row.appendChild(citeEl);
       row.appendChild(authorEl);
@@ -14738,6 +14807,7 @@
         q,
         venueKeyword: state.filters.venueKeyword || "",
         hasPdf: !!state.filters.hasPdf,
+        hasQuickRead: !!state.filters.hasQuickRead,
         hasCode: !!state.filters.hasCode,
         qualityFilter: state.filters.qualityFilter || "",
         hasFullText: !!state.filters.hasFullText,
@@ -14822,6 +14892,7 @@
         yearMax: urlYear.yearMax,
         venueKeyword: (stored && stored.venueKeyword) || "",
         hasPdf: !!(stored && stored.hasPdf),
+        hasQuickRead: !!(stored && stored.hasQuickRead),
         hasCode: !!(stored && stored.hasCode),
         qualityFilter: (stored && stored.qualityFilter) || "",
         hasFullText: !!(stored && stored.hasFullText),
@@ -14892,6 +14963,11 @@
           ensureSearchSyntaxHighlighting();
         } catch (e) {
           console.warn("[SU] syntax highlighting bootstrap failed", e);
+        }
+        try {
+          await maybeRunGraphMonitorCheck();
+        } catch (e) {
+          console.warn("[SU] graph monitor check failed", e);
         }
       };
       if (typeof requestIdleCallback === "function") {
