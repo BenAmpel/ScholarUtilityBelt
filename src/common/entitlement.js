@@ -57,6 +57,33 @@ export function isTrialActive(extpayUser, now = Date.now()) {
  * ExtPay/App Pass state (the service worker skips those lookups for
  * grandfathered users unless asked, so the common path stays offline).
  */
+/**
+ * How long an ExtensionPay answer stays good when ExtensionPay cannot be reached. ExtPay keeps
+ * the last user it fetched, but throws on a network failure instead of returning it, so without
+ * this a paying user who is offline (or whose connection hangs) is treated as free and every
+ * "new" Pro feature locks.
+ */
+export const EXTPAY_OFFLINE_GRACE_DAYS = 14;
+
+/**
+ * The user to trust when ExtensionPay is unreachable, or null.
+ * `cached` is ExtPay's stored `extensionpay_user` (dates as strings); `lastOkAt` is when a live
+ * lookup last succeeded (ms), null when unknown. A cancelled subscription is not trusted.
+ */
+export function offlineExtpayUser(cached, lastOkAt, now = Date.now()) {
+  if (!cached || typeof cached !== "object") return null;
+  if (lastOkAt != null && !(now - Number(lastOkAt) < EXTPAY_OFFLINE_GRACE_DAYS * DAY_MS)) return null;
+  const user = { ...cached };
+  for (const key of ["paidAt", "trialStartedAt", "installedAt", "subscriptionCancelAt"]) {
+    if (typeof user[key] === "string") {
+      const d = new Date(user[key]);
+      user[key] = Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+  if (user.subscriptionStatus === "canceled") user.paid = false;
+  return user;
+}
+
 export function describeEntitlement({ grandfathered, extpayUser, appPass, now = Date.now() }) {
   const trial = isTrialActive(extpayUser, now);
   const appPassOk = appPass?.status === "ok";

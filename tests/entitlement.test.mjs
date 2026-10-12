@@ -10,6 +10,8 @@ import {
   trialEndsAt,
   isTrialActive,
   PRO_FEATURES,
+  offlineExtpayUser,
+  EXTPAY_OFFLINE_GRACE_DAYS,
   canUseFeature,
 } from "../src/common/entitlement.js";
 
@@ -318,5 +320,40 @@ describe("grandfathering covers legacy Pro features only", () => {
       assert.equal(canUseFeature(id, free), false, id);
       assert.equal(canUseFeature(id, { paid: true, tier: "trial", purchased: true }), true, id);
     }
+  });
+});
+
+describe("offlineExtpayUser (ExtensionPay unreachable)", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = Date.parse("2026-10-12T12:00:00Z");
+  const paid = { paid: true, paidAt: "2026-09-01T10:00:00.000Z", installedAt: "2026-08-01T10:00:00.000Z", plan: { nickname: "lifetime" } };
+
+  it("keeps a paying user paid, with dates revived, inside the grace period", () => {
+    const u = offlineExtpayUser(paid, now - 3 * DAY, now);
+    assert.equal(u.paid, true);
+    assert.ok(u.paidAt instanceof Date);
+    assert.equal(describeEntitlement({ grandfathered: false, extpayUser: u, now }).purchased, true);
+  });
+  it("keeps a trial running offline", () => {
+    const trial = { paid: false, trialStartedAt: new Date(now - 2 * DAY).toISOString() };
+    const u = offlineExtpayUser(trial, now - DAY, now);
+    assert.equal(describeEntitlement({ grandfathered: true, extpayUser: u, now }).purchased, true);
+  });
+  it("stops trusting the cache after the grace period", () => {
+    assert.equal(offlineExtpayUser(paid, now - (EXTPAY_OFFLINE_GRACE_DAYS + 1) * DAY, now), null);
+  });
+  it("trusts it when no lookup time is known (the caller then starts the clock)", () => {
+    assert.equal(offlineExtpayUser(paid, null, now).paid, true);
+  });
+  it("does not trust a cancelled subscription, and ignores missing or odd input", () => {
+    assert.equal(offlineExtpayUser({ ...paid, subscriptionStatus: "canceled" }, now, now).paid, false);
+    assert.equal(offlineExtpayUser(null, now, now), null);
+    assert.equal(offlineExtpayUser("paid", now, now), null);
+    assert.equal(offlineExtpayUser({ paid: true, paidAt: "not a date" }, now, now).paidAt, null);
+  });
+  it("does not mutate the cached object", () => {
+    const copy = JSON.stringify(paid);
+    offlineExtpayUser(paid, now, now);
+    assert.equal(JSON.stringify(paid), copy);
   });
 });

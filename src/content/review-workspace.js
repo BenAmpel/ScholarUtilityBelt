@@ -60,6 +60,7 @@ export function createReviewWorkspace(deps) {
     downloadBlob,
     getStorageMap,
     setStorageMap,
+    setStorageMapEntry,
     CLS_BTN_SEC,
     getEntitlementStatus,
     canUseFeature,
@@ -82,6 +83,12 @@ export function createReviewWorkspace(deps) {
   async function setReviewProjects(map) {
     if (!chrome?.storage?.local?.set) return;
     await setStorageMap(REVIEW_PROJECTS_KEY, map);
+  }
+  // Saves one project. Writing the whole map from this tab's copy would erase edits made in
+  // another tab or window; a single entry write (locked per key in storage.js) cannot.
+  async function saveReviewProjectEntry(project) {
+    if (!chrome?.storage?.local?.set || !project?.id) return;
+    await setStorageMapEntry(REVIEW_PROJECTS_KEY, project.id, project);
   }
   function normalizeReviewProject(project) {
     if (!project || typeof project !== "object") return null;
@@ -152,13 +159,11 @@ export function createReviewWorkspace(deps) {
     if (window.suReviewState) return window.suReviewState;
     const projects = await getReviewProjects();
     const ids = Object.keys(projects);
-    let dirty = false;
+    // Normalising fills in fields added by newer versions. It is repeated on every load, so it
+    // is not written back: rewriting every project on open would overwrite other tabs' edits.
     for (const id of ids) {
       const normalized = normalizeReviewProject(projects[id]);
-      if (normalized) {
-        projects[id] = normalized;
-        dirty = true;
-      }
+      if (normalized) projects[id] = normalized;
     }
     let activeId = ids[0] || null;
     if (!activeId) {
@@ -166,10 +171,7 @@ export function createReviewWorkspace(deps) {
       const project = createReviewProject("New review", q || "");
       projects[project.id] = project;
       activeId = project.id;
-      dirty = true;
-    }
-    if (dirty) {
-      await setReviewProjects(projects);
+      await saveReviewProjectEntry(project);
     }
     window.suReviewState = { projects, activeId, tab: "overview" };
     return window.suReviewState;
@@ -185,7 +187,7 @@ export function createReviewWorkspace(deps) {
     normalizeReviewProject(project);
     project.updatedAt = new Date().toISOString();
     state.projects[project.id] = project;
-    await setReviewProjects(state.projects);
+    await saveReviewProjectEntry(project);
   }
   function extractReviewPaperFromResult(row, isAuthorProfile) {
     const paper = isAuthorProfile ? getCachedAuthorPaper(row) : extractPaperFromResult(row);
@@ -1805,7 +1807,7 @@ export function createReviewWorkspace(deps) {
         const project = createReviewProject(name, getScholarSearchQuery() || "");
         state.projects[project.id] = project;
         state.activeId = project.id;
-        await setReviewProjects(state.projects);
+        await saveReviewProjectEntry(project);
         renderReviewOverlay(project);
         return;
       }
@@ -2136,18 +2138,27 @@ export function createReviewWorkspace(deps) {
       const fileInput = e.target.closest("#su-review-import-file");
       if (fileInput && fileInput.files?.length) {
         const file = fileInput.files[0];
-        const text = await file.text();
         try {
+          const text = await file.text();
           const project = JSON.parse(text);
-          if (project?.id) {
+          if (!project || typeof project !== "object" || !project.id || typeof project.papers !== "object") {
+            window.alert("That file is not a review project exported from this workspace. Nothing was imported.");
+          } else {
             normalizeReviewProject(project);
             const state = await ensureReviewState();
+            // A project with the same id is never replaced: the import is kept as a separate copy.
+            if (state.projects[project.id]) {
+              project.id = `rev_${Date.now().toString(36)}`;
+              project.name = `${project.name || "Review"} (imported)`;
+            }
             state.projects[project.id] = project;
             state.activeId = project.id;
-            await setReviewProjects(state.projects);
+            await saveReviewProjectEntry(project);
             renderReviewOverlay(project);
           }
-        } catch {}
+        } catch {
+          window.alert("Couldn't read that file as a review project. Nothing was imported.");
+        }
         fileInput.value = "";
         return;
       }

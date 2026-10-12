@@ -7,7 +7,8 @@ import {
   getLibraryState,
   getSavedPapers,
   replaceLibrary,
-  saveLibraryBackup
+  saveLibraryBackup,
+  withStorageLock
 } from "./storage.js";
 import { mergeDuplicatePair, mergeLibraryImport } from "./library-merge.js";
 
@@ -28,23 +29,29 @@ export function parseLibraryFileText(text) {
  * Merge a payload into the stored library. The backup is written before anything else changes,
  * and nothing is written when the payload cannot be read.
  */
-export async function importLibraryPayload(payload, opts = {}) {
-  const [papers, state] = await Promise.all([getSavedPapers(), getLibraryState()]);
-  const result = mergeLibraryImport(papers, state, payload, opts);
-  if (!result.ok) return result;
-  await saveLibraryBackup(opts.reason || "import", result.summary);
-  await replaceLibrary(result.papers, result.state);
-  return result;
+export function importLibraryPayload(payload, opts = {}) {
+  // Read, merge and write as one step, so a save made meanwhile in another page of the
+  // extension (the popup, options or library) is not lost.
+  return withStorageLock("savedPapers", async () => {
+    const [papers, state] = await Promise.all([getSavedPapers(), getLibraryState()]);
+    const result = mergeLibraryImport(papers, state, payload, opts);
+    if (!result.ok) return result;
+    await saveLibraryBackup(opts.reason || "import", result.summary);
+    await replaceLibrary(result.papers, result.state);
+    return result;
+  });
 }
 
 /** Merge one duplicate into another, with a backup first. */
-export async function mergeDuplicatesInStorage(keepKey, dropKey) {
-  const papers = await getSavedPapers();
-  const result = mergeDuplicatePair(papers, keepKey, dropKey);
-  if (!result.ok) return result;
-  await saveLibraryBackup("duplicate merge", null);
-  await replaceLibrary(result.papers, null);
-  return result;
+export function mergeDuplicatesInStorage(keepKey, dropKey) {
+  return withStorageLock("savedPapers", async () => {
+    const papers = await getSavedPapers();
+    const result = mergeDuplicatePair(papers, keepKey, dropKey);
+    if (!result.ok) return result;
+    await saveLibraryBackup("duplicate merge", null);
+    await replaceLibrary(result.papers, null);
+    return result;
+  });
 }
 
 /** Restore the library to the backup. Anything changed after the import is lost. */

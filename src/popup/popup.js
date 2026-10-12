@@ -1,4 +1,6 @@
 import { getSavedPapers, getSettings, setSettings } from "../common/storage.js";
+import { importLibraryPayload, parseLibraryFileText } from "../common/library-import.js";
+import { describeImportSummary } from "../common/library-merge.js";
 
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: "application/json" });
@@ -44,15 +46,13 @@ document.getElementById("importJson").addEventListener("change", async (e) => {
   if (!file) return;
 
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    if (!data || typeof data !== "object" || !data.savedPapers || typeof data.savedPapers !== "object") {
-      throw new Error("Invalid export format (expected { savedPapers: {...} }).");
-    }
-    const existing = await chrome.storage.local.get({ savedPapers: {} });
-    const merged = { ...(existing.savedPapers || {}), ...(data.savedPapers || {}) };
-    await chrome.storage.local.set({ savedPapers: merged });
-    setHint("Imported JSON (merged).");
+    // The same merge the Library page uses: nothing is overwritten, tags, notes and
+    // collections are combined, and one backup is kept so the Library page can undo it.
+    const parsed = parseLibraryFileText(await file.text());
+    if (!parsed.ok) throw new Error(parsed.error);
+    const result = await importLibraryPayload(parsed.data, { reason: "popup import" });
+    if (!result.ok) throw new Error(result.error);
+    setHint(`Imported: ${describeImportSummary(result.summary)}. Existing papers were merged, not overwritten. Undo is on the Library page.`);
     await refresh();
   } catch (err) {
     setHint(`Import failed: ${err?.message || String(err)}`);
