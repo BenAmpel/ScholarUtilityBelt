@@ -314,7 +314,7 @@ describe("grandfathering covers legacy Pro features only", () => {
   });
 
   it("registers the library export features as new Pro features", () => {
-    for (const id of ["zoteroExport", "obsidianExport", "latexPack", "wordRefList"]) {
+    for (const id of ["zoteroExport", "obsidianExport", "latexPack", "wordRefList", "librarianReport"]) {
       assert.equal(PRO_FEATURES[id], "new", id);
       assert.equal(canUseFeature(id, grandfathered), false, id);
       assert.equal(canUseFeature(id, free), false, id);

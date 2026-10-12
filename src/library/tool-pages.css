@@ -44,3 +44,12 @@ label.btn { cursor: pointer; display: inline-block; }
   .doc table, .doc tr { break-inside: avoid; }
   .doc h2 { break-after: avoid; }
 }
+
+/* Librarian report: candidate choices */
+.match-row { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.match-row legend { font-size: 13px; font-weight: 600; padding: 0 4px; }
+.match-opt { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 12.5px; line-height: 1.4; }
+.match-opt input { margin-top: 3px; }
+.match-meta { color: var(--muted); }
+.match-tag { display: inline-block; border: 1px solid var(--chip-tag-border); background: var(--chip-tag-bg); border-radius: 999px; padding: 0 7px; margin-left: 6px; font-size: 11.5px; }
+.match-error { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }

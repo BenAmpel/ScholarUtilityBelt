@@ -133,7 +133,7 @@ Nothing is sent to a server run by the project. These are all the places the ext
 
 | Service (host) | What is sent | When |
 |---|---|---|
-| [OpenAlex](https://openalex.org/) (`api.openalex.org`) | DOI, title, author name or search text; your optional API key and a placeholder `mailto` | Citation metrics, p-index and FWCI, the trend panel, related works, the citation graph, and watch lists (only if you add watch items) |
+| [OpenAlex](https://openalex.org/) (`api.openalex.org`) | DOI, title, author name or search text; your optional API key and a placeholder `mailto` | Citation metrics, p-index and FWCI, the trend panel, related works, the citation graph, and watch lists (only if you add watch items). Also the librarian report page (Pro): the names, institutions and ORCIDs you type, only when you press "Find authors" |
 | [Crossref](https://www.crossref.org/) (`api.crossref.org`) | DOI or a reference title | Per-result details and update status in the detailed view; the bibliography checker's "Check DOIs" button |
 | [Unpaywall](https://unpaywall.org/) (`api.unpaywall.org`) | DOI and a placeholder email | Open-access status, per result in the detailed view |
 | [OpenCitations](https://opencitations.net/) (`opencitations.net`) | DOI | Citing-works counts, per result in the detailed view |
@@ -143,6 +143,7 @@ Nothing is sent to a server run by the project. These are all the places the ext
 | [Europe PMC](https://europepmc.org/) (`www.ebi.ac.uk`), [NCBI E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25501/) (`eutils.ncbi.nlm.nih.gov`) | DOI, PubMed id or PMC id | PubMed-indexed results in the detailed view |
 | [NIH iCite](https://icite.od.nih.gov/) (`icite.od.nih.gov`) | PubMed ids | Relative Citation Ratio on author profiles (PubMed-indexed works only) |
 | [ROR](https://ror.org/) (`api.ror.org`) and [DBLP](https://dblp.org/) (`dblp.org`, `sparql.dblp.org`) | Affiliation text; co-author name | Co-author and affiliation insights, when that panel is open on an author profile |
+| [Overleaf](https://www.overleaf.com/) (`www.overleaf.com`) | The LaTeX source you are shown first: the chosen papers' titles, authors, years, venues, DOIs, links, tags and abstracts; your private notes only if you tick a box that is off by default | Only when you click "Send to Overleaf" in the LaTeX citation pack (Pro). It is a form posted from your browser in a new tab, so it is not a fetch and is not on the extension's fetch allowlist (`url-policy.js`); no permission is involved |
 | [SCImago](https://www.scimagojr.com/) (`www.scimagojr.com`) | The year you picked, nothing else | Only when you press the download button for rankings in Options |
 | [ExtensionPay](https://extensionpay.com/) (`extensionpay.com`) | A random per-install key | Pro checks, after you start a trial or unlock (see the Pro note below) |
 | joinapppass.com | Your joinapppass.com login cookie | Only if you opt in to App Pass in Options |
