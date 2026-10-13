@@ -4,14 +4,14 @@
 Scholar Utility Belt — Journal Quality Badges
 
 ## Short Description (132 char max)
-Journal & conference rankings (ABDC, FT50, UTD24, VHB, CORE), citation analytics, author metrics & trend tracking on Google Scholar.
+Journal rankings, citation analytics and author metrics on Google Scholar. Free to use, and your data stays on your computer.
 
 ## Detailed Description
 
 Scholar Utility Belt adds journal quality badges, citation analytics, author metrics, advisor–student genealogy trees, and research trend tracking directly to Google Scholar — no extra tabs, no manual lookups.
 
 ★ JOURNAL QUALITY BADGES
-See ABDC, FT50, UTD24, VHB, SJR Quartile (Q1–Q4), ERA, ABS, CORE, CCF, Norwegian Register, FNEGE, and Impact Factor rankings as color-coded badges on every search result and author profile page. Instantly identify top-tier publications without leaving Scholar.
+See journal quality as color-coded badges, taken from established ranking lists for business, computing and other fields, plus quartile rankings, on every search result and author profile page. Instantly identify top-tier publications without leaving Scholar.
 
 ★ YOUR OWN JOURNAL LIST
 Upload a CSV of journals and conferences with your own tier labels, such as a department's A, B and C list. Matching venues get a badge with your label next to the built-in ones. The file is read in your browser and stays there.
@@ -20,7 +20,7 @@ Upload a CSV of journals and conferences with your own tier labels, such as a de
 Each paper shows citations per year with trend arrows (↑ accelerating, → stable, ↓ decaying). Compare papers not just by total citations but by research momentum.
 
 ★ AUTHOR PROFILE METRICS
-On any Scholar author page, see computed h-index, m-index, L-index, g-index, hI-norm, self-citation rate, publication quality breakdown (how many Q1, FT50, UTD24 papers), and coauthor analytics — all calculated in real time.
+On any Scholar author page, see computed h-index, m-index, L-index, g-index, hI-norm, self-citation rate, publication quality breakdown (how many papers fall in each ranking tier), and coauthor analytics — all calculated in real time.
 
 ★ ADVISOR–STUDENT GENEALOGY
 Trace advisor–student genealogy across generations. See who advised whom in an interactive tree view with 900,000+ researchers from Academic Family Tree, Mathematics Genealogy Project, and institutional repository data.
@@ -46,21 +46,8 @@ Triage cards show study design, sample and setting under a result, read from the
 ★ PRIVACY-FIRST
 All ranking data is bundled locally — no API calls needed for quality badges. External lookups (OpenAlex, Crossref, Unpaywall) only happen when features are enabled and never send personal data. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. If you turn on the optional bring-your-own-key feature, the paper text you select and your question go to the AI provider you picked, using your own key, and to no one else. App Pass is off by default and contacts joinapppass.com only after you turn it on.
 
-SUPPORTED RANKING SYSTEMS:
-• ABDC (Australian Business Deans Council) — A*, A, B, C
-• FT50 (Financial Times Top 50 Journals)
-• UTD24 (UT Dallas Top 24 Business Journals)
-• VHB-JOURQUAL (German Academic Association for Business Research) — A+, A, B, C
-• SJR / Scopus Quartiles — Q1, Q2, Q3, Q4
-• JCR Impact Factor Quartiles
-• ERA (Excellence in Research for Australia)
-• ABS (Chartered Association of Business Schools) — 4*, 4, 3, 2, 1
-• CORE (Computing Research & Education) — A*, A, B, C
-• CCF (China Computer Federation) — A, B, C
-• Norwegian Register — Level 1, 2
-• FNEGE (Fondation Nationale pour l'Enseignement de la Gestion) — 1, 2, 3, 4
-• Google Scholar h5-index for venues
-• Predatory journal detection (Beall's List + community lists)
+RANKING SOURCES
+The badges come from ranking lists bundled with the extension, plus Google Scholar's own venue h5-index. Journals that appear on public predatory-journal lists are flagged. The full list of sources and how each is used is in the README on GitHub.
 
 Works on all Google Scholar country domains (google.com, google.de, google.co.uk, google.fr, etc.).
 
