@@ -1,6 +1,7 @@
 import { getSavedPapers, getSettings, setSettings } from "../common/storage.js";
 import { importLibraryPayload, parseLibraryFileText } from "../common/library-import.js";
 import { describeImportSummary } from "../common/library-merge.js";
+import { initRatingPrompt } from "../common/rating-prompt.js";
 
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: "application/json" });
@@ -84,3 +85,5 @@ async function initToggles() {
 
 refresh();
 initToggles();
+
+initRatingPrompt();

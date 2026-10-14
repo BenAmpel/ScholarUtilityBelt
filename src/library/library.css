@@ -882,3 +882,6 @@ input::placeholder {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Rating card (src/common/rating-prompt.js) reuses the promo card styles; it sits above the promo card. */
+.rating-card[hidden] { display: none; }

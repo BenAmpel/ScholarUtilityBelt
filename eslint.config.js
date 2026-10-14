@@ -120,6 +120,7 @@ module.exports = [
       "src/common/apppass.js",
       "src/common/install-pages.js",
       "src/common/promo-card.js",
+      "src/common/rating-prompt.js",
       "src/common/triage-verify.js",
       "src/common/ask-verify.js",
       "src/common/ask-provider.js",

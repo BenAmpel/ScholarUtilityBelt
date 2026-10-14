@@ -24,6 +24,7 @@ import { normalizeVenueName } from "../common/quality.js";
 import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
+import { initRatingPrompt } from "../common/rating-prompt.js";
 import { initAskSettings } from "./ask-settings.js";
 
 function el(id) {
@@ -1325,3 +1326,4 @@ load();
 initAskSettings().catch(() => {});
 renderProStatus();
 initPromoCard();
+initRatingPrompt();
