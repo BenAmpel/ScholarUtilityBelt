@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scholar Utility Belt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
   "action": {
     "default_title": "Scholar Utility Belt",
@@ -197,6 +197,7 @@
         "dist/common/quality.js",
         "dist/common/reading-order.js",
         "dist/common/reference-import.js",
+        "dist/common/rating-prompt.js",
         "dist/common/reload-banner.js",
         "dist/common/repro-signals.js",
         "dist/common/review-snapshots.js",

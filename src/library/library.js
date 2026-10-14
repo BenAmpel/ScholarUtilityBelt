@@ -13,6 +13,7 @@ import {
   upsertPaper
 } from "../common/storage.js";
 import { initLatexLink, initPromoCard } from "../common/promo-card.js";
+import { initRatingPrompt } from "../common/rating-prompt.js";
 import { initAskPanel, isPicked, setPicked } from "./ask-panel.js";
 import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
 import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
@@ -1142,5 +1143,6 @@ exportUi.wire();
 render();
 refreshUndoButton();
 initPromoCard();
+initRatingPrompt();
 initAskPanel().catch(() => {});
 initLatexLink();

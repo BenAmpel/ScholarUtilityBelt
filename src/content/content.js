@@ -207,6 +207,8 @@
     // Independent of each other, so run together instead of one after the other.
     await Promise.all([refreshEntitlementCache(), loadSignalsModules()]);
     modulesLoaded = true;
+    // Count today as a day of use for the rating card on the extension's own pages. Local only, once a day.
+    importModuleWithRetry("dist/common/rating-prompt.js").then((m) => m.recordActiveDay()).catch(() => {});
   }
   /**
    * Load the signals modules and look up which new Pro features this user may use.

@@ -107,6 +107,10 @@ const TARGETS = [
     args: ['src/common/reload-banner.js', '--bundle=false', '--minify', '--outfile=dist/common/reload-banner.js', '--log-level=warning'],
   },
   {
+    label: 'common/rating-prompt.js',
+    args: ['src/common/rating-prompt.js', '--bundle=false', '--minify', '--outfile=dist/common/rating-prompt.js', '--log-level=warning'],
+  },
+  {
     label: 'common/quality.js',
     args: ['src/common/quality.js', '--bundle=false', '--minify', '--outfile=dist/common/quality.js', '--log-level=warning'],
   },

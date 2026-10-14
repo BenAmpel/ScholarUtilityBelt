@@ -124,6 +124,10 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.0.1 (paste into the dashboard's "What's new")
+
+After you have used the extension on Google Scholar on a few different days, the popup, Options and Library pages show a small card asking whether you would rate it on the Chrome Web Store, with "Not now" and "Don't ask again". It never appears on Google Scholar pages, and the extension sends nothing: the day count stays in your browser.
+
 ## Release notes for 1.0.0 (paste into the dashboard's "What's new")
 
 Free: your own journal list (upload a CSV of venues and tier labels); Scholar's Quick read link stays visible and has a results filter; library and popup imports now merge instead of overwriting, with a backup and undo; BibTeX export writes the right entry type with venue, tags and abstract; an Options switch for the extra per-result lookups; the CatalyzeX Code badge is removed (it sent result titles to catalyzex.com); the advisor and student dataset loads only when you ask; fixes for lost saves, a freeze in the bibliography checker and a sort loop.
