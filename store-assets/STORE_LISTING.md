@@ -1,7 +1,9 @@
-# Chrome Web Store Listing — Scholar Utility Belt v1.0.0
+# Chrome Web Store Listing — Scholar Utility Belt v1.0.2
 
 ## Extension Name (45 char max)
-Scholar Utility Belt — Journal Quality Badges
+Scholar Utility Belt for Google Scholar
+
+(The store reads this from the manifest `name`. `short_name`, "Scholar Utility Belt", is what Chrome shows where space is short.)
 
 ## Short Description (132 char max)
 Journal rankings, citation analytics and author metrics on Google Scholar. Free to use, and your data stays on your computer.
@@ -123,6 +125,10 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 - **Privacy policy URL.** It must describe the flows above, including the AI provider flow; the README's "A note on the Pro tier" section has the wording.
 
 ---
+
+## Release notes for 1.0.2 (paste into the dashboard's "What's new")
+
+The store name is now "Scholar Utility Belt for Google Scholar". Nothing else changed.
 
 ## Release notes for 1.0.1 (paste into the dashboard's "What's new")
 
