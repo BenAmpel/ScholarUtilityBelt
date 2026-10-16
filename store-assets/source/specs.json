@@ -1,0 +1,5 @@
+[
+ {"img":"results.png","out":"screenshot-1-1280x800.png","title":"Journal rankings beside every Scholar result","sub":"Quartiles, impact factor, h5-index and your own list, read from data bundled with the extension. Quick read stays one click away."},
+ {"img":"author.png","out":"screenshot-2-1280x800.png","title":"Author metrics on every profile","sub":"h-index, m-index, g-index, authorship position and top venues, calculated from the papers on the page."},
+ {"img":"custom-list.png","out":"screenshot-3-1280x800.png","title":"Add your department's journal list","sub":"Upload a CSV of venues and tiers. Matching results get a badge with your label, and the file never leaves your browser."}
+]

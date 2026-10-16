@@ -74,14 +74,17 @@ English
 
 ## Files to Upload
 
-### Screenshots (1280×800, PNG)
-1. screenshot-1-1280x800.png — Quality Badges on search results
-2. screenshot-2-1280x800.png — Author profile analytics
-3. screenshot-3-1280x800.png — Advisor–student genealogy tree
-4. screenshot-4-1280x800.png — Trend tracker panel
-5. screenshot-5-1280x800.png — Dark mode + quick actions
+### Screenshots (1280×800, PNG), made 2026-10-16 from real captures of 1.0.2
+Delete the old five in the dashboard first, then upload these three in order:
+1. screenshot-1-1280x800.png: Journal rankings beside every Scholar result
+2. screenshot-2-1280x800.png: Author metrics on every profile (profile photo blurred)
+3. screenshot-3-1280x800.png: Add your department's journal list
 
-### Promotional Images
+How they were made: `store-assets/source/` (capture.py captures one Chrome window and crops off the toolbar;
+compose.mjs and specs.json lay them out; tiles.mjs draws the promo tiles). The old HTML mockups
+(screenshots.html, render.mjs) are kept for reference but are no longer the source.
+
+### Promotional Images (new belt icon, 2026-10-16)
 - Small tile: promo-small-440x280.png (440×280)
 - Marquee: promo-marquee-1400x560.png (1400×560)
 
