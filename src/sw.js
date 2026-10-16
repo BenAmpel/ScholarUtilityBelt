@@ -52,14 +52,17 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 // are optional features, loaded one at a time so a missing or broken file turns off only that
 // feature (each use below already sits in a try/catch or .catch) instead of stopping the worker
 // from registering any handler at all.
-importScripts(
+// Firefox runs this file as an event page, where importScripts does not exist: its manifest lists these files
+// before sw.js instead (scripts/make_variant.mjs), so there the call does nothing.
+const loadScripts = typeof importScripts === "function" ? importScripts : () => {};
+loadScripts(
   chrome.runtime.getURL("dist/common/extpay.js"),
   chrome.runtime.getURL("dist/common/entitlement.sw.js"),
   chrome.runtime.getURL("dist/common/url-policy.sw.js")
 );
 for (const optional of ["apppass.sw.js", "install-pages.sw.js", "ask-sw.js"]) {
   try {
-    importScripts(chrome.runtime.getURL(`dist/common/${optional}`));
+    loadScripts(chrome.runtime.getURL(`dist/common/${optional}`));
   } catch (e) {
     console.warn(`[SU] optional script ${optional} failed to load; that feature is off`, e);
   }
