@@ -68,3 +68,7 @@ zip -r "${ZIP_PATH}" \
 popd >/dev/null
 
 echo "Wrote ${ZIP_PATH}"
+
+# The Microsoft Edge and Firefox packages are made from the Chrome one (store links, wording, manifest keys).
+node "${ROOT_DIR}/scripts/make_variant.mjs" edge
+node "${ROOT_DIR}/scripts/make_variant.mjs" firefox
