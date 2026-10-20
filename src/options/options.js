@@ -238,6 +238,7 @@ async function load() {
   el("groupVersions").checked = !!s.groupVersions;
   el("versionOrder").value = s.versionOrder || "journal-first";
   el("showNewSinceLastVisit").checked = s.showNewSinceLastVisit !== false;
+  el("autoLoadAuthorPapers").checked = s.autoLoadAuthorPapers === true;
   el("showCitationSpike").checked = s.showCitationSpike !== false;
   el("citationSpikeThresholdPct").value = String(s.citationSpikeThresholdPct ?? 50);
   el("citationSpikeMonths").value = String(s.citationSpikeMonths ?? 6);
@@ -668,6 +669,7 @@ async function handleSave() {
     qualityBadgeKinds,
     authorStatsVisible,
     showNewSinceLastVisit: el("showNewSinceLastVisit").checked,
+    autoLoadAuthorPapers: el("autoLoadAuthorPapers").checked,
     showCitationSpike: el("showCitationSpike").checked,
     citationSpikeThresholdPct: Math.max(10, Math.min(500, parseInt(el("citationSpikeThresholdPct").value, 10) || 50)),
     citationSpikeMonths: Math.max(1, Math.min(24, parseInt(el("citationSpikeMonths").value, 10) || 6)),

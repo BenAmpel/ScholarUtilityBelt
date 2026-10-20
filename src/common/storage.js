@@ -191,6 +191,10 @@ export const DEFAULT_SETTINGS = {
 
   // Power user
   showNewSinceLastVisit: true,
+  // Off by default since 1.1.0: clicking Scholar's "Show more" on every profile visit sent extra Scholar requests
+  // that could add to a user's chance of a Scholar CAPTCHA. Profiles show stats for the loaded papers and a
+  // "Load all for full stats" button instead.
+  autoLoadAuthorPapers: false,
   showCitationSpike: true,
   citationSpikeThresholdPct: 50,
   citationSpikeMonths: 6,

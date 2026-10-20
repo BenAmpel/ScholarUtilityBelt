@@ -15357,6 +15357,13 @@
         if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled && state.authorAutoLoadRunning) {
           // A load-all is already in progress. Each "Show more" adds rows and triggers another pass,
           // which used to start another loop on top of the running one.
+        } else if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled && !state.settings.autoLoadAuthorPapers) {
+          // Auto-load is off (the default): no extra Scholar requests on a profile visit. Stats cover the loaded
+          // papers and say so, with a "Load all for full stats" button that runs the same loader on request.
+          const moreBtn = document.getElementById("gsc_bpf_more");
+          state.authorStatsPartial = !!(moreBtn && !moreBtn.disabled);
+          const fullStats = computeAuthorStats(visibleAuthorResults, state, window.suAuthorPositionFilter);
+          await renderAuthorStatsWithGrowth(fullStats);
         } else if (!state.allPublicationsLoaded && !state.authorAutoLoadDisabled) {
           state.authorAutoLoadRunning = true;
           renderAuthorStats({ qualityCounts: { q1: 0, a: 0, vhb: 0, utd24: 0, ft50: 0, abs4star: 0 }, totalPublications: 0, totalCitations: 0, avgCitations: 0, recentActivity: { last5Years: 0 } }, true);
