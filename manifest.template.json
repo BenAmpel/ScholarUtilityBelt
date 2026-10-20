@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Scholar Utility Belt for Google Scholar",
   "short_name": "Scholar Utility Belt",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Personal productivity tools for Google Scholar with minimal extra requests.",
   "action": {
     "default_title": "Scholar Utility Belt",

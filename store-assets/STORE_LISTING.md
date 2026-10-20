@@ -129,6 +129,10 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.0 (paste into the dashboard's "What's new")
+
+Author profiles no longer press Scholar's "Show more" by themselves. Stats now cover the papers on screen, and "Load all for full stats" loads the rest when you click it. The automatic loading sent Scholar extra page requests on every profile visit, which can add to the chance of a "not a robot" check. If you prefer the old behavior, turn on "Load every paper on author profiles automatically" in Options.
+
 ## Release notes for 1.0.2 (paste into the dashboard's "What's new")
 
 The store name is now "Scholar Utility Belt for Google Scholar". Nothing else changed.
