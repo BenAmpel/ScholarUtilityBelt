@@ -106,7 +106,8 @@ describe("parseBibtex", () => {
     assert.ok(!records.some((r) => /Not real/.test(r.title)));
   });
   it("cleans LaTeX in titles and keeps balanced text", () => {
-    assert.equal(records[0].title, "Reducing GPT-4 hallucination & bias: a Quick look");
+    // {Q\"u}ick is LaTeX for "Qüick": accents are kept, not dropped.
+    assert.equal(records[0].title, "Reducing GPT-4 hallucination & bias: a Qüick look");
     assert.equal(records[1].title, "Second Paper");
   });
   it("splits authors on and, keeps corporate authors, formats names", () => {
@@ -347,5 +348,13 @@ describe("duplicate matching across records with and without a DOI", async () =>
     registerKeys(fps, { doi: "10.1/x", title: longTitle }, "b", h);
     assert.equal(fps["doi:10.1/x"], "a");
     assert.equal(fps[`title:${h.normalizeTitle(longTitle)}`], "b");
+  });
+});
+
+describe("parseBibtex keeps accented names", () => {
+  it("turns LaTeX accent commands into the letters they stand for", () => {
+    const { records } = parseBibtex("@article{k,\n  title={Pok{\\'e}mon and {\\'\\i}ndice: Stra{\\ss}e},\n  author={G{\\'o}mez, Ana and Pe{\\~n}a, Luis and Dvo{\\v{r}}{\\'a}k, A},\n  year={2021}\n}");
+    assert.equal(records[0].title, "Pokémon and índice: Straße");
+    assert.equal(records[0].authors, "A Gómez, L Peña, A Dvořák");
   });
 });
