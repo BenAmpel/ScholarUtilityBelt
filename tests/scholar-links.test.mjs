@@ -109,3 +109,23 @@ describe("safeHref", async () => {
     assert.equal(safeHref(null), "");
   });
 });
+
+describe("scholarRowLinkKind and citedByCount", async () => {
+  const { scholarRowLinkKind, citedByCount } = await import("../src/common/scholar-links.js");
+  it("classifies result links by address, whatever the interface language", () => {
+    assert.equal(scholarRowLinkKind("/scholar?cites=123&as_sdt=2005&hl=de"), "cited");
+    assert.equal(scholarRowLinkKind("https://scholar.google.fr/scholar?cluster=99&hl=fr"), "versions");
+    assert.equal(scholarRowLinkKind("/scholar?q=related:abc:scholar.google.com/&hl=ja"), "related");
+    assert.equal(scholarRowLinkKind("/scholar?q=sleep"), null);
+    assert.equal(scholarRowLinkKind("https://example.org/scholar?cites=1"), null);
+    assert.equal(scholarRowLinkKind("/citations?user=x"), null);
+  });
+  it("reads the count in any language", () => {
+    assert.equal(citedByCount("Cited by 1,234"), 1234);
+    assert.equal(citedByCount("Zitiert von: 1.234"), 1234);
+    assert.equal(citedByCount("Cité 1 234 fois"), 1234);
+    assert.equal(citedByCount("被引用次数：87"), 87);
+    assert.equal(citedByCount("Citado por 5"), 5);
+    assert.equal(citedByCount("Cited by"), null);
+  });
+});

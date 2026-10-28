@@ -23,6 +23,14 @@ function num(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Scholar's own counts are whole numbers, written "5,432", "5.432" or "5 432" depending on the interface language.
+function count(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const digits = String(v).replace(/\D/g, "");
+  return digits ? Number(digits) : null;
+}
+
 function str(v, max = 400) {
   return String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, max);
 }
@@ -48,14 +56,16 @@ export function parseSidebarTable(table) {
   if (!table || !Array.isArray(table.rows)) return out;
   const headers = Array.isArray(table.headers) ? table.headers.map((h) => str(h, 40)) : [];
   out.sinceLabel = headers[2] || "";
-  for (const row of table.rows) {
-    if (!Array.isArray(row) || row.length < 2) continue;
+  // Rows are always citations, h-index, i10-index in that order; the labels are translated ("Zitiert von", "h-Index"),
+  // so a known label wins and the position is the fallback.
+  const byPosition = ["citations", "hIndex", "i10Index"];
+  table.rows.forEach((row, i) => {
+    if (!Array.isArray(row) || row.length < 2) return;
     const label = str(row[0], 40).toLowerCase();
-    const pair = { all: num(row[1]), recent: num(row[2]) };
-    if (label === "citations") out.citations = pair;
-    else if (label === "h-index") out.hIndex = pair;
-    else if (label === "i10-index") out.i10Index = pair;
-  }
+    const pair = { all: count(row[1]), recent: count(row[2]) };
+    const key = label === "citations" ? "citations" : label === "h-index" ? "hIndex" : label === "i10-index" ? "i10Index" : byPosition[i];
+    if (key && out[key] == null) out[key] = pair;
+  });
   return out;
 }
 

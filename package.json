@@ -14,6 +14,7 @@
     "store-status": "node scripts/store_status.mjs",
     "a11y": "node scripts/e2e/a11y.mjs",
     "focus": "node scripts/e2e/focus.mjs",
+    "idle": "node scripts/e2e/idle.mjs",
     "theme": "node scripts/e2e/theme.mjs"
   },
   "keywords": [],

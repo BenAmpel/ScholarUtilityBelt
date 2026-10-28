@@ -41,6 +41,11 @@ jobs:
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
           if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping focus check"; exit 0; fi
           EDGE_PATH="$EDGE" npm run focus
+      - name: An idle Scholar tab does not keep the CPU busy
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping idle check"; exit 0; fi
+          EDGE_PATH="$EDGE" npm run idle
       - name: Package all stores, then end-to-end on the Edge package
         run: |
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"

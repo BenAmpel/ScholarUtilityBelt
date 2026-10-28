@@ -73,3 +73,26 @@ export function safeHref(raw) {
     return "";
   }
 }
+/**
+ * What a link under a Scholar result points to, from its address rather than its text, so it works in every
+ * interface language: "cited" (/scholar?cites=), "versions" (/scholar?cluster=) or "related" (q=related:).
+ */
+export function scholarRowLinkKind(href) {
+  let u;
+  try { u = new URL(String(href || ""), "https://scholar.google.com"); } catch (_) { return null; }
+  if (!/^scholar\.google\./.test(u.hostname) || u.pathname !== "/scholar") return null;
+  if (u.searchParams.has("cites")) return "cited";
+  if (u.searchParams.has("cluster")) return "versions";
+  if (/^related:/.test(u.searchParams.get("q") || "")) return "related";
+  return null;
+}
+/**
+ * The count in a "Cited by" link's text in any language: "Cited by 1,234", "Zitiert von: 1.234",
+ * "Cité 1 234 fois", "被引用次数：1234". Thousands separators are dropped. Null when there is no number.
+ */
+export function citedByCount(text) {
+  const m = String(text || "").match(/\d[\d.,\u00a0\u202f ]*/);
+  if (!m) return null;
+  const n = parseInt(m[0].replace(/\D/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+}
