@@ -38,7 +38,7 @@ function balanceBraces(s) {
 /** Text fields: collapse whitespace, balance braces, escape the characters LaTeX treats specially. */
 export function escapeBibText(value) {
   const s = balanceBraces(String(value ?? "")).replace(/\s+/g, " ").trim();
-  return s.replace(/\\/g, "").replace(/([&%#])/g, "\\$1");
+  return s.replace(/\\/g, "").replace(/([&%#_$])/g, "\\$1");
 }
 
 /** Keys may not contain whitespace or BibTeX delimiters. */

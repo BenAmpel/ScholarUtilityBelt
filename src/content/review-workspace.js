@@ -15,6 +15,7 @@
  */
 import { showProPrompt } from "../common/pro-prompt.js";
 import { safeHref } from "../common/scholar-links.js";
+import { buildBibTeXEntry } from "../common/bibtex.js";
 import {
   MAX_FILE_BYTES,
   findExistingKey,
@@ -529,8 +530,8 @@ export function createReviewWorkspace(deps) {
     const entries = includedIds.map((id) => {
       const p = project.papers[id];
       const key = `${(project.name || "review").replace(/\W+/g, "")}${p.year || ""}${hashString(p.title || "")}`.slice(0, 32);
-      const authors = p.authors ? p.authors.split(/\s*[,;]\s*|\s+and\s+/i).join(" and ") : "";
-      return `@article{${key},\n  title={${p.title || ""}},\n  author={${authors}},\n  year={${p.year || ""}},\n  doi={${p.doi || ""}},\n  url={${p.url || ""}}\n}`;
+      const authors = p.authors ? String(p.authors).split(/\s*[,;]\s*|\s+and\s+/i).filter(Boolean) : [];
+      return buildBibTeXEntry({ key, title: p.title, authors, year: p.year, venue: p.venue, doi: p.doi, url: p.url });
     }).join("\n\n");
     downloadBlob(`${project.name}-included.bib`.replace(/\s+/g, "-").toLowerCase(), "text/plain;charset=utf-8", entries || "");
   }

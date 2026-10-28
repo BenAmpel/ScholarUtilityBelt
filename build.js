@@ -87,6 +87,11 @@ const TARGETS = [
     args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
   },
   {
+    // Imported by the review workspace (BibTeX export of included papers).
+    label: 'common/bibtex.js',
+    args: ['src/common/bibtex.js', '--bundle=false', '--minify', '--outfile=dist/common/bibtex.js', '--log-level=warning'],
+  },
+  {
     label: 'common/claim-signals.js',
     args: ['src/common/claim-signals.js', '--bundle=false', '--minify', '--outfile=dist/common/claim-signals.js', '--log-level=warning'],
   },
