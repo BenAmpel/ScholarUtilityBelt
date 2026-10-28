@@ -172,3 +172,48 @@ describe("compileQualityIndex (edge cases)", () => {
     assert.equal(idx.quartiles.get("goodjournal"), "Q1");
   });
 });
+
+describe("badges say when they come from a close (prefix) match", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const idx = compileQualityIndex({ qualityAbdcRanks: "Journal of Information Technology,A\nMIS Quarterly Management Information Systems,A*" });
+  it("an exact match carries no near-match note", () => {
+    const b = qualityBadgesForVenue("Journal of Information Technology", idx).find((x) => x.kind === "abdc");
+    assert.ok(b);
+    assert.equal(b.metadata.nearMatch, undefined);
+  });
+  it("a prefix match names the list entry and the venue it read", () => {
+    const b = qualityBadgesForVenue("MIS Quarterly", idx).find((x) => x.kind === "abdc");
+    assert.ok(b);
+    assert.equal(b.text, "ABDC A*");
+    assert.equal(b.metadata.nearMatch, "mis quarterly management information systems");
+    assert.equal(b.metadata.venueRead, "mis quarterly");
+  });
+});
+
+describe("prefix matches never guess between different venues", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  it("no h5 badge when the venue only begins other journals' names (shipped bug: J Neurosci showed J Neurosci Nursing's 52)", () => {
+    const idx = compileQualityIndex({}, { h5Index: { "journal of neuroscience nursing": 52, "journal of neuroscience psychology and economics": 31 } });
+    assert.equal(qualityBadgesForVenue("Journal of Neuroscience", idx).find((b) => b.kind === "h5"), undefined);
+  });
+  it("entries that all agree still give the badge, and say how many matched", () => {
+    const idx = compileQualityIndex({ qualityQuartiles: "MIS Quarterly Executive,Q1\nMIS Quarterly Management Information Systems,Q1" });
+    const b = qualityBadgesForVenue("MIS Quarterly", idx).find((x) => x.kind === "quartile");
+    assert.equal(b?.text, "Q1");
+    assert.equal(b.metadata.nearMatchCount, 2);
+  });
+  it("a list's colon subtitle makes the short name an exact match", () => {
+    const idx = compileQualityIndex({}, { absIndex: new Map([["MIS Quarterly: Management Information Systems", "4*"], ["MIS Quarterly Executive", "2"]]) });
+    const b = qualityBadgesForVenue("MIS Quarterly", idx).find((x) => x.kind === "abs");
+    assert.equal(b?.text, "ABS 4*");
+    assert.equal(b.metadata.nearMatch, undefined);
+  });
+  it("a journal listed under the short name itself beats a subtitle alias", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Information Policy: Studies in Something,B\nInformation Policy,A" });
+    assert.equal(qualityBadgesForVenue("Information Policy", idx).find((x) => x.kind === "abdc")?.text, "ABDC A");
+  });
+  it("two subtitled entries with the same short name and different ranks add no alias", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Journal of Things: Series A,A\nJournal of Things: Series B,C" });
+    assert.equal(idx.abdc.has("journal of things"), false);
+  });
+});

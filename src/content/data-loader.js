@@ -81,7 +81,9 @@ export async function loadEraAndNorwegian() {
       const rank = line.slice(idx + 1).trim();
       if (!name || !rank) continue;
       const n = normalizeVenueName(name);
-      if (n && /^4\*?$|^[1234]$/i.test(rank)) absIndex.set(n, rank);
+      // Keyed by the list's own name: compileQualityIndex normalizes it and needs the colon to match
+      // "MIS Quarterly: Management Information Systems" to Scholar's "MIS Quarterly".
+      if (n && /^4\*?$|^[1234]$/i.test(rank)) absIndex.set(name, rank);
     }
   } catch (_) {
     eraSet = new Set();

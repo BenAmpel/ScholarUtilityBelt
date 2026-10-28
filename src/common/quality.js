@@ -181,6 +181,15 @@ function addSynonymsToMap(map, name, value) {
   }
 }
 
+// Lists write some journals with a subtitle that Scholar leaves off: ABS has "MIS Quarterly: Management Information
+// Systems", Scholar shows "MIS Quarterly". The part before the colon is the name to match on.
+function subtitleHead(rawName) {
+  const i = String(rawName || "").indexOf(":");
+  if (i <= 0) return "";
+  const head = normalizeVenueName(String(rawName).slice(0, i));
+  return head.includes(" ") || head.length >= 8 ? head : "";
+}
+
 export function normalizeVhbRank(raw) {
   let r = String(raw || "").trim().toUpperCase();
   if (!r) return "";
@@ -202,6 +211,21 @@ export function compileQualityIndex(settings, extra = {}) {
   const impact = new Map(); // venue -> impact factor (numeric)
   const abs = new Map(); // venue -> 4*/4/3/2/1 (ABS 2024 AJG)
 
+  // map -> (subtitle head -> value, or CONFLICT when two subtitled entries with that head disagree). Added as exact
+  // keys at the end, and only where no list entry already has that name.
+  const subtitleAliases = new Map();
+  const CONFLICT = Symbol("conflict");
+  const noteAlias = (map, name, value) => {
+    for (const syn of String(name || "").split("|")) {
+      const head = subtitleHead(syn);
+      if (!head) continue;
+      if (!subtitleAliases.has(map)) subtitleAliases.set(map, new Map());
+      const pending = subtitleAliases.get(map);
+      const v = String(value || "").trim();
+      pending.set(head, pending.has(head) && pending.get(head) !== v ? CONFLICT : v);
+    }
+  };
+
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   const VALID_ABS = /^4\*?$|^[1234]$/i;
   const VALID_VHB = /^A\+?$|^[BCDE]$/i;
@@ -219,6 +243,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = line.slice(idx + 1).trim();
     if (!name || !rank || !VALID_ABDC.test(rank)) continue;
     addSynonymsToMap(abdc, name, rank);
+    noteAlias(abdc, name, rank);
   }
   const extraVhb = extra?.vhbIndex;
   if (extraVhb && typeof extraVhb === "object") {
@@ -238,6 +263,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = normalizeVhbRank(rankRaw);
     if (!name || !rank || !VALID_VHB.test(rank)) continue;
     addSynonymsToMap(vhb, name, rank);
+    noteAlias(vhb, name, rank);
   }
 
   for (const line of parseLines(settings.qualityFnegeRanks || "")) {
@@ -247,6 +273,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = line.slice(idx + 1).trim().replace(/\s+/g, "");
     if (!name || !rank || !VALID_FNEGE.test(rank)) continue;
     addSynonymsToMap(fnege, name, rank);
+    noteAlias(fnege, name, rank);
   }
 
   // Large-scale quartiles can be supplied as a prebuilt index (already normalized keys).
@@ -288,6 +315,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const q = line.slice(idx + 1).trim();
     if (!name || !q || !VALID_QUARTILE.test(q)) continue;
     addSynonymsToMap(quartiles, name, q);
+    noteAlias(quartiles, name, q);
   }
 
   for (const line of parseLines(settings.qualityCoreRanks || "")) {
@@ -297,6 +325,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = line.slice(idx + 1).trim();
     if (!name || !rank || !VALID_CORE.test(rank)) continue;
     addSynonymsToMap(core, name, rank);
+    noteAlias(core, name, rank);
   }
 
   for (const line of parseLines(settings.qualityCcfRanks || "")) {
@@ -306,6 +335,7 @@ export function compileQualityIndex(settings, extra = {}) {
     const rank = line.slice(idx + 1).trim();
     if (!name || !rank || !VALID_CCF.test(rank)) continue;
     addSynonymsToMap(ccf, name, rank);
+    noteAlias(ccf, name, rank);
   }
 
   // ERA 2023, Norwegian Register, ABS 2024: supplied via extra (loaded from src/data/ in content script)
@@ -317,7 +347,10 @@ export function compileQualityIndex(settings, extra = {}) {
     for (const [name, rank] of entries) {
       const n = normalizeVenueName(name);
       const v = String(rank || "").trim();
-      if (n && v && VALID_ABS.test(v)) abs.set(n, v);
+      if (n && v && VALID_ABS.test(v)) {
+        abs.set(n, v);
+        noteAlias(abs, name, v);
+      }
     }
   }
 
@@ -332,6 +365,12 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
+  for (const [map, pending] of subtitleAliases) {
+    for (const [head, value] of pending) {
+      if (value !== CONFLICT && !map.has(head)) map.set(head, value);
+    }
+  }
+
   return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
 }
 
@@ -340,22 +379,39 @@ export function compileQualityIndex(settings, extra = {}) {
 const MIN_KEY_LENGTH_FOR_PREFIX_MATCH = 12;
 
 function findBestMatch(normalizedVenue, map) {
-  // Try prefix matching: check if any key starts with the normalized venue
-  // This handles cases like "mis quarterly" matching "mis quarterly management information systems"
+  const entry = findBestMatchEntry(normalizedVenue, map);
+  return entry ? entry[1] : null;
+}
+
+/**
+ * findBestMatch, returning the [listKey, value] pair so a badge can say which list entry it came from.
+ * Two kinds of near match, because Scholar truncates long venue names and lists add subtitles:
+ *  - forward: list entries that extend the venue ("mis quarterly" -> "mis quarterly management information systems").
+ *    When several entries extend it and their values differ, the venue is ambiguous ("journal of neuroscience" ->
+ *    "...nursing" 52 or "...psychology and economics" 31) and no badge beats a wrong one.
+ *  - reverse: the venue extends a list entry (a venue line with extra words); the longest such entry wins.
+ */
+function findBestMatchEntry(normalizedVenue, map) {
+  if (map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
+  let forward = null;
+  let forwardAgrees = true;
+  let forwardCount = 0;
+  let reverse = null;
   for (const [key, value] of map.entries()) {
-    // Check if key starts with normalized venue (with space after)
-    if (key.startsWith(normalizedVenue + " ") || key === normalizedVenue) {
-      return value;
-    }
-    // Also try reverse: if the normalized venue starts with the key
-    if (normalizedVenue.startsWith(key + " ") || normalizedVenue === key) {
+    if (key.startsWith(normalizedVenue + " ")) {
+      forwardCount += 1;
+      if (!forward) forward = [key, value];
+      else if (String(forward[1]) !== String(value)) forwardAgrees = false;
+      else if (key.length < forward[0].length) forward = [key, value];
+    } else if (normalizedVenue.startsWith(key + " ")) {
       // Require key to be multi-word or long enough so "ais" doesn't match "ais transactions on replication research" (journal)
-      if (key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" "))
-        return value;
+      if ((key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" ")) && (!reverse || key.length > reverse[0].length)) {
+        reverse = [key, value];
+      }
     }
   }
-  
-  return null;
+  if (forward && forwardAgrees) return [forward[0], forward[1], forwardCount];
+  return reverse;
 }
 
 /**
@@ -444,6 +500,14 @@ export function qualityBadgesForVenue(venue, qIndex) {
 
   const badges = [];
   let impactBadge = null;
+  // Badge kind -> the list entry a prefix (not exact) match landed on, shown on hover so a wrong match is visible.
+  const nearMatch = {};
+  const fuzzy = (kind, map) => {
+    const entry = findBestMatchEntry(v, map);
+    if (!entry) return null;
+    if (entry[0] !== v) nearMatch[kind] = { key: entry[0], count: entry[2] || 1 };
+    return entry[1];
+  };
 
   // Pre-print badge first so it's clearly visible
   const preprint = getPreprintBadge(venue);
@@ -455,7 +519,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // Try exact match first, then fuzzy match for ABDC
   let abdc = qIndex.abdc.get(v);
   if (!abdc) {
-    abdc = findBestMatch(v, qIndex.abdc);
+    abdc = fuzzy("abdc", qIndex.abdc);
   }
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   if (abdc && VALID_ABDC.test(String(abdc).trim())) {
@@ -464,7 +528,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   let vhb = qIndex.vhb?.get?.(v);
-  if (!vhb && qIndex.vhb) vhb = findBestMatch(v, qIndex.vhb);
+  if (!vhb && qIndex.vhb) vhb = fuzzy("vhb", qIndex.vhb);
   const VALID_VHB = /^A\+?$|^[BCDE]$/i;
   if (vhb && VALID_VHB.test(String(vhb).trim())) {
     const r = String(vhb).trim().toUpperCase().replace("*", "+");
@@ -472,7 +536,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   let fnege = qIndex.fnege?.get?.(v);
-  if (!fnege && qIndex.fnege) fnege = findBestMatch(v, qIndex.fnege);
+  if (!fnege && qIndex.fnege) fnege = fuzzy("fnege", qIndex.fnege);
   const VALID_FNEGE = /^1\*?$|^[234]$/i;
   if (fnege && VALID_FNEGE.test(String(fnege).trim())) {
     const r = String(fnege).trim().replace(/\s+/g, "");
@@ -480,7 +544,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   let abs = qIndex.abs?.get?.(v);
-  if (!abs && qIndex.abs) abs = findBestMatch(v, qIndex.abs);
+  if (!abs && qIndex.abs) abs = fuzzy("abs", qIndex.abs);
   const VALID_ABS = /^4\*?$|^[1234]$/i;
   if (abs && VALID_ABS.test(String(abs).trim())) {
     const r = String(abs).trim();
@@ -498,7 +562,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   let impact = qIndex.impact?.get?.(v);
-  if (impact == null && qIndex.impact) impact = findBestMatch(v, qIndex.impact);
+  if (impact == null && qIndex.impact) impact = fuzzy("if", qIndex.impact);
   const impactNum = typeof impact === "number" ? impact : parseFloat(String(impact || "").replace(/[^0-9.]/g, ""));
   if (Number.isFinite(impactNum) && impactNum > 0) {
     const display = impactNum.toFixed(1);
@@ -524,9 +588,9 @@ export function qualityBadgesForVenue(venue, qIndex) {
     core = qIndex.core.get("hawaii international conference on system sciences");
   }
   if (!core) {
-    core = findBestMatch(v, qIndex.core);
+    core = fuzzy("core", qIndex.core);
   }
-  let ccf = qIndex.ccf?.get?.(v) || (qIndex.ccf ? findBestMatch(v, qIndex.ccf) : null);
+  let ccf = qIndex.ccf?.get?.(v) || (qIndex.ccf ? fuzzy("ccf", qIndex.ccf) : null);
   const exactQuartile = qIndex.quartiles.get(v);
   // Known journal (exact quartile match): don't show CORE/CCF. CORE/CCF are for conferences; a journal can falsely match when a conference name starts with the journal name (e.g. "Information Systems Research" matching "Information Systems Research Seminar in Scandinavia").
   if (exactQuartile) {
@@ -539,7 +603,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // Don't apply quartile prefix match when venue looks like a workshop (e.g. "IEEE Security and Privacy Workshops" must not match journal "IEEE Security and Privacy").
   const looksLikeWorkshop = /\bworkshops?\b/.test(v);
   if (exactQuartile || !isConference) {
-    const q = exactQuartile || (looksLikeWorkshop ? null : findBestMatch(v, qIndex.quartiles));
+    const q = exactQuartile || (looksLikeWorkshop ? null : fuzzy("quartile", qIndex.quartiles));
     if (q && VALID_QUARTILE.test(String(q))) badges.push({ kind: "quartile", text: String(q).toUpperCase(), metadata: { quartile: q, system: "SCImago Journal Rank (SJR)" } });
   }
 
@@ -606,15 +670,20 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   let norLevel = qIndex.norwegian?.get?.(v);
-  if (norLevel == null && qIndex.norwegian) norLevel = findBestMatch(v, qIndex.norwegian);
+  if (norLevel == null && qIndex.norwegian) norLevel = fuzzy("norwegian", qIndex.norwegian);
   if (norLevel === "1" || norLevel === "2") badges.push({ kind: "norwegian", text: `Level ${norLevel}`, metadata: { level: norLevel, system: "Norwegian Register for Scientific Journals" } });
 
   let h5Val = qIndex.h5?.get?.(v);
-  if (h5Val == null && qIndex.h5) h5Val = findBestMatch(v, qIndex.h5);
+  if (h5Val == null && qIndex.h5) h5Val = fuzzy("h5", qIndex.h5);
   if (typeof h5Val === "number" && h5Val > 0) {
     badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: "Google Scholar 5-year h-index" } });
   }
 
   if (impactBadge) badges.push(impactBadge);
+  for (const b of badges) {
+    if (nearMatch[b.kind] && b.metadata) {
+      Object.assign(b.metadata, { nearMatch: nearMatch[b.kind].key, nearMatchCount: nearMatch[b.kind].count, venueRead: v });
+    }
+  }
   return badges;
 }
