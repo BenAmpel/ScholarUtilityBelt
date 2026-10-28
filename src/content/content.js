@@ -2858,6 +2858,8 @@
     if (!key) return null;
     const current = getLocalExpectedForPaper(paper, state);
     if ((current?.n || 0) >= SPARSE_LOCAL_COHORT_MIN) return current;
+    // Reading neighbouring Scholar pages is opt-in: each one is an extra Scholar request the user did not make.
+    if (!state.settings?.emergingSampleScholarPages) return current;
     if (!state.localCohortSampleAttempts) state.localCohortSampleAttempts = new Set();
     if (!state.localCohortSampleInFlight) state.localCohortSampleInFlight = new Map();
     if (!state.localCohortSampleCache) state.localCohortSampleCache = new Map();

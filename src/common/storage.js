@@ -195,6 +195,9 @@ export const DEFAULT_SETTINGS = {
   // that could add to a user's chance of a Scholar CAPTCHA. Profiles show stats for the loaded papers and a
   // "Load all for full stats" button instead.
   autoLoadAuthorPapers: false,
+  // Off by default since 1.1.0: when the Emerging score had too few similar papers on the page it read up to three
+  // neighbouring Scholar pages in the background, which adds to a user's Scholar traffic. It now uses OpenAlex instead.
+  emergingSampleScholarPages: false,
   showCitationSpike: true,
   citationSpikeThresholdPct: 50,
   citationSpikeMonths: 6,

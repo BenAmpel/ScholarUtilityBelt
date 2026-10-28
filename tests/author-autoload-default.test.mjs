@@ -21,3 +21,12 @@ describe("author profile auto-load", () => {
     assert.match(js, /autoLoadAuthorPapers: el\("autoLoadAuthorPapers"\)\.checked/);
   });
 });
+
+describe("Emerging score Scholar sampling", () => {
+  it("is off by default and checked before any neighbouring page is fetched", () => {
+    assert.equal(DEFAULT_SETTINGS.emergingSampleScholarPages, false);
+    const src = fs.readFileSync(new URL("../src/content/content.js", import.meta.url), "utf8");
+    const fn = src.slice(src.indexOf("async function maybeExpandLocalCohortForPaper"));
+    assert.ok(fn.indexOf("if (!state.settings?.emergingSampleScholarPages) return current;") < fn.indexOf("getSparseLocalCohortSampleUrl("));
+  });
+});

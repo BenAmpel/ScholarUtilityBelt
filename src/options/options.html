@@ -271,6 +271,10 @@
           <span>Show <strong>Emerging Paper Score</strong> badge (trajectory-based signals: momentum, venue-adjusted performance, acceleration, half-life)</span>
           <span class="toggle-switch"><input type="checkbox" id="showEmergingScore" /><span class="slider"></span></span>
         </label>
+        <label class="toggle-row">
+          <span><strong>Let the Emerging score read nearby Scholar pages</strong>: when a page has too few similar papers to compare against, read up to three neighbouring Scholar result pages in the background. Off by default, because those page loads count toward Scholar's limits; with it off the score uses OpenAlex figures instead.</span>
+          <span class="toggle-switch"><input type="checkbox" id="emergingSampleScholarPages" /><span class="slider"></span></span>
+        </label>
         <label class="field" for="emergingScoreDataSource">
           <div class="label">Emerging score data source</div>
           <select id="emergingScoreDataSource">
