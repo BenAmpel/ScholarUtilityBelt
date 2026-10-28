@@ -82,6 +82,7 @@
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let classifyScholarResponse = () => null;
   let findResultDoi = () => null;
+  let safeHref = (u) => (/^https?:\/\//i.test(String(u ?? "").trim()) ? String(u).trim() : "");
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
   // Resolves with `fallback` if the promise is slow or fails. Entitlement lookups can wait on
   // ExtensionPay's server, which has no timeout of its own; page boot must not wait on it.
@@ -135,7 +136,7 @@
       importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi, safeHref } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -9261,8 +9262,8 @@
       const tooltipAttr = escapeHtml(tooltipRaw).replace(/\n/g, "&#10;");
       const link = coauthorLinks.get(coKey);
       const safeName = escapeHtml(String(coAuthor?.name ?? ""));
-      const nameHtml = link
-        ? `<a class="su-coauthor-link" href="${escapeHtml(link)}" target="_blank" rel="noopener" title="${tooltipAttr}">${safeName}</a>`
+      const nameHtml = safeHref(link)
+        ? `<a class="su-coauthor-link" href="${escapeHtml(safeHref(link))}" target="_blank" rel="noopener" title="${tooltipAttr}">${safeName}</a>`
         : safeName;
       return `
               <tr class="su-coauthor-row" data-coauthor-tooltip="${tooltipAttr}">
@@ -11083,7 +11084,7 @@
       bodyHtml = `<div class="su-pop-peers-error">${escapeHtml(error)}</div>`;
     } else if (peers.length) {
       const rows = displayPeers.map((p) => {
-        const oaLink = p.id ? `<a href="${escapeHtml(p.id)}" target="_blank" rel="noopener">OpenAlex</a>` : "";
+        const oaLink = safeHref(p.id) ? `<a href="${escapeHtml(safeHref(p.id))}" target="_blank" rel="noopener">OpenAlex</a>` : "";
         const scholarQuery = p.name ? `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(p.name)}` : "";
         const scholarLink = scholarQuery ? `<a href="${scholarQuery}" target="_blank" rel="noopener">Scholar</a>` : "";
         const links = [oaLink, scholarLink].filter(Boolean).join(" · ");
@@ -11256,7 +11257,7 @@
             <tbody>
               ${rows.map((p) => {
                 const cpy = computeVelocityValue(p.citations, p.year);
-                const url = p.url ? `<a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">link</a>` : "";
+                const url = safeHref(p.url) ? `<a href="${escapeHtml(safeHref(p.url))}" target="_blank" rel="noopener">link</a>` : "";
                 return `<tr>
                   <td>${escapeHtml(p.title || "")}</td>
                   <td>${p.year || "—"}</td>
@@ -13327,7 +13328,7 @@
         const items = results.map((w) => {
           const href = w.doi ? `https://doi.org/${encodeURIComponent(String(w.doi).replace(/^https?:\/\/doi\.org\//, ""))}` : (w.id || "#");
           const venue = w?.primary_location?.source?.display_name || "";
-          return `<div class="su-related-item"><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(w.display_name || "Untitled")}</a><span class="su-related-meta">${w.publication_year || ""}${venue ? ` \u00b7 ${escapeHtml(venue)}` : ""} \u00b7 ${Number(w.cited_by_count) || 0} cites</span></div>`;
+          return `<div class="su-related-item"><a href="${escapeHtml(safeHref(href) || "#")}" target="_blank" rel="noopener">${escapeHtml(w.display_name || "Untitled")}</a><span class="su-related-meta">${w.publication_year || ""}${venue ? ` \u00b7 ${escapeHtml(venue)}` : ""} \u00b7 ${Number(w.cited_by_count) || 0} cites</span></div>`;
         }).join("");
         panel.innerHTML = `<div class="su-related-title">Related works (OpenAlex relevance)</div>${items}`;
         relatedWorksCache = { query, html: panel.innerHTML };
