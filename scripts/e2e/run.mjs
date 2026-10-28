@@ -29,7 +29,13 @@ await ctx.route("**/*", (route) => {
   const u = new URL(route.request().url());
   if (/^scholar\.google\./.test(u.hostname)) {
     scholarHits.push(u.pathname + u.search);
-    if (u.pathname === "/scholar" && !u.searchParams.has("start")) return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-results.html") });
+    if (u.pathname === "/scholar" && !u.searchParams.has("start")) {
+      // hl=de: the same page with German link text, as Scholar shows it to a German-language user.
+      const body = u.searchParams.get("hl") === "de"
+        ? FX("scholar-results.html").replace(/>Cited by (\d+)</g, ">Zitiert von: $1<").replace(/>Related articles</g, ">Ähnliche Artikel<").replace(/>All (\d+) versions</g, ">Alle $1 Versionen<")
+        : FX("scholar-results.html");
+      return route.fulfill({ status: 200, contentType: "text/html", body });
+    }
     if (u.pathname === "/citations" && u.searchParams.get("user") === "FIXTURE" && !u.searchParams.has("cstart")) return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-profile.html") });
     return route.fulfill({ status: 204, body: "" });
   }
@@ -61,6 +67,7 @@ try {
   const firstBadgeMs = Date.now() - t0;
   await p.waitForTimeout(2500);
   const badges = await p.locator(".su-badge").count();
+  const enVelocity = await p.locator(".su-velocity").count();
   const rowsWithQuality = await p.evaluate(() => [...document.querySelectorAll(".gs_r.gs_or")].filter((r) => r.querySelector(".su-quartile, .su-ft50, .su-utd24, .su-abdc, .su-h5")).length);
   const doiBtns = await p.evaluate(() => [...document.querySelectorAll('button[data-act="copydoi"]')].map((b) => b.dataset.doi));
   await p.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://scholar.google.com" }).catch(() => {});
@@ -192,6 +199,10 @@ try {
   await de.waitForSelector(".su-badge", { timeout: 15000 }).catch(() => {});
   const deBadges = await de.locator(".su-badge").count();
   check("country domain (scholar.google.de) shows badges", deBadges > 0, `${deBadges} badges`);
+  // Citation counts come from the "Cited by" link's address, so German link text gives the same velocity badges.
+  await de.waitForTimeout(1500);
+  const deVelocity = await de.locator(".su-velocity").count();
+  check("German interface: citation velocity matches the English page", deVelocity > 0 && deVelocity === enVelocity, `${deVelocity} German, ${enVelocity} English`);
   await de.close();
   // 3b. Options: the two Scholar-request switches save and survive a reload.
   await sw.evaluate(async () => { const { settings } = await chrome.storage.local.get("settings"); await chrome.storage.local.set({ settings: { ...(settings || {}), autoLoadAuthorPapers: false, emergingSampleScholarPages: false } }); });
