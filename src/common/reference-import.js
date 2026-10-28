@@ -314,6 +314,42 @@ export function searchLogToMarkdown(log) {
   ].join("\n");
 }
 
+/**
+ * Search-log entry for papers added from a Google Scholar page ("Add page results"), so a Scholar search is recorded
+ * like a database export: the query exactly as run (with any year limits), the date, and the page address in the File
+ * column so the same page can be opened again. `url` is the Scholar page address.
+ */
+export function scholarPageLogEntry({ url, papersCount = 0, added = 0, duplicates = 0, isAuthorProfile = false, authorName = "", now = new Date() } = {}) {
+  let u = null;
+  try { u = new URL(String(url || "")); } catch (_) { /* leave the query empty */ }
+  const p = u ? u.searchParams : new URLSearchParams();
+  let query;
+  if (isAuthorProfile) {
+    query = authorName ? `Author profile: ${authorName}` : "Author profile";
+  } else {
+    query = p.get("q") || "";
+    const lo = p.get("as_ylo"), hi = p.get("as_yhi");
+    if (lo || hi) query += ` [years ${lo || "…"}-${hi || "…"}]`;
+    if (p.get("scisbd")) query += " [sorted by date]";
+    const start = Number(p.get("start") || 0);
+    if (start > 0) query += ` [results from ${start + 1}]`;
+  }
+  const day = now instanceof Date && !Number.isNaN(now.getTime()) ? now : new Date();
+  const searchedOn = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  return {
+    id: `log_${day.getTime().toString(36)}`,
+    database: isAuthorProfile ? "Google Scholar author profile" : "Google Scholar",
+    searchedOn,
+    query: query.trim(),
+    fileName: u ? u.toString() : "",
+    format: "scholar-page",
+    recordsInFile: Number(papersCount) || 0,
+    added: Number(added) || 0,
+    duplicates: Number(duplicates) || 0,
+    importedAt: day.toISOString(),
+  };
+}
+
 export function totalRecordsFromSearchLog(log) {
   return (Array.isArray(log) ? log : []).reduce((n, e) => n + (Number(e.recordsInFile) || 0), 0);
 }
