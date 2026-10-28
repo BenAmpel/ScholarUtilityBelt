@@ -257,6 +257,7 @@ Automated checks:
 - `npm test`: unit tests for the shared modules and wiring.
 - `npm run e2e`: the built extension in Microsoft Edge against local Scholar-shaped pages in `tests/e2e/fixtures` (every Scholar URL is answered locally, nothing reaches Google). It checks that badges render, that a results page and a profile visit send Scholar no extra requests, the custom list and Quick read filter, and that no page logs an error.
 - `npm run a11y`: axe-core WCAG 2.1 AA checks of the extension's UI, light and dark.
+- `npm run focus`: tabs through the extension's controls on the results and profile fixtures and fails if one takes keyboard focus with no visible change.
 - `npm run store-status`: the public version, users and ratings of each store listing.
 
 Representative validation tasks include:
