@@ -82,6 +82,7 @@ module.exports = [
         DecompressionStream: "readonly",
         requestIdleCallback: "readonly",
         cancelIdleCallback: "readonly",
+        CSS: "readonly",
       },
     },
     rules: {

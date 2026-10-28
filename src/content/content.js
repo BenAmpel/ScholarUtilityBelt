@@ -2066,10 +2066,12 @@
     const m = DOI_REGEX.exec(String(textValue));
     return m ? m[0] : null;
   }
-  function buildMinimalBibTeX(item) {
+  // Reading-queue entries carry title, link and searchQuery (not the result fields buildMinimalBibTeX reads). This
+  // used to share that function's name, and the later declaration replaced it, so queue exports lost their link.
+  function buildQueueItemBibTeX(item) {
     const keyBase = normalizeTitleForGrouping(item.title || "paper").split(" ").slice(0, 4).join("");
     const key = (keyBase || "paper") + String(Date.now()).slice(-4);
-    const title = (item.title || "Untitled").replace(/[{}]/g, "");
+    const title = escapeBibTeX(item.title || "Untitled");
     const url = item.link || "";
     const note = item.searchQuery ? `Search query: ${item.searchQuery}` : "";
     return `@misc{${key},
@@ -2088,7 +2090,7 @@
         if (res?.ok && res.body) return res.body;
       } catch {}
     }
-    return buildMinimalBibTeX(item);
+    return buildQueueItemBibTeX(item);
   }
   function csvEscape(value) {
     const s = String(value ?? "");
@@ -4974,7 +4976,9 @@
     if (!state.settings.showAuthorshipHeatmap) {
       const authorEl = container.querySelector(".gs_a, .gsc_a_t div.gs_gray");
       if (authorEl?.querySelector(".su-author")) {
-        authorEl.textContent = authorEl.textContent;
+        // Replace the highlighted author spans with their plain text (turning the heatmap off).
+        const plainText = authorEl.textContent;
+        authorEl.textContent = plainText;
       }
       return;
     }
