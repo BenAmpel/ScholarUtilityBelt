@@ -529,6 +529,12 @@ async function fetchBundledDataset(files) {
   return merged ? merged + "\n" : "";
 }
 
+const BUNDLED_QUARTILES_FILE = "src/data/scimago_2024_quartiles.json";
+// The bundled snapshot's meta.source; Options imports use "SCImago (SJR export)" or "SCImago (download)".
+function isBundledQuartilesMeta(meta) {
+  return meta?.source === "SCImago Journal Rank (CSV export)";
+}
+
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize storage keys if missing.
   const { savedPapers, settings } = await chrome.storage.local.get({ savedPapers: {}, settings: {} });
@@ -550,17 +556,20 @@ chrome.runtime.onInstalled.addListener(async () => {
 
   await chrome.storage.local.set({ savedPapers, settings: updatedSettings });
 
-  // Seed SJR quartiles snapshot if the user hasn't imported one yet.
-  const { qualityQuartilesIndex } = await chrome.storage.local.get({ qualityQuartilesIndex: {} });
-  if (!qualityQuartilesIndex || Object.keys(qualityQuartilesIndex).length === 0) {
+  // Seed the bundled SJR quartiles, and replace an older bundled snapshot when a newer one ships. A file the
+  // user imported in Options (its meta.source differs) is never replaced.
+  const { qualityQuartilesIndex, qualityQuartilesMeta } = await chrome.storage.local.get({ qualityQuartilesIndex: {}, qualityQuartilesMeta: null });
+  const hasIndex = qualityQuartilesIndex && Object.keys(qualityQuartilesIndex).length > 0;
+  if (!hasIndex || isBundledQuartilesMeta(qualityQuartilesMeta)) {
     try {
-      const url = chrome.runtime.getURL("src/data/scimago_2024_quartiles.json");
+      const url = chrome.runtime.getURL(BUNDLED_QUARTILES_FILE);
       const r = await fetch(url);
       if (r.ok) {
         const data = await r.json();
         const index = data?.index || {};
         const meta = data?.meta || null;
-        if (index && typeof index === "object" && Object.keys(index).length > 1000) {
+        const newer = !hasIndex || Number(meta?.year) > Number(qualityQuartilesMeta?.year || 0);
+        if (newer && index && typeof index === "object" && Object.keys(index).length > 1000) {
           await chrome.storage.local.set({ qualityQuartilesIndex: index, qualityQuartilesMeta: meta });
         }
       }
