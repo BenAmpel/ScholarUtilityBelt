@@ -3693,7 +3693,9 @@
     }
     // A prefix match can land on a different venue that shares a name start; say which entry it was so a wrong
     // badge is visible rather than silently trusted.
-    if (meta.nearMatch) {
+    if (meta.nearMatch && meta.nearMatchVetted) {
+      parts.push(`<span class="su-badge-near">Listed as "${escapeHtml(meta.nearMatch)}".</span>`);
+    } else if (meta.nearMatch) {
       const read = escapeHtml(meta.venueRead || "");
       parts.push(meta.nearMatchCount > 1
         ? `<span class="su-badge-near">Close match, not exact. ${meta.nearMatchCount} list entries begin with "${read}" (one is "${escapeHtml(meta.nearMatch)}") and all give this value.</span>`
@@ -4223,8 +4225,8 @@
         span.textContent = b.text;
         span.title = badgeKindTitles[b.kind] || (b.metadata?.system ? `${b.text}: ${b.metadata.system}` : b.text);
         if (b.metadata?.nearMatch) {
-          span.title += ` Close match, not exact: list entry "${b.metadata.nearMatch}".`;
-          span.classList.add("su-badge-near-match");
+          span.title += b.metadata.nearMatchVetted ? ` Listed as "${b.metadata.nearMatch}".` : ` Close match, not exact: list entry "${b.metadata.nearMatch}".`;
+          if (!b.metadata.nearMatchVetted) span.classList.add("su-badge-near-match");
         }
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {

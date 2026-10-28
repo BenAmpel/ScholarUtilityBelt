@@ -240,3 +240,17 @@ describe("a known journal never takes another known journal's badge", async () =
     assert.equal(h5Of("Journal of Experimental Psychology: Learning", { "journal of experimental psychology learning memory and cognition": 80 }), "h5: 80");
   });
 });
+
+describe("ERA goes through the shared near-match rules", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const eraSet = new Set(["findings", "punishment and society the international journal of penology"]);
+  const idx = compileQualityIndex({}, { eraSet, quartilesIndex: { "punishment and society": "Q1" } });
+  it("ACL Findings does not take the journal Findings' ERA listing", () => {
+    assert.equal(qualityBadgesForVenue("Findings of the Association for Computational Linguistics: EMNLP 2023", idx).find((b) => b.kind === "era"), undefined);
+  });
+  it("a full title matches its subtitled ERA entry, vetted (no warning edge)", () => {
+    const b = qualityBadgesForVenue("Punishment & Society", idx).find((x) => x.kind === "era");
+    assert.equal(b?.text, "ERA 2023");
+    assert.equal(b.metadata.nearMatchVetted, true);
+  });
+});

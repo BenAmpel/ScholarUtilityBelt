@@ -16,7 +16,9 @@ const absIndex = new Map(D("abs2024.csv").split(/\r?\n/).map((l) => {
   const i = l.lastIndexOf(",");
   return [l.slice(0, i).replace(/^"|"$/g, ""), l.slice(i + 1).trim()];
 }).filter(([n, r]) => n && r));
-const idx = q.compileQualityIndex({ qualityAbdcRanks: D("abdc2025.csv") }, { h5Index, absIndex, quartilesIndex: sjr });
+const eraSet = new Set(D("era2023.txt").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(q.normalizeVenueName).filter(Boolean));
+const norwegianMap = new Map(Object.entries(JSON.parse(D("norwegian_compact.json"))).filter(([, lv]) => lv === "1" || lv === "2"));
+const idx = q.compileQualityIndex({ qualityAbdcRanks: D("abdc2025.csv") }, { h5Index, absIndex, quartilesIndex: sjr, eraSet, norwegianMap });
 const titles = new Set(Object.keys(sjr));
 const wrong = [];
 const close = {};

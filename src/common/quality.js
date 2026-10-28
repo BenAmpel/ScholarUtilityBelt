@@ -371,7 +371,11 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
-  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
+  // ERA is a set of titles; the same Map shape lets it share findBestMatchEntry's near-match rules.
+  const eraMap = new Map();
+  for (const entry of era) eraMap.set(entry, "listed");
+
+  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, eraMap, norwegian, abs, h5 };
 }
 
 
@@ -511,6 +515,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   let impactBadge = null;
   // Badge kind -> the list entry a prefix (not exact) match landed on, shown on hover so a wrong match is visible.
   const nearMatch = {};
+  const venueIsKnownTitle = !!qIndex.quartiles?.has?.(v);
   const fuzzy = (kind, map) => {
     const entry = findBestMatchEntry(v, map, qIndex.quartiles);
     if (!entry) return null;
@@ -660,22 +665,10 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (core && VALID_CORE.test(String(core).trim())) badges.push({ kind: "core", text: `CORE ${String(core).trim().toUpperCase()}`, metadata: { rank: String(core).trim().toUpperCase(), system: "CORE/ICORE Conference Rankings" } });
   if (ccf && VALID_CCF.test(String(ccf).trim())) badges.push({ kind: "ccf", text: `CCF ${String(ccf).trim().toUpperCase()}`, metadata: { rank: String(ccf).trim().toUpperCase(), system: "China Computer Federation Conference Rankings" } });
 
-  if (qIndex.era?.has?.(v)) {
+  // ERA's ~26,000 titles include many short generic ones ("Findings", "Analysis"); findBestMatchEntry's guards keep
+  // "Findings of the Conference on Empirical Methods..." (ACL's Findings track) off the unrelated journal "Findings".
+  if (qIndex.era?.has?.(v) || (qIndex.eraMap && fuzzy("era", qIndex.eraMap))) {
     badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
-  } else if (qIndex.era) {
-    // v.startsWith(entry + " ") is a prefix match against a ~26,000-entry list that includes
-    // many short, generic single-word titles ("Findings", "Analysis", "Test", "Order" — 1,000+
-    // entries under 12 chars with no space). Without a length/space guard, "Findings of the
-    // Conference on Empirical Methods in Natural Language Processing" (ACL's "Findings" track,
-    // not itself ERA-listed) false-matched the unrelated journal "Findings" this way. Same guard
-    // as findBestMatch's prefix matching above.
-    for (const entry of qIndex.era) {
-      const entryIsSpecificEnough = entry.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || entry.includes(" ");
-      if (entry === v || (entryIsSpecificEnough && (entry.startsWith(v + " ") || v.startsWith(entry + " ")))) {
-        badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
-        break;
-      }
-    }
   }
 
   let norLevel = qIndex.norwegian?.get?.(v);
@@ -691,7 +684,9 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (impactBadge) badges.push(impactBadge);
   for (const b of badges) {
     if (nearMatch[b.kind] && b.metadata) {
-      Object.assign(b.metadata, { nearMatch: nearMatch[b.kind].key, nearMatchCount: nearMatch[b.kind].count, venueRead: v });
+      // Vetted: the venue is a full SCImago title, so findBestMatchEntry has already ruled out every other known
+      // journal; what is left is the same title with a subtitle or acronym ("journal of social issues jsi").
+      Object.assign(b.metadata, { nearMatch: nearMatch[b.kind].key, nearMatchCount: nearMatch[b.kind].count, venueRead: v, nearMatchVetted: venueIsKnownTitle });
     }
   }
   return badges;
