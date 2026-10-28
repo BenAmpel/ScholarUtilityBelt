@@ -22,7 +22,8 @@ export function downloadBlob(filename, blob) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // Revoke after the click is handled: Firefox can cancel a download whose blob URL is revoked in the same tick.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadText(filename, text, mime = "text/plain") {
