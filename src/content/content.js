@@ -79,6 +79,9 @@
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let classifyScholarResponse = () => null;
   let findResultDoi = () => null;
+  // Until scholar-links.js loads, row links are read the old English-only way.
+  let scholarRowLinkKind = () => null;
+  let citedByCount = (t) => { const m = String(t || "").match(/Cited by\s+([\d,]+)/i); return m ? parseInt(m[1].replace(/,/g, ""), 10) : null; };
   let safeHref = (u) => (/^https?:\/\//i.test(String(u ?? "").trim()) ? String(u).trim() : "");
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
   // Resolves with `fallback` if the promise is slow or fails. Entitlement lookups can wait on
@@ -133,7 +136,7 @@
       importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi, safeHref } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -1844,16 +1847,18 @@
     return m ? Number(m[1]) : null;
   }
   function findFlLinks(gsR) {
-    const fl = gsR.querySelector(".gs_fl");
-    const links = Array.from(fl?.querySelectorAll("a") || []);
+    // Every .gs_fl block in the row: the first one is usually the PDF column, the link bar comes after it.
+    const links = Array.from(gsR.querySelectorAll(".gs_fl a"));
     const out = { citedByUrl: null, versionsUrl: null, relatedUrl: null };
     for (const a of links) {
       const t = text(a);
       const u = tryGetHref(a);
       if (!u) continue;
-      if (/^Cited by\b/i.test(t)) out.citedByUrl = u;
-      else if (/^All \d+ versions\b/i.test(t)) out.versionsUrl = u;
-      else if (/^Related articles\b/i.test(t)) out.relatedUrl = u;
+      // By address first, which works in every interface language; English text as the fallback.
+      const kind = scholarRowLinkKind(a.getAttribute("href"));
+      if (kind === "cited" || (!kind && /^Cited by\b/i.test(t))) out.citedByUrl = u;
+      else if (kind === "versions" || (!kind && /^All \d+ versions\b/i.test(t))) out.versionsUrl = u;
+      else if (kind === "related" || (!kind && /^Related articles\b/i.test(t))) out.relatedUrl = u;
     }
     return out;
   }
@@ -2397,10 +2402,14 @@
       });
     }
   }
-  /** Get citation count from a search result (.gs_r) by parsing "Cited by N" in .gs_fl. */
+  /** Citation count of a search result (.gs_r): the number in its "Cited by" link, found by address in any language. */
   function getCitationCountFromResult(gsR) {
     const fl = gsR?.querySelector(".gs_fl");
     if (!fl) return null;
+    // Any link in the row, by address: a row has two .gs_fl blocks (the PDF column comes first), and the text differs by language.
+    for (const a of gsR.querySelectorAll("a")) {
+      if (scholarRowLinkKind(a.getAttribute("href")) === "cited") return citedByCount(text(a));
+    }
     for (const a of fl.querySelectorAll("a")) {
       const t = text(a).trim();
       if (!/^Cited by\b/i.test(t)) continue;
