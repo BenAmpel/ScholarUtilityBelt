@@ -580,7 +580,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   // Per-row parse cache to avoid repeated DOM parsing.
   const rowParseCache = new WeakMap();
@@ -5210,7 +5210,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
     openAllBtn.addEventListener("click", () => {
       if (queue.length === 0) return;
@@ -10828,7 +10828,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function exportGraph(kind) {
     const graph = window.suGraphState;
@@ -10891,7 +10891,7 @@
           document.body.appendChild(a);
           a.click();
           a.remove();
-          URL.revokeObjectURL(url);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
       };
       img.src = `data:image/svg+xml;base64,${svg64}`;
