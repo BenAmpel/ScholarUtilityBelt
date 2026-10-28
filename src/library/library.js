@@ -1,4 +1,5 @@
 import { buildBibTeXEntry } from "../common/bibtex.js";
+import { safeHref } from "../common/scholar-links.js";
 import {
   csvToTags,
   getLibraryState,
@@ -775,7 +776,7 @@ async function render() {
     const node = tpl.content.firstElementChild.cloneNode(true);
     const titleA = node.querySelector(".title");
     titleA.textContent = p.title || "(untitled)";
-    titleA.href = p.url || p.sourcePageUrl || "#";
+    titleA.href = safeHref(p.url) || safeHref(p.sourcePageUrl) || "#";
 
     const metaParts = [p.authorsVenue, p.year ? `(${p.year})` : "", p.citations ? `${p.citations} cites` : ""].filter(Boolean);
     node.querySelector(".meta").textContent = metaParts.join(" ");
