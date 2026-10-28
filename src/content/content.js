@@ -2003,7 +2003,10 @@
     return buildQueueItemBibTeX(item);
   }
   function csvEscape(value) {
-    const s = String(value ?? "");
+    // Titles and queries come from Scholar, where anyone can publish a document titled "=HYPERLINK(...)": a leading
+    // = + - @ tab or CR would run as a formula in Excel or Sheets, so text cells get a leading apostrophe. Numbers stay.
+    let s = String(value ?? "");
+    if (typeof value !== "number" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
     return s;
   }
