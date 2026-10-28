@@ -12,7 +12,8 @@
     "test:e2e": "node build.js && node scripts/e2e-check.mjs",
     "e2e": "node scripts/e2e/run.mjs",
     "store-status": "node scripts/store_status.mjs",
-    "a11y": "node scripts/e2e/a11y.mjs"
+    "a11y": "node scripts/e2e/a11y.mjs",
+    "focus": "node scripts/e2e/focus.mjs"
   },
   "keywords": [],
   "author": "",

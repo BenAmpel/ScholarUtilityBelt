@@ -31,6 +31,11 @@ jobs:
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
           if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping a11y"; exit 0; fi
           EDGE_PATH="$EDGE" npm run a11y
+      - name: Keyboard focus is visible on every extension control
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping focus check"; exit 0; fi
+          EDGE_PATH="$EDGE" npm run focus
       - name: Package all stores, then end-to-end on the Edge package
         run: |
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
