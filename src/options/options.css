@@ -264,6 +264,9 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+/* These default-palette badges get pale backgrounds without a text colour; give them dark text so they read in dark mode. */
+.su-badge.su-quartile, .su-badge.su-abdc, .su-badge.su-vhb, .su-badge.su-ft50,
+.su-badge.su-utd24, .su-badge.su-abs, .su-badge.su-fnege { color: #1f2937; }
 .su-badge.su-quartile { background: #f0fdf4; border-color: rgba(21,128,61,0.28); }
 .su-badge.su-abdc { background: #ecfeff; border-color: rgba(14,116,144,0.28); }
 .su-badge.su-vhb { background: #f0f9ff; border-color: rgba(7,89,133,0.28); }
@@ -446,6 +449,7 @@ button:hover {
 
 .actions button.primary {
   background: var(--accent);
+  /* see the dark-mode override below for the text colour */
   border-color: var(--accent-hover);
   color: #fff;
   font-weight: 600;
@@ -867,3 +871,11 @@ a:focus-visible {
 
 /* Rating card (src/common/rating-prompt.js) reuses the promo card styles; it sits above the promo card. */
 .rating-card[hidden] { display: none; }
+
+/* White on the dark theme's light-blue accent measured 2.81:1; dark text on it is about 7:1. */
+@media (prefers-color-scheme: dark) {
+  .actions button.primary { color: #0b1220; }
+  /* Plain links otherwise keep the browser's default dark blue, 1.8:1 on this background. */
+  a:not([class]) { color: var(--accent); }
+}
+.badge-preview-mini { overflow-x: hidden; }

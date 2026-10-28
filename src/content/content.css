@@ -1214,7 +1214,7 @@ body[data-su-theme="dark"] .su-tortured-badge {
   border-radius: 5px;
   border: 1px solid var(--su-accent, #6d28d9);
   background: transparent;
-  color: var(--su-accent, #6d28d9);
+  color: #1557b0;
   cursor: pointer;
 }
 .su-locked-feature-unlock:hover {
@@ -1226,7 +1226,8 @@ body[data-su-theme="dark"] .su-tortured-badge {
   padding: 4px 6px;
   border: 0;
   background: transparent;
-  color: var(--su-accent, #6d28d9);
+  /* Darker than the accent: the accent blue on this grey box measured 4.09:1, under the 4.5:1 minimum. */
+  color: #1557b0;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -1235,6 +1236,17 @@ body[data-su-theme="dark"] .su-locked-feature {
 }
 body[data-su-theme="dark"] .su-locked-feature-desc {
   color: #94a3b8;
+}
+body[data-su-theme="dark"] .su-locked-feature-trial,
+body[data-su-theme="dark"] .su-locked-feature-unlock {
+  color: #aecbfa;
+}
+/* The dark accent is a light blue, so the badge text has to be dark (light text measured 1.74:1). */
+/* Needs !important: the dark profile header forces `color: inherit !important` on every descendant (#gsc_prf_w *). */
+body[data-su-theme="dark"] #gsc_prf_w .su-locked-feature-badge,
+body[data-su-theme="dark"] #gsc_prf_i .su-locked-feature-badge,
+html[data-su-theme="dark"] body[data-su-theme="dark"] .su-locked-feature .su-locked-feature-badge {
+  color: #202124 !important;
 }
 .su-apikey-banner {
   display: flex;
@@ -2256,7 +2268,7 @@ body[data-su-badge-palette="warm"] .su-badge.su-abs4star { background: #fef3c7; 
 .su-coauthor-sort-chip.su-coauthor-sort-active {
   background: #e8f0fe;
   border-color: #1a73e8;
-  color: #1a73e8;
+  color: #1557b0;
 }
 .su-coauthors-table-inner th {
   font-size: 12px;
@@ -4108,6 +4120,7 @@ body[data-su-theme="dark"] .su-reading-guide-toggle.su-reading-guide-on {
 /* Citation graph card + overlay */
 .su-graph-card .su-graph-card-body { display: flex; flex-direction: column; gap: 8px; }
 .su-graph-card-meta { font-size: 12px; color: #5f6368; }
+body[data-su-theme="dark"] .su-graph-card-meta { color: #bdc1c6; }
 .su-graph-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .su-lineage-card-body { display: flex; flex-direction: column; gap: 6px; }
 .su-lineage-card-name { font-size: 13px; font-weight: 600; color: #111827; }
