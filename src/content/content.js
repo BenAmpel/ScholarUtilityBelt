@@ -11008,10 +11008,18 @@
           return;
         }
         const resultEl = overlay.querySelector("#su-compare-result");
+        const waitMs = await scholarCooldownLeftMs();
+        if (waitMs > 0) {
+          setCompareResultMessage(resultEl, `Google Scholar blocked a request a few minutes ago. Try again in ${Math.ceil(waitMs / 60000)} min.`, "su-compare-error");
+          return;
+        }
         setCompareResultMessage(resultEl, "Loading Author B...");
         try {
-          const PAGE_SIZE = 20;
-          const MAX_PAGES = 25;
+          // Scholar serves up to 100 profile rows per request, so 500 papers take 5 requests instead of 25, spaced
+          // out, and the loop stops at the first CAPTCHA or rate-limit answer instead of retrying into it.
+          const PAGE_SIZE = 100;
+          const MAX_PAGES = 5;
+          const PAGE_GAP_MS = 1200;
           const FETCH_TIMEOUT_MS = 12000;
           const fetchPage = async (cstart) => {
             const u = new URL(url);
@@ -11021,8 +11029,18 @@
             const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
             try {
               const res = await fetch(u.toString(), { credentials: "include", signal: ctrl.signal });
+              const body = await res.text().catch(() => "");
+              const blocked = classifyScholarResponse({ status: res.status, url: res.url, html: body });
+              if (blocked) {
+                const e = new Error(blocked === "captcha"
+                  ? "Google Scholar is asking for a \"not a robot\" check. Open Scholar in a tab, complete it, then try again."
+                  : "Google Scholar is limiting requests right now. Wait a few minutes, then try again.");
+                e.scholarBlocked = blocked;
+                await noteScholarBlock();
+                throw e;
+              }
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              return await res.text();
+              return body;
             } finally {
               clearTimeout(timer);
             }
@@ -11035,6 +11053,7 @@
           for (let page = 1; page < MAX_PAGES; page++) {
             const cstart = page * PAGE_SIZE;
             setCompareResultMessage(resultEl, `Loading Author B... (${allRows.length} papers so far)`);
+            await new Promise((resolve) => setTimeout(resolve, PAGE_GAP_MS));
             const html = await fetchPage(cstart);
             const doc = new DOMParser().parseFromString(html, "text/html");
             const rows = Array.from(doc.querySelectorAll(".gsc_a_tr"));
@@ -11056,7 +11075,8 @@
           const table = buildAuthorCompareTable(nameA, statsA, nameB, statsB);
           if (resultEl) resultEl.innerHTML = table;
         } catch (err) {
-          setCompareResultMessage(resultEl, `Could not load profile: ${String(err?.message || err)}`, "su-compare-error");
+          const msg = err?.scholarBlocked ? String(err.message) : `Could not load profile: ${String(err?.message || err)}`;
+          setCompareResultMessage(resultEl, msg, "su-compare-error");
         }
       });
     }
@@ -13622,6 +13642,20 @@
     }
   }
   /** Fetch next page HTML, append .gs_r rows to current page, re-apply filters. Returns { added, visible, hasMore }. */
+  // After Scholar answers one of our requests with a CAPTCHA or 429, every extension feature that asks Scholar for
+  // more pages waits SCHOLAR_COOLDOWN_MS before asking again, in every tab, so one block is not made worse by the next
+  // button press. Only that one timestamp is stored, in chrome.storage.local.
+  const SCHOLAR_COOLDOWN_KEY = "scholarCooldownUntil";
+  const SCHOLAR_COOLDOWN_MS = 15 * 60 * 1000;
+  async function noteScholarBlock() {
+    try { await chrome.storage.local.set({ [SCHOLAR_COOLDOWN_KEY]: Date.now() + SCHOLAR_COOLDOWN_MS }); } catch (_) { /* no cooldown is better than a broken button */ }
+  }
+  async function scholarCooldownLeftMs() {
+    try {
+      const got = await chrome.storage.local.get(SCHOLAR_COOLDOWN_KEY);
+      return Math.max(0, Number(got?.[SCHOLAR_COOLDOWN_KEY] || 0) - Date.now());
+    } catch (_) { return 0; }
+  }
   async function fetchNextPageAndStitch(state) {
     const nextUrl = getNextPageUrl();
     if (!nextUrl) return { added: 0, visible: 0, hasMore: false };
@@ -14189,6 +14223,12 @@
     loadMoreBtn.title = "Fetch next pages and append results here so filter matches appear without clicking Next.";
     loadMoreBtn.addEventListener("click", async () => {
       if (loadMoreBtn.disabled) return;
+      const waitMs = await scholarCooldownLeftMs();
+      if (waitMs > 0) {
+        loadMoreBtn.textContent = `Scholar blocked a request recently. Try again in ${Math.ceil(waitMs / 60000)} min.`;
+        setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 6000);
+        return;
+      }
       const maxPages = 5;
       const delayMs = 1500;
       loadMoreBtn.disabled = true;
@@ -14202,7 +14242,7 @@
         const out = await fetchNextPageAndStitch(state);
         totalAdded += out.added;
         lastVisible = out.visible;
-        if (out.blocked) { blockedBy = out.blocked; break; }
+        if (out.blocked) { blockedBy = out.blocked; await noteScholarBlock(); break; }
         if (!out.hasMore || out.added === 0) break;
         await new Promise((r) => setTimeout(r, delayMs));
       }
