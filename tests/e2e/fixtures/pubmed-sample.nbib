@@ -1,0 +1,37 @@
+PMID- 90000001
+OWN - NLM
+STAT- MEDLINE
+DP  - 2021 Mar
+TI  - Test record one: effect of a made-up intervention on a made-up outcome in a
+      randomized trial.
+AB  - This is a synthetic abstract written for testing the importer. It reports that
+      the intervention reduced the outcome (p < 0.05) among 120 participants.
+FAU - Rivera, Ana
+AU  - Rivera A
+FAU - Okafor, Chidi
+AU  - Okafor C
+TA  - Test J Med
+JT  - Test Journal of Medicine
+AID - 10.9999/test.0001 [doi]
+MH  - Randomized Controlled Trial
+PT  - Journal Article
+
+PMID- 90000002
+DP  - 2022
+TI  - Test record two: a cohort study with no abstract.
+FAU - Lindqvist, Maja
+AU  - Lindqvist M
+TA  - Test Epidemiol
+JT  - Test Epidemiology Letters
+AID - 10.9999/test.0002 [doi]
+
+PMID- 90000003
+DP  - 2019 Jul
+TI  - Test record three: cross-sectional survey of imaginary clinicians.
+AB  - Synthetic abstract. A survey of 400 clinicians found association between X and Y.
+FAU - Tanaka, Kenji
+AU  - Tanaka K
+FAU - Moreau, Claire
+AU  - Moreau C
+TA  - Test Surv
+JT  - Test Survey Research
