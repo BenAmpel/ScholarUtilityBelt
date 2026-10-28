@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 import fs from "node:fs"; import os from "node:os"; import path from "node:path"; import { createRequire } from "node:module"; import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."); const EDGE = "/Volumes/Extreme SSD/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge";
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.."); const EDGE = process.env.EDGE_PATH || "/Volumes/Extreme SSD/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge";
 const FX = (n) => fs.readFileSync(path.join(ROOT, "tests/e2e/fixtures", n), "utf8");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sub-a11y-"));
 const ctx = await chromium.launchPersistentContext(dir, { executablePath: EDGE, headless: false, args: [`--disable-extensions-except=${ROOT}`, `--load-extension=${ROOT}`, "--headless=new", "--no-first-run"], viewport: { width: 1400, height: 900 } });

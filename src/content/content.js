@@ -265,7 +265,7 @@
   function normalizeText(str) {
     return String(str || "")
       .toLowerCase()
-      .replace(/[\.,\/#!$%\^&\*;:{}=\_`~?"“”()\[\]]/g, " ")
+      .replace(/[.,/#!$%^&*;:{}=_`~?"“”()[\]]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -340,7 +340,7 @@
       } catch (_) {}
     }
     // L2: chrome.storage.local — 30-day persistent cache.
-    let cached = null;
+    let cached;
     try {
       cached = { [cacheKey]: await getStorageValue(cacheKey, null) };
     } catch (_) {
@@ -1463,7 +1463,7 @@
       return work;
     })();
     if (cacheKey) openalexWorkInFlight.set(cacheKey, fetchPromise);
-    let work = null;
+    let work;
     try {
       work = await fetchPromise;
     } finally {
@@ -2817,7 +2817,7 @@
     if (!rows.length) return null;
     const samples = [];
     for (const row of rows) {
-      let paper = null;
+      let paper;
       try {
         paper = isAuthorProfile ? extractPaperFromAuthorProfile(row) : extractPaperFromResultFast(row);
       } catch {
@@ -3015,7 +3015,7 @@
       for (const row of visibleRows) {
         if (warmed >= EMERGING_PREFETCH_MAX_ROWS) break;
         if (!canSpendLatencyBudget(state, deadline)) break;
-        let paper = null;
+        let paper;
         try {
           paper = isAuthorProfile ? getCachedAuthorPaper(row) : getCachedPaperFast(row);
         } catch {
@@ -3105,7 +3105,7 @@
     let url = formatOpenAlexUrl(`${citedByApi}?per_page=200&select=publication_year`);
     const years = [];
     let pages = 0;
-    let cursor = "*";
+    let cursor;
     while (url && pages < 5) {
       const res = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
       const results = Array.isArray(res?.results) ? res.results : [];
@@ -3580,7 +3580,7 @@
     const yearText = text(yearEl);
     const year = parseYear(yearText || venueText || authorsVenue);
     // Extract venue - prefer the venueText if we found it separately
-    let venue = "";
+    let venue;
     if (venueText) {
       // Try extracting from the venue text directly
       venue = extractVenueFromAuthorsVenue(venueText);
@@ -4984,7 +4984,7 @@
       }
       return;
     }
-    let authorEl = null;
+    let authorEl;
     if (isAuthorProfile) {
       const titleCell = container.querySelector(".gsc_a_t");
       const grayDivs = titleCell ? Array.from(titleCell.querySelectorAll("div.gs_gray")) : [];
@@ -7156,7 +7156,7 @@
       if (apiCalls >= 40) break;
       const year = Number(paper.year) || null;
       if (!year || !paper.title) continue;
-      let oaWork = null;
+      let oaWork;
       try {
         oaWork = await fetchOpenAlexWorkForPaper(paper, authorName);
         apiCalls++;
@@ -10001,8 +10001,8 @@
     const container = svg.parentElement;
     const width = container?.clientWidth || 640;
     const height = container?.clientHeight || 360;
-    let nodes = [];
-    let edges = [];
+    let nodes;
+    let edges;
     let layout = null;
     if (mode === "authors") {
       const authorGraph = graph.authorGraph || buildAuthorGraph(graph);
@@ -10945,7 +10945,7 @@
       overlay.querySelector("#su-compare-do").addEventListener("click", async () => {
         const urlInput = overlay.querySelector("#su-compare-url-b");
         const url = (urlInput?.value || "").trim();
-        let parsed = null;
+        let parsed;
         try {
           parsed = url ? new URL(url) : null;
         } catch {
@@ -11238,7 +11238,7 @@
     const note = `Data via OpenAlex concepts "${escapeHtml(conceptsLabel)}". Start year range: ${yearRange}. Inferred from OpenAlex counts_by_year; list may be incomplete.`;
     const displayPeers = peers.slice(0, 40);
     const showingLine = peers.length > 40 ? `Showing top 40 of ${peers.length}.` : "";
-    let bodyHtml = "";
+    let bodyHtml;
     if (!startYear) {
       bodyHtml = `<div class="su-pop-peers-empty">Start year unavailable for this author.</div>`;
     } else if (loading) {
@@ -11313,7 +11313,7 @@
     const overlay = ensurePoPOverlay();
     const content = overlay.querySelector("#su-pop-content");
     if (!content) return;
-    let metrics = null;
+    let metrics;
     try {
       metrics = getPoPMetricsCached(stats);
     } catch (_) {
@@ -11343,7 +11343,7 @@
     ];
     const acc = metrics.acc || {};
     const accLine = `≥1: ${acc.c1 ?? 0} · ≥2: ${acc.c2 ?? 0} · ≥5: ${acc.c5 ?? 0} · ≥10: ${acc.c10 ?? 0} · ≥20: ${acc.c20 ?? 0}`;
-    let peersHtml = "";
+    let peersHtml;
     try {
       peersHtml = buildPoPPeersSection(stats);
     } catch (_) {
@@ -14911,7 +14911,7 @@
     };
   }
     // Extract author name if on author profile page
-    let authorVariations = [];
+    let authorVariations;
     const isAuthorProfilePage = document.querySelector(".gsc_a_tr") !== null;
     if (isAuthorProfilePage) {
       const authorName = extractAuthorName();

@@ -255,7 +255,7 @@ async function loadImpactIndex() {
       if (!line || /^\s*Journal\s*Name\s*,/i.test(line)) continue;
       const idx = line.lastIndexOf(",");
       if (idx <= 0 || idx >= line.length - 1) continue;
-      const name = line.slice(0, idx).trim().replace(/^\"|\"$/g, "");
+      const name = line.slice(0, idx).trim().replace(/^"|"$/g, "");
       const raw = line.slice(idx + 1).trim();
       const val = parseFloat(String(raw || "").replace(/[^0-9.]/g, ""));
       if (!name || !Number.isFinite(val) || val <= 0) continue;
