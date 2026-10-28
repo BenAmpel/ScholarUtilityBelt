@@ -217,3 +217,40 @@ describe("prefix matches never guess between different venues", async () => {
     assert.equal(idx.abdc.has("journal of things"), false);
   });
 });
+
+describe("a known journal never takes another known journal's badge", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const sjr = { "acta orthopaedica": "Q2", "acta orthopaedica belgica": "Q4", "acoustics": "Q2", "acoustics australia": "Q3",
+    "national academy of sciences india section a physical sciences": "Q3", "computer": "Q1" };
+  const h5Of = (venue, h5Index) => qualityBadgesForVenue(venue, compileQualityIndex({}, { quartilesIndex: sjr, h5Index })).find((b) => b.kind === "h5")?.text;
+  it("forward: Acoustics does not show Acoustics Australia's h5", () => {
+    assert.equal(h5Of("Acoustics", { "acoustics australia": 31 }), undefined);
+  });
+  it("reverse: Acta Orthopaedica Belgica does not show Acta Orthopaedica's h5", () => {
+    assert.equal(h5Of("Acta Orthopaedica Belgica", { "acta orthopaedica": 136 }), undefined);
+  });
+  it("reverse: a complete title does not borrow a shorter list entry (PNAS India is not PNAS)", () => {
+    assert.equal(h5Of("Proceedings of the National Academy of Sciences, India Section A: Physical Sciences", { "national academy of sciences": 242 }), undefined);
+  });
+  it("a one-word generic venue does not prefix-match (Computer -> Computer and Telecommunications Law Review)", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Computer and Telecommunications Law Review,C" }, { quartilesIndex: sjr });
+    assert.equal(qualityBadgesForVenue("Computer", idx).find((b) => b.kind === "abdc"), undefined);
+  });
+  it("a truncated Scholar venue still matches its one list entry", () => {
+    assert.equal(h5Of("Journal of Experimental Psychology: Learning", { "journal of experimental psychology learning memory and cognition": 80 }), "h5: 80");
+  });
+});
+
+describe("ERA goes through the shared near-match rules", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const eraSet = new Set(["findings", "punishment and society the international journal of penology"]);
+  const idx = compileQualityIndex({}, { eraSet, quartilesIndex: { "punishment and society": "Q1" } });
+  it("ACL Findings does not take the journal Findings' ERA listing", () => {
+    assert.equal(qualityBadgesForVenue("Findings of the Association for Computational Linguistics: EMNLP 2023", idx).find((b) => b.kind === "era"), undefined);
+  });
+  it("a full title matches its subtitled ERA entry, vetted (no warning edge)", () => {
+    const b = qualityBadgesForVenue("Punishment & Society", idx).find((x) => x.kind === "era");
+    assert.equal(b?.text, "ERA 2023");
+    assert.equal(b.metadata.nearMatchVetted, true);
+  });
+});

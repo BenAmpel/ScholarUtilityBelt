@@ -15,7 +15,8 @@
     "a11y": "node scripts/e2e/a11y.mjs",
     "focus": "node scripts/e2e/focus.mjs",
     "idle": "node scripts/e2e/idle.mjs",
-    "theme": "node scripts/e2e/theme.mjs"
+    "theme": "node scripts/e2e/theme.mjs",
+    "audit:venues": "node --import ./tests/register-loader.mjs scripts/audit-venue-matches.mjs"
   },
   "keywords": [],
   "author": "",

@@ -19,6 +19,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: node build.js
+      - name: No journal takes another journal's badge (venue match audit)
+        run: npm run audit:venues
       # The built extension in Microsoft Edge (preinstalled on GitHub's Ubuntu runners) against local Scholar-shaped
       # fixtures; every Scholar URL is answered locally and other requests are blocked.
       - name: End-to-end (offline fixtures, Edge)
