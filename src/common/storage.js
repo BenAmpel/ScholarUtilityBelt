@@ -109,12 +109,9 @@ function sameStringArray(a, b) {
 
 export const DEFAULT_SETTINGS = {
   highlightSaved: true,
-  autoTagFromQuery: false,
-  defaultTagsCsv: "",
   keywordHighlightsCsv: "",
   hideTitleRegex: "",
   hideAuthorsRegex: "",
-  compactResultButtons: true,
 
   // Appearance
   theme: "auto", // "auto" | "light" | "dark"
@@ -178,10 +175,7 @@ export const DEFAULT_SETTINGS = {
   showReadingOrder: true,
   showAgeBiasHeatmap: true,
   showAuthorshipHeatmap: true,
-  showRelevancySparkline: true,
   showSnippetCueEmphasis: true,
-  showSkimmabilityStrip: true,
-  showReadingLoadEstimator: true,
   showResearchIntel: true,
   showAdvancedFilters: true,
   showTrendTracker: true,

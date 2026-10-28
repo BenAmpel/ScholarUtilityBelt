@@ -889,23 +889,6 @@ body[data-su-theme="dark"] .su-triage-missing {
   vertical-align: middle;
   opacity: 0.9;
 }
-/* Reading load estimator: skim / read / deep read */
-.su-reading-load-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  margin-left: 6px;
-  padding: 0 10px;
-  height: var(--su-chip-height, 26px);
-  border-radius: var(--su-chip-radius, 8px);
-  border: 1px solid var(--su-chip-border, rgba(0,0,0,0.18));
-  background: var(--su-chip-bg, #fff);
-  color: var(--su-chip-text, #1f2937);
-  cursor: help;
-  position: relative;
-}
 .su-floating-tooltip {
   position: fixed;
   z-index: 10000;
@@ -927,12 +910,6 @@ body[data-su-theme="dark"] .su-triage-missing {
 }
 .su-floating-tooltip.su-floating-tooltip-visible {
   display: block;
-}
-.su-reading-load-skim,
-.su-reading-load-read,
-.su-reading-load-deep-read {
-  background: transparent;
-  color: inherit;
 }
 /* Hide Scholar's native PDF link (keep layout, show extension button) */
 .gs_or_ggsm a:not(.gs_or_aia),
@@ -4973,7 +4950,6 @@ body[data-su-theme="dark"] .su-review-prisma line { stroke: #6b7280; }
   .su-retraction-badge-link,
   .su-age-heatmap,
   .su-authorship-heatmap,
-  .su-skimmability-strip,
   .su-new-badge,
   .su-spike-badge,
   [class^="su-"] {

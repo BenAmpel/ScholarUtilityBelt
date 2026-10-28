@@ -5467,13 +5467,12 @@
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
-        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
+        .querySelectorAll(".su-velocity, .su-artifact-badge, .su-external, .su-citation-spike-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
         .forEach((el) => el.remove());
     } else {
       renderEmergingScore(container, paper, state, isAuthorProfile);
       if (isDetailed) {
         renderExternalSignalBadges(container, state, isAuthorProfile, { inViewport });
-        // renderSkimmabilityStrip(container, paper, state, isAuthorProfile);
         renderArtifactBadges(container, state);
         renderVelocity(container, paper, isAuthorProfile);
         // Pro: claim-evidence chips and reproducibility signals (local, from the snippet and links).
@@ -5481,7 +5480,7 @@
           signalsUi.renderRowSignals(container, { settings: state.settings, allowed: signalsAllowed, ownDoi: extractDOIFromResult(container) });
         }
       } else {
-        container.querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-claim-chips, .su-repro-signals").forEach((el) => el.remove());
+        container.querySelectorAll(".su-velocity, .su-artifact-badge, .su-external, .su-claim-chips, .su-repro-signals").forEach((el) => el.remove());
       }
     }
     renderAuthorshipHeatmap(container, state, isAuthorProfile);
@@ -5577,7 +5576,7 @@
         queueBtn.setAttribute("aria-label", "Add to reading queue");
         bar.append(queueBtn);
         const pdfBtn = createButton("PDF", { act: "openpdf" });
-        const pdfTip = "Open the best available PDF: tries publisher link first, then arXiv/SSRN if present, then a search. If you open the PDF, the extension can store its page count to improve the reading-load estimate.";
+        const pdfTip = "Open the best available PDF: tries publisher link first, then arXiv/SSRN if present, then a search.";
         pdfBtn.title = pdfTip;
         attachFloatingTooltip(pdfBtn, pdfTip);
         bar.append(pdfBtn);

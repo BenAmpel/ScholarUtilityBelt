@@ -207,7 +207,6 @@ async function load() {
   }
   el("highlightSaved").checked = !!s.highlightSaved;
   el("openalexApiKey").value = s.openalexApiKey || "";
-  el("defaultTagsCsv").value = s.defaultTagsCsv || "";
   el("keywordHighlightsCsv").value = s.keywordHighlightsCsv || "";
   el("hideTitleRegex").value = s.hideTitleRegex || "";
   el("hideAuthorsRegex").value = s.hideAuthorsRegex || "";
@@ -228,10 +227,7 @@ async function load() {
   el("showReadingOrder").checked = s.showReadingOrder !== false;
   el("showAgeBiasHeatmap").checked = !!s.showAgeBiasHeatmap;
   el("showAuthorshipHeatmap").checked = !!s.showAuthorshipHeatmap;
-  el("showRelevancySparkline").checked = !!s.showRelevancySparkline;
   el("showSnippetCueEmphasis").checked = !!s.showSnippetCueEmphasis;
-  el("showSkimmabilityStrip").checked = !!s.showSkimmabilityStrip;
-  el("showReadingLoadEstimator").checked = !!s.showReadingLoadEstimator;
   el("showResearchIntel").checked = s.showResearchIntel !== false;
   el("showAdvancedFilters").checked = s.showAdvancedFilters !== false;
   el("showTrendTracker").checked = s.showTrendTracker !== false;
@@ -675,7 +671,6 @@ async function handleSave() {
     citationSpikeMonths: Math.max(1, Math.min(24, parseInt(el("citationSpikeMonths").value, 10) || 6)),
     highlightSaved: el("highlightSaved").checked,
     openalexApiKey: el("openalexApiKey").value.trim(),
-    defaultTagsCsv: el("defaultTagsCsv").value,
     keywordHighlightsCsv: el("keywordHighlightsCsv").value,
     hideTitleRegex: el("hideTitleRegex").value,
     hideAuthorsRegex: el("hideAuthorsRegex").value,
@@ -696,10 +691,7 @@ async function handleSave() {
     showReadingOrder: el("showReadingOrder").checked,
     showAgeBiasHeatmap: el("showAgeBiasHeatmap").checked,
     showAuthorshipHeatmap: el("showAuthorshipHeatmap").checked,
-    showRelevancySparkline: el("showRelevancySparkline").checked,
     showSnippetCueEmphasis: el("showSnippetCueEmphasis").checked,
-    showSkimmabilityStrip: el("showSkimmabilityStrip").checked,
-    showReadingLoadEstimator: el("showReadingLoadEstimator").checked,
     showResearchIntel: el("showResearchIntel").checked,
     showAdvancedFilters: el("showAdvancedFilters").checked,
     showTrendTracker: el("showTrendTracker").checked,
