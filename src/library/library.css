@@ -3,7 +3,7 @@
   --panel: rgba(255,255,255,0.055);
   --panel2: rgba(255,255,255,0.09);
   --fg: #e8e8e6;
-  --muted: rgba(232,232,230,0.55);
+  --muted: rgba(232,232,230,0.68);
   --line: rgba(232,232,230,0.12);
   --accent: #4f9cf9;
   --danger: #fb7185;
@@ -27,7 +27,7 @@
     --panel: rgba(0,0,0,0.035);
     --panel2: rgba(0,0,0,0.055);
     --fg: #1a1918;
-    --muted: rgba(26,25,24,0.52);
+    --muted: rgba(26,25,24,0.66);
     --line: rgba(0,0,0,0.1);
     --accent: #2563eb;
     --danger: #dc2626;

@@ -11,7 +11,8 @@
     "test": "node --import ./tests/register-loader.mjs --test tests/*.test.mjs",
     "test:e2e": "node build.js && node scripts/e2e-check.mjs",
     "e2e": "node scripts/e2e/run.mjs",
-    "store-status": "node scripts/store_status.mjs"
+    "store-status": "node scripts/store_status.mjs",
+    "a11y": "node scripts/e2e/a11y.mjs"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "axe-core": "^4.14.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
     "playwright": "^1.58.2"
