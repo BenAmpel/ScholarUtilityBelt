@@ -34,6 +34,20 @@ await ctx.route("**/*", (route) => {
   return route.abort();
 });
 const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 20000 });
+const extId = new URL(sw.url()).host;
+// Errors from the extension: uncaught exceptions on any page, and console errors that mention the extension or its
+// [SU] log prefix (Scholar's own fixture pages log nothing). Blocked third-party requests are expected and ignored.
+const errors = [];
+const watch = (page, label) => {
+  page.on("pageerror", (e) => errors.push(`${label}: uncaught ${e.message}`));
+  page.on("console", (m) => {
+    if (m.type() !== "error") return;
+    const t = m.text();
+    if (/net::ERR_FAILED|ERR_BLOCKED|Failed to load resource/i.test(t)) return;
+    errors.push(`${label}: console ${t.slice(0, 200)}`);
+  });
+};
+ctx.on("page", (pg) => watch(pg, "page"));
 
 try {
   // 1. Results page: badges render.
@@ -71,6 +85,14 @@ try {
   const extraOptIn = scholarHits.filter((h) => h.includes("cstart=")).length;
   check("with the switch on, the profile loads more automatically", extraOptIn > 0, `${extraOptIn} extra`);
   await b.close();
+  // 4. The extension's own pages load without errors.
+  for (const pg of ["src/options/options.html", "src/library/library.html", "src/popup/popup.html"]) {
+    const x = await ctx.newPage();
+    await x.goto(`chrome-extension://${extId}/${pg}`);
+    await x.waitForTimeout(1500);
+    await x.close();
+  }
+  check("no uncaught exceptions or console errors from the extension", errors.length === 0, errors.slice(0, 6).join(" | "));
 } finally {
   await ctx.close();
   fs.rmSync(profileDir, { recursive: true, force: true });
