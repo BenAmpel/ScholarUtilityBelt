@@ -51,7 +51,7 @@ All ranking data is bundled locally — no API calls needed for quality badges. 
 RANKING SOURCES
 The badges come from ranking lists bundled with the extension, plus Google Scholar's own venue h5-index. Journals that appear on public predatory-journal lists are flagged. The full list of sources and how each is used is in the README on GitHub.
 
-Works on all Google Scholar country domains (google.com, google.de, google.co.uk, google.fr, etc.).
+Works on Google Scholar at scholar.google.com and 39 country domains, including .de, .co.uk, .fr, .co.jp and .com.br.
 
 Open source: https://github.com/BenAmpel/ScholarUtilityBelt
 

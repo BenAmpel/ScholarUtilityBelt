@@ -186,6 +186,13 @@ try {
   const extraOptIn = scholarHits.filter((h) => h.includes("cstart=")).length;
   check("with the switch on, the profile loads more automatically", extraOptIn > 0, `${extraOptIn} extra`);
   await b.close();
+  // 3a. A country domain from the manifest list gets the same badges (the listing names 39 of them).
+  const de = await ctx.newPage();
+  await de.goto("https://scholar.google.de/scholar?hl=de&q=sleep+deprivation+working+memory");
+  await de.waitForSelector(".su-badge", { timeout: 15000 }).catch(() => {});
+  const deBadges = await de.locator(".su-badge").count();
+  check("country domain (scholar.google.de) shows badges", deBadges > 0, `${deBadges} badges`);
+  await de.close();
   // 3b. Options: the two Scholar-request switches save and survive a reload.
   await sw.evaluate(async () => { const { settings } = await chrome.storage.local.get("settings"); await chrome.storage.local.set({ settings: { ...(settings || {}), autoLoadAuthorPapers: false, emergingSampleScholarPages: false } }); });
   const o = await ctx.newPage();
