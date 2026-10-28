@@ -93,3 +93,19 @@ describe("DOIs shown on a result", () => {
     assert.equal(findResultDoi([], ""), null);
   });
 });
+
+describe("safeHref", async () => {
+  const { safeHref } = await import("../src/common/scholar-links.js");
+  it("keeps absolute http and https URLs", () => {
+    assert.equal(safeHref("https://doi.org/10.1000/x"), "https://doi.org/10.1000/x");
+    assert.equal(safeHref("  http://example.org/a?b=1 "), "http://example.org/a?b=1");
+  });
+  it("drops script, data and relative URLs", () => {
+    assert.equal(safeHref("javascript:alert(1)"), "");
+    assert.equal(safeHref(" JavaScript:alert(1)"), "");
+    assert.equal(safeHref("data:text/html,<b>x</b>"), "");
+    assert.equal(safeHref("/scholar?q=x"), "");
+    assert.equal(safeHref("https://"), "");
+    assert.equal(safeHref(null), "");
+  });
+});

@@ -14,6 +14,7 @@
  * feature — no other call sites existed in content.js.
  */
 import { showProPrompt } from "../common/pro-prompt.js";
+import { safeHref } from "../common/scholar-links.js";
 import {
   MAX_FILE_BYTES,
   findExistingKey,
@@ -1386,7 +1387,7 @@ export function createReviewWorkspace(deps) {
               <details class="su-review-row" data-review-id="${escapeHtml(r.id)}">
                 <summary>
                   <span class="su-review-title">
-                    ${r.p.url ? `<a href="${escapeHtml(r.p.url)}" target="_blank" rel="noopener">${escapeHtml(r.p.title || "Untitled")}</a>` : escapeHtml(r.p.title || "Untitled")}
+                    ${safeHref(r.p.url) ? `<a href="${escapeHtml(safeHref(r.p.url))}" target="_blank" rel="noopener">${escapeHtml(r.p.title || "Untitled")}</a>` : escapeHtml(r.p.title || "Untitled")}
                   </span>
                   <span class="su-review-meta">${r.p.year || "—"} · ${r.p.citations || 0} cites · score ${r.score}</span>
                   <span class="su-review-badges">
@@ -1422,7 +1423,7 @@ export function createReviewWorkspace(deps) {
                   <div class="su-review-highlights">
                     <div class="su-review-highlights-header">
                       <span>PDF highlights</span>
-                      ${r.p.pdfUrl ? `<a class="su-review-pdf-link" href="${escapeHtml(r.p.pdfUrl)}" target="_blank" rel="noopener">Open PDF</a>` : ""}
+                      ${safeHref(r.p.pdfUrl) ? `<a class="su-review-pdf-link" href="${escapeHtml(safeHref(r.p.pdfUrl))}" target="_blank" rel="noopener">Open PDF</a>` : ""}
                     </div>
                     <div class="su-review-highlights-list">
                       ${(project.highlights?.[r.id] || []).map((h, hIdx) => `

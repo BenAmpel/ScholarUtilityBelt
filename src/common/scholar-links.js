@@ -62,3 +62,14 @@ export function findResultDoi(hrefs = [], text = "") {
   return cleanDoi(text);
 }
 
+/** `raw` if it is an absolute http(s) URL, else "". For href attributes built from fetched or imported data. */
+export function safeHref(raw) {
+  const s = String(raw ?? "").trim();
+  if (!/^https?:\/\//i.test(s)) return "";
+  try {
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:" ? s : "";
+  } catch (_) {
+    return "";
+  }
+}
