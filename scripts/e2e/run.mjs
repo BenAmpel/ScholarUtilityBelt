@@ -84,6 +84,46 @@ try {
   await sw.evaluate(() => chrome.storage.local.remove("customVenueList"));
   await q.close();
 
+  // 1c. Pro review workspace: import a PubMed and a Scopus file and check the search log and duplicate matching.
+  // Pro comes from ExtensionPay's own offline cache (an active trial), which the worker trusts when it cannot reach
+  // ExtensionPay; every non-Scholar request is blocked here, so it always takes that path.
+  await sw.evaluate(async () => {
+    const user = { paid: false, paidAt: null, installedAt: new Date(Date.now() - 864e5).toISOString(), trialStartedAt: new Date().toISOString(), subscriptionStatus: null };
+    // A key makes ExtPay try the network (blocked here, so it fails over to the cache); without one it reports a free user.
+    await chrome.storage.sync.set({ extensionpay_user: user, extensionpay_api_key: "e2e-offline-key" });
+    await chrome.storage.local.set({ extensionpay_user: user, suExtpayOkAt: Date.now() });
+  });
+  const w = await ctx.newPage();
+  w.on("dialog", (d) => d.accept(d.type() === "prompt" ? "E2E review" : undefined));
+  await w.goto("https://scholar.google.com/scholar?hl=en&q=sleep+deprivation+working+memory");
+  await w.waitForSelector(".su-badge", { timeout: 20000 }).catch(() => {});
+  await w.locator("button", { hasText: /^Review workspace$/ }).first().click();
+  await w.waitForSelector('[data-review-new="1"]', { timeout: 10000 }).catch(async () => {
+    const seen = await w.evaluate(() => [...document.querySelectorAll('[class*="su-pro-prompt"], [class*="su-review"], [role="dialog"]')].filter((e) => e.offsetParent !== null).map((e) => (e.className + ": " + e.textContent.trim().slice(0, 120))).slice(0, 4));
+    const ent = await sw.evaluate(async () => { try { const r = await new Promise((res) => chrome.runtime.sendMessage({ action: "getEntitlementStatus" }, res)); return r; } catch (e) { return String(e); } });
+    console.log("DEBUG visible:", JSON.stringify(seen), "| entitlement:", JSON.stringify(ent));
+    throw new Error("workspace did not open");
+  });
+  await w.click('[data-review-new="1"]');
+  await w.waitForTimeout(500);
+  await w.click('[data-review-tab="import"]');
+  const doImport = async (db, query, file) => {
+    await w.waitForSelector("#su-review-ref-file", { timeout: 10000 });
+    await w.fill("#su-review-imp-db", db);
+    await w.fill("#su-review-imp-query", query);
+    await w.setInputFiles("#su-review-ref-file", path.join(ROOT, "tests/e2e/fixtures", file));
+    await w.click('[data-review-run-import="1"]');
+    await w.waitForTimeout(1500);
+  };
+  await doImport("PubMed", "test AND synthetic", "pubmed-sample.nbib");
+  await doImport("Scopus", "TITLE-ABS(test)", "scopus-sample.ris");
+  const log = await w.evaluate(() => [...document.querySelectorAll(".su-review-import tbody tr")].map((tr) => [...tr.children].map((td) => td.textContent.trim())));
+  const row = (db) => log.find((r) => r[0] === db) || [];
+  check("review workspace logs both imports", log.length === 2, JSON.stringify(log.map((r) => [r[0], r[4], r[5], r[6]])));
+  check("PubMed import adds 3 new records", row("PubMed")[4] === "3" && row("PubMed")[5] === "3" && row("PubMed")[6] === "0");
+  check("Scopus import matches 1 duplicate by DOI and adds 2", row("Scopus")[4] === "3" && row("Scopus")[5] === "2" && row("Scopus")[6] === "1");
+  await w.close();
+
   // 2. Author profile with default settings: no automatic "Show more".
   scholarHits.length = 0;
   const a = await ctx.newPage();
