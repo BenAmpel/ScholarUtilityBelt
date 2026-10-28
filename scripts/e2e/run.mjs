@@ -65,6 +65,25 @@ try {
   check("results page sends no extra Scholar requests", extraOnResults === 0, `${extraOnResults} extra: ${scholarHits.slice(1).join(", ")}`);
   await p.close();
 
+  // 1b. Your own journal list and the Quick read filter.
+  await sw.evaluate(() => chrome.storage.local.set({ customVenueList: { name: "Fixture list", uploadedAt: new Date().toISOString(), entries: [["Sleep", "A"], ["Nature", "B"]] } }));
+  const q = await ctx.newPage();
+  await q.goto("https://scholar.google.com/scholar?hl=en&q=sleep+deprivation+working+memory");
+  await q.waitForSelector(".su-badge", { timeout: 20000 }).catch(() => {});
+  await q.waitForTimeout(2000);
+  const custom = await q.locator(".su-custom").count();
+  check("custom journal list adds its badges", custom >= 2, `${custom} custom badges`);
+  const filterBtn = q.locator("button", { hasText: /^Filter/ }).first();
+  await filterBtn.click().catch(() => {});
+  await q.waitForTimeout(500);
+  const qr = q.locator('input[title^="Only results that have Scholar\'s Quick read"]').first();
+  await qr.check().catch(() => {});
+  await q.waitForTimeout(1200);
+  const visibleRows = await q.evaluate(() => [...document.querySelectorAll(".gs_r.gs_or")].filter((r) => r.offsetParent !== null && !r.classList.contains("su-filtered-out")).length);
+  check("Quick read filter keeps only the 3 rows with Quick read", visibleRows === 3, `${visibleRows} visible`);
+  await sw.evaluate(() => chrome.storage.local.remove("customVenueList"));
+  await q.close();
+
   // 2. Author profile with default settings: no automatic "Show more".
   scholarHits.length = 0;
   const a = await ctx.newPage();
