@@ -8,7 +8,7 @@
  *
  * All state/helpers shared with content.js are passed in via `deps`
  * rather than imported, since content.js is a classic script, not a
- * module. Review-project persistence (getReviewProjects/setReviewProjects/
+ * module. Review-project persistence (getReviewProjects/
  * normalizeReviewProject/createReviewProject) and its storage key/default
  * constants moved in here too, since they're used exclusively by this
  * feature — no other call sites existed in content.js.
@@ -81,10 +81,6 @@ export function createReviewWorkspace(deps) {
   async function getReviewProjects() {
     if (!chrome?.storage?.local?.get) return {};
     return getStorageMap(REVIEW_PROJECTS_KEY);
-  }
-  async function setReviewProjects(map) {
-    if (!chrome?.storage?.local?.set) return;
-    await setStorageMap(REVIEW_PROJECTS_KEY, map);
   }
   // Saves one project. Writing the whole map from this tab's copy would erase edits made in
   // another tab or window; a single entry write (locked per key in storage.js) cannot.
@@ -213,12 +209,6 @@ export function createReviewWorkspace(deps) {
       citations: citations || 0,
       abstract: (snippetText || "").trim()
     };
-  }
-  function paperFingerprint(p) {
-    const doi = normalizeDoi(p?.doi || "");
-    if (doi) return `doi:${doi}`;
-    const titleKey = normalizeTitleForMatch(p?.title || "");
-    return titleKey ? `title:${titleKey}` : `key:${p?.id || ""}`;
   }
   function addPapersToProject(project, papers) {
     if (!project || !Array.isArray(papers)) return { added: 0, duplicates: 0 };
@@ -782,10 +772,6 @@ export function createReviewWorkspace(deps) {
   function logDecisionChanges(project, entries) {
     if (!window.suReviewState?.pro?.reviewSnapshots) return;
     project.changeLog = appendLog(project.changeLog, entries, new Date());
-  }
-  function effectiveVoteStatus(project, id, reviewerId) {
-    const v = (normalizeDecisionEntry(project.decisions?.[id]).votes || []).find((x) => x.reviewerId === reviewerId);
-    return v?.status || "unscreened";
   }
 
   function renderRobTab(project, state) {

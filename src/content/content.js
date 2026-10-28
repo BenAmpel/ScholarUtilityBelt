@@ -1570,19 +1570,6 @@
       orcid: author.orcid || ""
     };
   }
-  async function fetchOpenAlexAuthorsPage(conceptId, cursor, perPage = 200) {
-    if (!conceptId) return { results: [], nextCursor: null };
-    const params = new URLSearchParams();
-    params.set("filter", `concepts.id:${conceptId}`);
-    params.set("per_page", String(perPage));
-    params.set("cursor", cursor || "*");
-    const url = formatOpenAlexUrl(`https://api.openalex.org/authors?${params.toString()}`);
-    const data = await fetchExternalJson(url, { timeoutMs: 15000 });
-    if (!data) return { results: [], nextCursor: null, error: "OpenAlex request failed" };
-    const results = Array.isArray(data?.results) ? data.results : [];
-    const nextCursor = data?.meta?.next_cursor || null;
-    return { results, nextCursor, error: null };
-  }
   async function fetchOpenAlexWorksPage({ conceptId, year, perPage = 200, page = 1 }) {
     if (!conceptId || !year) return { results: [], error: "Missing concept or year" };
     const params = new URLSearchParams();
@@ -1638,84 +1625,6 @@
     const authors = Array.from(authorMap.values());
     authors.sort((a, b) => b.count - a.count);
     return { authors, scannedWorks, requests, error: null };
-  }
-  async function fetchPopPeersByStartYear(conceptId, year, opts = {}) {
-    const perPage = Number(opts.perPage) || 200;
-    const maxPages = Number(opts.maxPages) || 2;
-    const yearWindow = Number.isFinite(opts.yearWindow) ? Number(opts.yearWindow) : 0;
-    const minYear = Number.isFinite(year) ? year - yearWindow : null;
-    const maxYear = Number.isFinite(year) ? year + yearWindow : null;
-    const peers = [];
-    let scanned = 0;
-    let pages = 0;
-    let error = null;
-    let cursor = "*";
-    for (let i = 0; i < maxPages; i++) {
-      const page = await fetchOpenAlexAuthorsPage(conceptId, cursor, perPage);
-      if (page.error) {
-        error = page.error;
-        break;
-      }
-      pages += 1;
-      for (const raw of page.results || []) {
-        scanned += 1;
-        const compact = compactOpenAlexAuthor(raw);
-        if (!compact || !compact.firstYear) continue;
-        if (minYear != null && maxYear != null) {
-          if (compact.firstYear >= minYear && compact.firstYear <= maxYear) peers.push(compact);
-        } else if (compact.firstYear === year) {
-          peers.push(compact);
-        }
-      }
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
-    }
-    peers.sort((a, b) => (b.citedByCount || 0) - (a.citedByCount || 0));
-    return { peers, scanned, pages, error, yearWindow };
-  }
-  async function fetchPopPeersByStartYearMulti(concepts, year, opts = {}) {
-    const perPage = Number(opts.perPage) || 200;
-    const maxPages = Number(opts.maxPages) || 2;
-    const yearWindow = Number.isFinite(opts.yearWindow) ? Number(opts.yearWindow) : 0;
-    const minYear = Number.isFinite(year) ? year - yearWindow : null;
-    const maxYear = Number.isFinite(year) ? year + yearWindow : null;
-    const peers = [];
-    let scanned = 0;
-    let pages = 0;
-    let error = null;
-    const seen = new Set();
-    const conceptNames = [];
-    for (const concept of concepts || []) {
-      if (!concept?.id) continue;
-      conceptNames.push(concept.displayName || concept.name || "");
-      let cursor = "*";
-      for (let i = 0; i < maxPages; i++) {
-        const page = await fetchOpenAlexAuthorsPage(concept.id, cursor, perPage);
-        if (page.error) {
-          error = page.error;
-          break;
-        }
-        pages += 1;
-        for (const raw of page.results || []) {
-          const id = String(raw?.id || "");
-          if (id && seen.has(id)) continue;
-          if (id) seen.add(id);
-          scanned += 1;
-          const compact = compactOpenAlexAuthor(raw);
-          if (!compact || !compact.firstYear) continue;
-          if (minYear != null && maxYear != null) {
-            if (compact.firstYear >= minYear && compact.firstYear <= maxYear) peers.push(compact);
-          } else if (compact.firstYear === year) {
-            peers.push(compact);
-          }
-        }
-        if (!page.nextCursor) break;
-        cursor = page.nextCursor;
-      }
-      if (error) break;
-    }
-    peers.sort((a, b) => (b.citedByCount || 0) - (a.citedByCount || 0));
-    return { peers, scanned, pages, error, yearWindow, concepts: conceptNames.filter(Boolean) };
   }
   async function fetchOpenCitationsCociList(doi) {
     const norm = normalizeDoi(doi);
@@ -2104,14 +2013,6 @@
     if (/\bjournal\b|transactions|quarterly|review\b|science\b/.test(v)) return 3;
     if (/\bconference\b|proceedings|workshop\b|symposium\b/.test(v)) return 2;
     return 0;
-  }
-  /** Venue type for reading load: "journal" | "conference" | "preprint" | "other". */
-  function getVenueType(venue) {
-    const tier = getVenueTier(venue);
-    if (tier === 3) return "journal";
-    if (tier === 2) return "conference";
-    if (tier === 1) return "preprint";
-    return "other";
   }
   /**
    * Reading load label: skim (≤5 pp or preprint), read (6–15 or conference), deep read (16+ or journal).
@@ -5031,43 +4932,6 @@
     authorEl.textContent = "";
     authorEl.appendChild(fragment);
   }
-  /**
-   * Skimmability heat: green = PDF + abstract + citations; yellow = missing abstract or venue; red = no PDF, no citations, odd venue.
-   */
-  function computeSkimmability(container, paper, isAuthorProfile) {
-    const hasPdf = !!getBestPdfUrl(container);
-    const snippetText = getSnippetText(container);
-    const hasAbstract = (snippetText || "").trim().length >= 25;
-    const cite = isAuthorProfile ? getCachedAuthorCitationCount(container) : getCitationCountFromResult(container);
-    const hasCitations = cite != null && cite >= 0;
-    const venue = (paper.venue || "").trim();
-    const hasVenue = venue.length >= 3;
-    const oddVenue = !hasVenue || isPreprintVenue(venue);
-    if (hasPdf && hasAbstract && hasCitations) return "green";
-    if (!hasPdf && !hasCitations && oddVenue) return "red";
-    return "yellow";
-  }
-  function renderSkimmabilityStrip(container, paper, state, isAuthorProfile) {
-    const existing = container.querySelector(".su-skimmability-strip");
-    if (existing) existing.remove();
-    container.classList.remove("su-has-skimmability");
-    if (!state.settings.showSkimmabilityStrip) return;
-    const color = computeSkimmability(container, paper, isAuthorProfile);
-    const strip = document.createElement("div");
-    strip.className = "su-skimmability-strip su-skimmability-" + color;
-    strip.setAttribute("aria-label", `Skimmability: ${color}`);
-    strip.title =
-      color === "green"
-        ? "Skimmability: this result has a PDF link, abstract/snippet, and citation count—easier to assess quickly."
-        : color === "red"
-          ? "Skimmability: missing PDF, no citations, and odd or missing venue—harder to assess from the snippet alone."
-          : "Skimmability: abstract or venue info is missing—partial signal for quick assessment.";
-    container.classList.add("su-has-skimmability");
-    if (!container.style.position || container.style.position === "static") {
-      container.style.position = "relative";
-    }
-    container.insertBefore(strip, container.firstChild);
-  }
   function renderArtifactBadges(container, state) {
     const existing = container.querySelector(".su-artifact-badge");
     if (existing) existing.remove();
@@ -5196,67 +5060,6 @@
     } else {
       container.appendChild(root);
     }
-  }
-  /**
-   * Contribution Signal Score (CSS): composite 0–100 estimate of intellectual contribution.
-   * Formula: CSS = 40%·V + 40%·W + 20%·N (reference entropy E omitted—no data).
-   * V = citation velocity (log-normalized, cap 20/yr → 1). W = venue tier weight [0,1]. N = artifact novelty (0, 0.1, or 0.2).
-   */
-  function computeCSS(container, paper, state, isAuthorProfile) {
-    const citations = isAuthorProfile
-      ? getCachedAuthorCitationCount(container)
-      : getCitationCountFromResult(container);
-    const year = paper.year != null ? parseYear(String(paper.year)) : null;
-    if (year == null) return null;
-    const currentYear = new Date().getFullYear();
-    const yearsAgo = Math.max(1, currentYear - year);
-    const velocity = citations != null && citations >= 0 ? citations / yearsAgo : 0;
-    const V_norm = Math.min(1, Math.log(1 + velocity) / Math.log(1 + 20));
-    const W = venueWeightForVenue(paper.venue, state.qIndex);
-    const { code, data } = detectArtifacts(container);
-    const N = (code && data) ? 0.2 : (code || data) ? 0.1 : 0;
-    const score = 0.4 * V_norm + 0.4 * W + 0.2 * N;
-    const velocityStr = velocity >= 10 ? Math.round(velocity) : velocity.toFixed(1);
-    return {
-      score: Math.round(score * 100),
-      V_norm: Math.round(V_norm * 100) / 100,
-      W: Math.round(W * 100) / 100,
-      N,
-      velocityStr,
-      formula: `CSS = 0.4×V + 0.4×W + 0.2×N (E omitted)`
-    };
-  }
-  function renderCSSBadge(container, paper, state, isAuthorProfile) {
-    const existing = container.querySelector(".su-css-badge");
-    if (existing) existing.remove();
-    if (!state.settings.showCSS) return;
-    const css = computeCSS(container, paper, state, isAuthorProfile);
-    if (!css) return;
-    const anchor = isAuthorProfile
-      ? container.querySelector(".gsc_a_c")
-      : container.querySelector(".gs_fl");
-    if (!anchor) return;
-    const badge = document.createElement("span");
-    badge.className = "su-css-badge";
-    badge.setAttribute("aria-label", `Contribution Signal Score: ${css.score}`);
-    badge.textContent = `CSS ${css.score}`;
-    const tooltip = document.createElement("span");
-    tooltip.className = "su-css-tooltip";
-    tooltip.innerHTML = [
-      "Contribution Signal Score (0–100). Not raw popularity.",
-      "",
-      `Formula: ${css.formula}`,
-      `V (velocity): ${css.V_norm} (≈ ${css.velocityStr} cites/yr, log‑normalized; not field‑normalized)`,
-      `W (venue): ${css.W}`,
-      `N (artifacts): ${css.N}`,
-      "",
-      "Reference entropy E omitted (no data)."
-    ].join("<br>");
-    badge.appendChild(tooltip);
-    badge.addEventListener("mouseenter", () => { tooltip.classList.add("su-css-tooltip-visible"); });
-    badge.addEventListener("mouseleave", () => { tooltip.classList.remove("su-css-tooltip-visible"); });
-    anchor.appendChild(document.createTextNode(" "));
-    anchor.appendChild(badge);
   }
   function getCurrentSearchQuery() {
     try {
@@ -12040,13 +11843,6 @@
     }
     return queries;
   }
-  async function fetchS2PaperById(paperId) {
-    if (!paperId) return null;
-    const url = `https://api.semanticscholar.org/graph/v1/paper/${encodeURIComponent(paperId)}?fields=paperId,title,year,authors,abstract`;
-    const data = await fetchSemanticScholarJson(url, { timeoutMs: 15000 });
-    if (data?.__s2_error === "rate_limit") return null;
-    return normalizeS2Paper(data);
-  }
   async function resolveS2Paper(paper, doi) {
     const cacheKey = paper?.key || computeKey({
       clusterId: paper?.clusterId,
@@ -13652,44 +13448,6 @@
     } catch (e) {
       return { added, visible: 0, hasMore: true };
     }
-  }
-  function highlightSearchQuerySyntax(q) {
-    if (!q) return "";
-    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    let out = "";
-    let i = 0;
-    while (i < q.length) {
-      const ch = q[i];
-      if (ch === '"') {
-        const end = q.indexOf('"', i + 1);
-        const phrase = end === -1 ? q.slice(i) : q.slice(i, end + 1);
-        out += `<span class="su-search-phrase">${esc(phrase)}</span>`;
-        i += phrase.length;
-        continue;
-      }
-      const rest = q.slice(i);
-      const authorMatch = rest.match(/^author:[^\s"]+/i);
-      if (authorMatch) {
-        out += `<span class="su-search-author">${esc(authorMatch[0])}</span>`;
-        i += authorMatch[0].length;
-        continue;
-      }
-      const opMatch = rest.match(/^(AND|OR|NOT)\b/i);
-      if (opMatch) {
-        const prev = i === 0 ? " " : q[i - 1];
-        const next = q[i + opMatch[0].length] || " ";
-        const prevOk = /\s|\(|\)|"/.test(prev);
-        const nextOk = /\s|\(|\)|"/.test(next);
-        if (prevOk && nextOk) {
-          out += `<span class="su-search-op">${esc(opMatch[0].toUpperCase())}</span>`;
-          i += opMatch[0].length;
-          continue;
-        }
-      }
-      out += esc(ch);
-      i += 1;
-    }
-    return out;
   }
   function ensureSearchSyntaxHighlighting() {
     return;
