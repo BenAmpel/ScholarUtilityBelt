@@ -19,19 +19,19 @@ See journal quality as color-coded badges, taken from established ranking lists 
 Upload a CSV of journals and conferences with your own tier labels, such as a department's A, B and C list. Matching venues get a badge with your label next to the built-in ones. The file is read in your browser and stays there.
 
 ★ CITATION VELOCITY & ANALYTICS
-Each paper shows citations per year with trend arrows (↑ accelerating, → stable, ↓ decaying). Compare papers not just by total citations but by research momentum.
+Each paper shows citations per year. An arrow marks papers cited faster (↑) or slower (↓) than papers of similar age on the same page.
 
 ★ AUTHOR PROFILE METRICS
-On any Scholar author page, see computed h-index, m-index, L-index, g-index, hI-norm, self-citation rate, publication quality breakdown (how many papers fall in each ranking tier), and coauthor analytics — all calculated in real time.
+On any Scholar author page, see h-index, m-index, L-index and g-index, a self-citation rate estimated from OpenAlex, a publication quality breakdown (how many papers fall in each ranking tier) and coauthor analytics, calculated from the papers loaded on the page.
 
 ★ ADVISOR–STUDENT GENEALOGY
 Trace advisor–student genealogy across generations. See who advised whom in an interactive tree view with 900,000+ researchers drawn from public genealogy projects and institutional repository data.
 
 ★ QUERY TREND TRACKER
-See how research topics are trending via OpenAlex data. Every search shows related concept velocity (e.g., "Large Language Models ↑ 847%") plus detected methodology keywords.
+A panel above the results, closed until you open it, lists the research methods named in the results and related OpenAlex topics marked rising (↑), flat (→) or falling (↓). OpenAlex is asked only while the panel is open.
 
 ★ RETRACTION ALERTS
-Papers flagged in the Retraction Watch database are marked with a visible warning badge. Never accidentally cite retracted research.
+Results whose DOI matches a list built from the Retraction Watch database, bundled with the extension, get a "Potential update/retraction" badge. Check the publisher's page before relying on it.
 
 ★ QUICK ACTIONS
 One-click Save to library, BibTeX export, abstract preview, DOI lookup, and code/dataset link detection (from the result's own links and DataCite) — all inline on search results.
@@ -46,10 +46,10 @@ Everything above is free. Scholar Utility Belt Pro adds tools for literature rev
 Triage cards show study design, sample and setting under a result, read from the snippet by Chrome's built-in on-device model where your Chrome offers one; a value appears only if it is in the snippet. Ask my shortlist lets you ask one question about papers you saved, using your own API key from an AI provider you choose in Options. If you use it, the titles and saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you chose, only after you review the cost estimate and confirm. Each quoted sentence in the answer is checked against the saved text.
 
 ★ PRIVACY-FIRST
-All ranking data is bundled locally — no API calls needed for quality badges. External lookups, such as OpenAlex and Crossref, only happen when features are enabled and never send personal data. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. If you turn on the optional bring-your-own-key feature, the paper text you select and your question go to the AI provider you picked, using your own key, and to no one else. App Pass is off by default and contacts joinapppass.com only after you turn it on.
+All ranking data is bundled locally — no API calls needed for quality badges. In the detailed view, which is the default, each result's DOI, arXiv or PubMed id is looked up at Crossref, OpenCitations, DataCite, Unpaywall, Semantic Scholar, arXiv, Europe PMC and NCBI, and author pages ask OpenAlex and DBLP. These requests carry the identifier or author name, never personal data, and one switch in Options turns the per-result lookups off. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. If you turn on the optional bring-your-own-key feature, the paper text you select and your question go to the AI provider you picked, using your own key, and to no one else. App Pass is off by default and contacts joinapppass.com only after you turn it on.
 
 RANKING SOURCES
-The badges come from ranking lists bundled with the extension, plus Google Scholar's own venue h5-index. Journals that appear on public predatory-journal lists are flagged. The full list of sources and how each is used is in the README on GitHub.
+The badges come from ranking lists bundled with the extension, plus Google Scholar's own venue h5-index. The full list of sources and how each is used is in the README on GitHub.
 
 Works on Google Scholar at scholar.google.com and 39 country domains, including .de, .co.uk, .fr, .co.jp and .com.br.
 
