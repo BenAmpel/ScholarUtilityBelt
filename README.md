@@ -91,6 +91,16 @@ Scholar Utility Belt addresses those gaps in-place. Instead of replacing Scholar
 - **Pro:** citation-lineage/idea-lineage views and an interactive citation-graph overlay, both built from bounded external enrichment.
 - **Pro:** Publish-or-Perish-style report with peer-cohort benchmarking.
 
+### Article pages
+
+On a profile's "View article" page (`/citations?view_op=view_citation`), all free and read from the open page, with no extra request to Scholar:
+
+- Journal badges on the venue line, from the same bundled lists as results and profiles.
+- Save to library, Copy BibTeX and Copy RIS with what only this page shows: every author (results pages cut the list short), volume, issue, pages, publisher and abstract.
+- Numbers from the page's own citation chart: citations a year on average, the peak year, the last full year against the three before it, and the current year so far.
+- A DOI button and the bundled retraction check when the title or PDF link carries a DOI.
+- Where the profile's owner sits among the authors (first, last, or author 2 of 4).
+
 ### Library and workflow tooling
 
 - Local saved-paper library with tags, notes, search, sorting, export/import, and collection-style organization.

@@ -5808,6 +5808,163 @@
     const removeBtn = bar.querySelector('button[data-act="remove"]');
     if (removeBtn) removeBtn.style.display = isSaved ? "" : "none";
   }
+  // ---- "View article" page (/citations?view_op=view_citation) ----------------------------------------------
+  // Badges on the venue, full-metadata Save / BibTeX / RIS, numbers from the citation chart, the DOI and retraction
+  // check, and where the profile's owner sits among the authors. All free, all read from the open page: no request.
+  let articlePageMod = null;
+  function readArticlePage() {
+    const table = document.getElementById("gsc_oci_table");
+    const titleEl = document.getElementById("gsc_oci_title");
+    if (!table || !titleEl) return null;
+    const titleLink = titleEl.querySelector("a.gsc_oci_title_link") || titleEl.querySelector("a");
+    const rows = Array.from(table.children).filter((el) => el.classList.contains("gs_scl")).map((row) => {
+      const valueEl = row.querySelector(".gsc_oci_value");
+      const cited = valueEl?.querySelector('a[href*="cites="]');
+      const hasGraph = !!valueEl?.querySelector("#gsc_oci_graph_bars, #gsc_oci_graph");
+      return {
+        label: text(row.querySelector(".gsc_oci_field")),
+        value: (valueEl?.textContent || "").trim(),
+        isDescription: valueEl?.id === "gsc_oci_descr" || !!valueEl?.querySelector("#gsc_oci_descr"),
+        isCitations: hasGraph || (!!cited && !valueEl.querySelector(".gsc_oci_merged_snippet")),
+        citedByText: cited ? text(cited) : "",
+        citedByHref: cited?.getAttribute("href") || "",
+        el: row,
+        valueEl,
+      };
+    });
+    const bars = Array.from(document.querySelectorAll("#gsc_oci_graph_bars a.gsc_oci_g_a")).map((a) => {
+      let year = null;
+      try { year = new URL(a.getAttribute("href") || "", location.origin).searchParams.get("as_ylo"); } catch (_) {}
+      return { year, count: text(a.querySelector(".gsc_oci_g_al")) };
+    });
+    const ownerName = Array.from(document.querySelectorAll('#gsc_sb_ui a[href*="user="]')).map((a) => text(a)).find(Boolean) || "";
+    const pdfLink = document.querySelector("#gsc_oci_title_gg a[href]");
+    return {
+      title: text(titleEl),
+      url: titleLink ? tryGetHref(titleLink) || "" : "",
+      pdfUrl: pdfLink ? tryGetHref(pdfLink) || "" : "",
+      ownerName,
+      rows,
+      bars,
+    };
+  }
+  async function renderArticlePage(state) {
+    const raw = readArticlePage();
+    if (!raw) return;
+    if (!articlePageMod) articlePageMod = await importModuleWithRetry("dist/common/article-page.js");
+    const A = articlePageMod;
+    const article = A.articleFromPage(raw);
+    if (!article) return;
+    document.querySelectorAll("[data-su-article]").forEach((el) => el.remove());
+    const rowFor = (pred) => raw.rows.find(pred);
+    const mark = (el) => { el.setAttribute("data-su-article", "1"); return el; };
+    const doi = findResultDoi(
+      [raw.url, raw.pdfUrl, ...Array.from(document.querySelectorAll("#gsc_oci_table a[href]")).map((a) => a.getAttribute("href") || "")],
+      ""
+    );
+    const key = article.clusterId ? `cid:${article.clusterId}` : computeKey({ url: article.url, title: article.title, authors: article.authors.join(", "), year: article.year });
+
+    // 1. Journal badges on the venue line: the same renderer, data and settings as results and profiles.
+    const venueRow = rowFor((r) => r.valueEl && tidyText(r.value) === article.venue && article.venue);
+    if (venueRow && state.settings.showQualityBadges) {
+      const anchor = mark(document.createElement("span"));
+      anchor.className = "su-article-venue-anchor";
+      venueRow.valueEl.appendChild(anchor);
+      renderQuality(venueRow.valueEl, { venue: article.venue, _authorsVenueEl: anchor }, state, false);
+      venueRow.valueEl.querySelectorAll(".su-quality").forEach(mark);
+    }
+
+    // 2 and 4. Save, Copy BibTeX, Copy RIS, Copy DOI, and the retraction check, under the title.
+    const bar = mark(document.createElement("div"));
+    bar.className = "su-article-actions";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Scholar Utility Belt actions for this article");
+    const saved = !!state.saved[key];
+    const saveBtn = createButton(saved ? "Saved" : "Save to library", { act: "article-save" });
+    saveBtn.title = saved ? "This paper is in your library." : "Save this paper to your library with its full author list, volume, pages and abstract.";
+    if (saved) saveBtn.disabled = true;
+    const bibBtn = createButton("Copy BibTeX", { act: "article-bib" });
+    bibBtn.title = "Copy BibTeX with every author, volume, issue, pages and publisher shown on this page.";
+    const risBtn = createButton("Copy RIS", { act: "article-ris" });
+    risBtn.title = "Copy RIS (EndNote, Zotero, Mendeley) with the same fields.";
+    bar.append(saveBtn, bibBtn, risBtn);
+    if (doi) {
+      const doiBtn = createButton("DOI", { act: "copydoi" });
+      doiBtn.dataset.doi = doi;
+      doiBtn.title = `Copy the DOI ${doi}`;
+      doiBtn.setAttribute("aria-label", `Copy DOI ${doi}`);
+      bar.append(doiBtn);
+    }
+    if (doi && state.settings.showRetractionWatch && state.retractionBloom && bloomHasDoi(doi, state.retractionBloom)) {
+      const flag = document.createElement("span");
+      flag.className = "su-badge su-retraction-neutral";
+      flag.textContent = "Potential update/retraction";
+      flag.title = "This DOI is on the bundled list built from the Retraction Watch database. Check the publisher's page.";
+      bar.append(flag);
+    }
+    const status = document.createElement("span");
+    status.className = "su-article-status";
+    status.setAttribute("role", "status");
+    bar.append(status);
+    const say = (msg) => { status.textContent = msg; setTimeout(() => { if (status.textContent === msg) status.textContent = ""; }, 2500); };
+    bar.addEventListener("click", async (e) => {
+      const btn = e.target?.closest?.("button[data-act]");
+      if (!btn) return;
+      const act = btn.dataset.act;
+      try {
+        if (act === "article-save") {
+          await upsertPaper({
+            key, title: article.title, url: article.url, authorsVenue: A.authorsVenueLine(article), venue: article.venue,
+            year: article.year, snippet: article.abstract, abstract: article.abstract, doi: doi || "", pdfUrl: article.pdfUrl,
+            volume: article.volume, issue: article.issue, pages: article.pages, publisher: article.publisher,
+            clusterId: article.clusterId, citedByUrl: rowFor((r) => r.isCitations)?.citedByHref || "",
+            sourcePageUrl: location.href, savedAt: new Date().toISOString(),
+          });
+          await refreshState(state);
+          btn.textContent = "Saved";
+          btn.disabled = true;
+          say("Saved to your library.");
+        } else if (act === "article-bib") {
+          await navigator.clipboard.writeText(A.articleBibTeX(article, doi || ""));
+          say("BibTeX copied.");
+        } else if (act === "article-ris") {
+          await navigator.clipboard.writeText(A.articleRis(article, doi || ""));
+          say("RIS copied.");
+        } else if (act === "copydoi") {
+          await navigator.clipboard.writeText(btn.dataset.doi || "");
+          say("DOI copied.");
+        }
+      } catch (_) {
+        say("That did not work. Try again.");
+      }
+    });
+    const titleWrap = document.getElementById("gsc_oci_title_wrapper") || document.getElementById("gsc_oci_title");
+    titleWrap.insertAdjacentElement("afterend", bar);
+
+    // 3. Plain numbers from Scholar's own chart.
+    const citesRow = rowFor((r) => r.isCitations);
+    const lines = A.citationStatsLines(A.citationStats(article));
+    if (citesRow?.valueEl && lines.length) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-cites";
+      p.textContent = `${lines.join(" · ")}.`;
+      p.title = "From the citation chart on this page. The current year is partial, so it is left out of the peak and the trend.";
+      citesRow.valueEl.appendChild(p);
+    }
+
+    // 5. Where the profile's owner sits among the authors.
+    const authorsRow = raw.rows[0];
+    const pos = A.authorPosition(article.authors, article.ownerName);
+    if (authorsRow?.valueEl && pos) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-author-pos";
+      p.textContent = A.authorPositionText(pos, article.ownerName, article.authorsTruncated);
+      authorsRow.valueEl.appendChild(p);
+    }
+  }
+  function tidyText(s) {
+    return String(s || "").replace(/\s+/g, " ").trim();
+  }
   function scanResults() {
     // Check if we're on an author profile page
     const isAuthorProfile =
@@ -14898,6 +15055,11 @@
       forceFull = false;
       pendingDirtyRows.clear();
       try {
+        // A "View article" page has no result rows: it gets its own features and nothing else.
+        if (document.getElementById("gsc_oci_table")) {
+          await renderArticlePage(state).catch((e) => console.warn("[SU] article page", e));
+          return;
+        }
         let { results, isAuthorProfile } = scanResults();
         if (!isAuthorProfile && window.suSearchSortByCitations && window.suSearchSortByCitations !== "default") {
           applyCitationSort();

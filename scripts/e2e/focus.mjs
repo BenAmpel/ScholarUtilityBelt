@@ -21,6 +21,7 @@ const ctx = await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.t
 await ctx.route("**/*", (route) => {
   const u = new URL(route.request().url());
   if (/^scholar\.google\./.test(u.hostname)) {
+    if (u.pathname === "/citations" && u.searchParams.get("view_op") === "view_citation") return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-article.html") });
     if (u.pathname === "/scholar" && !u.searchParams.has("start")) return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-results.html") });
     if (u.pathname === "/citations" && u.searchParams.get("user") === "FIXTURE" && !u.searchParams.has("cstart")) return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-profile.html") });
     return route.fulfill({ status: 204, body: "" });
@@ -33,7 +34,7 @@ await (ctx.serviceWorkers()[0] || ctx.waitForEvent("serviceworker", { timeout: 2
 const STYLE_KEYS = ["outlineStyle", "outlineWidth", "outlineColor", "boxShadow", "borderTopColor", "borderBottomColor", "backgroundColor", "textDecorationLine"];
 const failures = [];
 let seen = 0;
-for (const url of ["https://scholar.google.com/scholar?hl=en&q=sleep+deprivation+working+memory", "https://scholar.google.com/citations?user=FIXTURE&hl=en"]) {
+for (const url of ["https://scholar.google.com/scholar?hl=en&q=sleep+deprivation+working+memory", "https://scholar.google.com/citations?user=FIXTURE&hl=en", "https://scholar.google.com/citations?view_op=view_citation&hl=en&user=eEcALuEAAAAJ&citation_for_view=eEcALuEAAAAJ:0EnyYjriUFMC"]) {
   const p = await ctx.newPage();
   await p.goto(url);
   await p.waitForSelector(".su-badge", { timeout: 20000 }).catch(() => {});

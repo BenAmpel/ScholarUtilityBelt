@@ -5508,3 +5508,29 @@ body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-c
    tooltip names the list entry so a wrong match can be spotted. */
 .su-badge.su-badge-near-match { outline: 1px dashed currentColor; outline-offset: 1px; }
 .su-badge-tooltip .su-badge-near { display: inline-block; margin-top: 4px; max-width: 280px; white-space: normal; }
+
+/* "View article" page (/citations?view_op=view_citation): actions under the title, notes in the field rows. */
+.su-article-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.su-article-status {
+  font-size: 12px;
+  color: var(--su-chip-text, #1f2937);
+  min-height: 1em;
+}
+.su-article-note {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--su-chip-text, #1f2937);
+}
+.su-article-venue-anchor {
+  display: inline;
+}
+#gsc_oci_table .su-quality {
+  margin-top: 4px;
+}
