@@ -113,16 +113,21 @@ try {
     console.log("DEBUG visible:", JSON.stringify(seen), "| entitlement:", JSON.stringify(ent));
     throw new Error("workspace did not open");
   });
+  const projectsBefore = await w.locator("#su-review-project-select option").count();
   await w.click('[data-review-new="1"]');
-  await w.waitForTimeout(500);
+  // wait until the new project exists before importing into it
+  await w.waitForFunction((n) => document.querySelectorAll("#su-review-project-select option").length > n, projectsBefore, { timeout: 10000 }).catch(() => {});
   await w.click('[data-review-tab="import"]');
+  const logRows = () => w.evaluate(() => document.querySelectorAll(".su-review-import tbody tr").length);
   const doImport = async (db, query, file) => {
     await w.waitForSelector("#su-review-ref-file", { timeout: 10000 });
+    const before = await logRows();
     await w.fill("#su-review-imp-db", db);
     await w.fill("#su-review-imp-query", query);
     await w.setInputFiles("#su-review-ref-file", path.join(ROOT, "tests/e2e/fixtures", file));
     await w.click('[data-review-run-import="1"]');
-    await w.waitForTimeout(1500);
+    // wait for this import's search-log row instead of a fixed pause (a slow run used to overwrite the first import)
+    await w.waitForFunction((n) => document.querySelectorAll(".su-review-import tbody tr").length > n, before, { timeout: 15000 }).catch(() => {});
   };
   await doImport("PubMed", "test AND synthetic", "pubmed-sample.nbib");
   await doImport("Scopus", "TITLE-ABS(test)", "scopus-sample.ris");
