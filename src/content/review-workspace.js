@@ -20,6 +20,7 @@ import {
   hashId,
   parseReferences,
   registerKeys,
+  scholarPageLogEntry,
   searchLogToCsv,
   searchLogToMarkdown,
   totalRecordsFromSearchLog
@@ -1824,7 +1825,12 @@ export function createReviewWorkspace(deps) {
         if (!project) return;
         const { results, isAuthorProfile } = scanResults();
         const papers = results.map((row) => extractReviewPaperFromResult(row, isAuthorProfile)).filter(Boolean);
-        addPapersToProject(project, papers);
+        const { added, duplicates } = addPapersToProject(project, papers);
+        // Record the Scholar search in the search log, like a database export, so it can be reported and rerun.
+        if (papers.length) {
+          const authorName = isAuthorProfile ? (document.getElementById("gsc_prf_in")?.textContent || "").trim() : "";
+          project.searchLog.push(scholarPageLogEntry({ url: location.href, papersCount: papers.length, added, duplicates, isAuthorProfile, authorName }));
+        }
         await saveReviewProject(project);
         renderReviewOverlay(project);
         return;

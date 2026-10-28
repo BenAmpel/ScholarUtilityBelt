@@ -136,6 +136,13 @@ try {
   check("review workspace logs both imports", log.length === 2, JSON.stringify(log.map((r) => [r[0], r[4], r[5], r[6]])));
   check("PubMed import adds 3 new records", row("PubMed")[4] === "3" && row("PubMed")[5] === "3" && row("PubMed")[6] === "0");
   check("Scopus import matches 1 duplicate by DOI and adds 2", row("Scopus")[4] === "3" && row("Scopus")[5] === "2" && row("Scopus")[6] === "1");
+  // Add page results also records the Scholar search itself.
+  const rowsBefore = await logRows();
+  await w.click('[data-review-add-page="1"]');
+  await w.waitForFunction((n) => document.querySelectorAll(".su-review-import tbody tr").length > n, rowsBefore, { timeout: 10000 }).catch(() => {});
+  const log2 = await w.evaluate(() => [...document.querySelectorAll(".su-review-import tbody tr")].map((tr) => [...tr.children].map((td) => td.textContent.trim())));
+  const gs = log2.find((r) => r[0] === "Google Scholar") || [];
+  check("Add page results logs the Scholar search", gs[2] === "sleep deprivation working memory" && gs[4] === "10", JSON.stringify(gs));
   await w.close();
 
   // 2. Author profile with default settings: no automatic "Show more".
