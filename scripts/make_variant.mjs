@@ -21,8 +21,8 @@ const TARGETS = {
   },
   firefox: {
     store: "Firefox Add-ons",
-    reviews: "https://addons.mozilla.org/firefox/addon/scholar-utility-belt/reviews/",
-    listing: "https://addons.mozilla.org/firefox/addon/scholar-utility-belt/",
+    reviews: "https://addons.mozilla.org/firefox/addon/google-scholar-utility-belt/reviews/",
+    listing: "https://addons.mozilla.org/firefox/addon/google-scholar-utility-belt/",
   },
 };
 const t = TARGETS[target];
