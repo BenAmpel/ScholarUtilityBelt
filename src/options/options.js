@@ -810,15 +810,15 @@ el("tryDownloadScimago")?.addEventListener("click", async () => {
   try {
     setScimagoStatus("Downloading...");
     const r = await fetch(url, { method: "GET", credentials: "omit" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const text = await r.text();
 
-    // Common failure mode: Cloudflare / bot challenge.
-    if (/Just a moment/i.test(text) && /cloudflare/i.test(text)) {
+    // Common failure mode: Cloudflare's bot check, which answers 403 with a "Just a moment..." page.
+    if (/Just a moment/i.test(text) || (r.status === 403 && /cloudflare|challenge/i.test(text))) {
       throw new Error(
-        "Blocked by Cloudflare. Open SCImago in your browser, download the export, then use Import."
+        "SCImago asked for a browser check. Open SCImago in your browser, download the export, then use Import."
       );
     }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
     const { index, rowCount } = parseScimagoExport(text);
     if (!rowCount) throw new Error("Parsed 0 rows (download not recognized?)");
