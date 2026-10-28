@@ -176,7 +176,6 @@ export const DEFAULT_SETTINGS = {
   claimChipMinN: 30, // stated sample sizes below this get a chip
   showReproSignals: true,
   showReadingOrder: true,
-  showCSS: true,
   showAgeBiasHeatmap: true,
   showAuthorshipHeatmap: true,
   showRelevancySparkline: true,

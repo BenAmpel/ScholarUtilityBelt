@@ -217,7 +217,6 @@
         "dist/content/signals-ui.js",
         "dist/content/trend-methods.js",
         "dist/content/trend-tracker.js",
-        "dist/content/worker.js",
         "src/data/*.txt",
         "src/data/*.csv",
         "src/data/*.json",

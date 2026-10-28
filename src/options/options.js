@@ -226,7 +226,6 @@ async function load() {
   el("claimChipMinN").value = String(s.claimChipMinN ?? 30);
   el("showReproSignals").checked = s.showReproSignals !== false;
   el("showReadingOrder").checked = s.showReadingOrder !== false;
-  el("showCSS").checked = !!s.showCSS;
   el("showAgeBiasHeatmap").checked = !!s.showAgeBiasHeatmap;
   el("showAuthorshipHeatmap").checked = !!s.showAuthorshipHeatmap;
   el("showRelevancySparkline").checked = !!s.showRelevancySparkline;
@@ -695,7 +694,6 @@ async function handleSave() {
     claimChipMinN: Math.max(2, Math.min(10000, parseInt(el("claimChipMinN").value, 10) || 30)),
     showReproSignals: el("showReproSignals").checked,
     showReadingOrder: el("showReadingOrder").checked,
-    showCSS: el("showCSS").checked,
     showAgeBiasHeatmap: el("showAgeBiasHeatmap").checked,
     showAuthorshipHeatmap: el("showAuthorshipHeatmap").checked,
     showRelevancySparkline: el("showRelevancySparkline").checked,

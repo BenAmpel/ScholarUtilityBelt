@@ -197,10 +197,6 @@ const TARGETS = [
     args: ['src/content/content-author.js', '--bundle=false', '--minify', '--outfile=dist/content/content-author.js', '--log-level=warning'],
   },
   {
-    label: 'content/worker.js',
-    args: ['src/content/worker.js', '--bundle=false', '--minify', '--outfile=dist/content/worker.js', '--log-level=warning'],
-  },
-  {
     label: 'content/data-loader.js',
     args: ['src/content/data-loader.js', '--bundle=true', '--format=esm', '--minify', '--outfile=dist/content/data-loader.js', '--log-level=warning'],
   },

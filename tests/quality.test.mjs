@@ -11,7 +11,6 @@ const {
   compileQualityIndex,
   isPreprintVenue,
   qualityBadgesForVenue,
-  venueWeightForVenue,
 } = quality;
 
 // ---------------------------------------------------------------------------

@@ -29,8 +29,6 @@ describe("web_accessible_resources", () => {
       wanted.add(rel);
       if (existsSync(join(root, "src", rel))) queue.push(...importsOf(rel));
     }
-    // worker.js is started as a Worker by name rather than imported.
-    wanted.add("content/worker.js");
     assert.deepEqual(listed, [...wanted].map((r) => `dist/${r}`).sort());
   });
   it("has no wildcard over dist and does not expose the extension payment or service-worker bundles", () => {

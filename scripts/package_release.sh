@@ -62,8 +62,7 @@ zip -r "${ZIP_PATH}" \
   "src/content/review-workspace.js" \
   "src/content/signals-ui.js" \
   "src/content/trend-methods.js" \
-  "src/content/trend-tracker.js" \
-  "src/content/worker.js"
+  "src/content/trend-tracker.js"
 
 popd >/dev/null
 
