@@ -35,7 +35,8 @@ DATA_DIR = ROOT / "src" / "data"
 
 FT50_URL = "https://www.ft.com/content/3405a512-5cbb-11e1-8f1f-00144feabdc0"
 UTD24_URL = "https://jsom.utdallas.edu/the-utd-top-100-business-school-research-rankings/list-of-journals"
-ABDC_2022_URL = "https://abdc.edu.au/wp-content/uploads/2023/05/ABDC-JQL-2022-v3-100523.xlsx"
+# The 2025 review (released March 2026, v3 of 2026-09-21); the file also carries the 2022 and older editions.
+ABDC_URL = "https://abdc.edu.au/wp-content/uploads/2026/09/ABDC-JQL-2025-v3-210926.xlsx"
 ABS_2024_URL = "https://journalranking.org/"
 JQL_72_URL = "https://harzing.com/download/JQL-72_journal.pdf"
 CORE_PORTAL_BASE = "https://portal.core.edu.au/conf-ranks/"
@@ -139,12 +140,12 @@ def build_utd24() -> list[str]:
     return journals
 
 
-def build_abdc_2022_csv() -> str:
-    content = fetch_bytes(ABDC_2022_URL)
+def build_abdc_csv(url: str = None, year: int = 2025) -> str:
+    content = fetch_bytes(url or ABDC_URL)
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    if "2022 JQL" not in wb.sheetnames:
-        die(f"ABDC parse error: expected sheet '2022 JQL' in {wb.sheetnames}")
-    ws = wb["2022 JQL"]
+    if f"{year} JQL" not in wb.sheetnames:
+        die(f"ABDC parse error: expected sheet '{year} JQL' in {wb.sheetnames}")
+    ws = wb[f"{year} JQL"]
 
     header_row = None
     col_title = None
@@ -152,7 +153,7 @@ def build_abdc_2022_csv() -> str:
     for r in range(1, 60):
         vals = [ws.cell(r, c).value for c in range(1, 60)]
         lower = [str(v).strip().lower() for v in vals if v is not None]
-        if "journal title" in lower and "2022 rating" in lower:
+        if "journal title" in lower and f"{year} rating" in lower:
             header_row = r
             # Map column indices.
             for c in range(1, 60):
@@ -161,12 +162,12 @@ def build_abdc_2022_csv() -> str:
                     continue
                 if v.strip().lower() == "journal title":
                     col_title = c
-                elif v.strip().lower() == "2022 rating":
+                elif v.strip().lower() == f"{year} rating":
                     col_rank = c
             break
 
     if not header_row or not col_title or not col_rank:
-        die("ABDC parse error: could not locate 'Journal Title' and '2022 rating' columns")
+        die(f"ABDC parse error: could not locate 'Journal Title' and '{year} rating' columns")
 
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
@@ -389,9 +390,9 @@ def main() -> int:
     meta["sources"]["utd24"] = {"url": UTD24_URL, "count": len(utd24), "tls_verify": False}
 
     print("[abdc] fetch+parse", flush=True)
-    abdc_csv = build_abdc_2022_csv()
-    write_text(DATA_DIR / "abdc2022.csv", abdc_csv)
-    meta["sources"]["abdc2022"] = {"url": ABDC_2022_URL, "rows": abdc_csv.count("\n") - 1}
+    abdc_csv = build_abdc_csv()
+    write_text(DATA_DIR / "abdc2025.csv", abdc_csv)
+    meta["sources"]["abdc2025"] = {"url": ABDC_URL, "rows": abdc_csv.count("\n") - 1}
 
     print("[abs2024] fetch+parse", flush=True)
     abs_csv = build_abs_2024_csv()
@@ -422,7 +423,7 @@ def main() -> int:
     write_text(DATA_DIR / "quality_sources.json", json.dumps(meta, indent=2, sort_keys=True) + "\n")
 
     print("Wrote:")
-    for p in ["ft50.txt", "utd24.txt", "abdc2022.csv", "abs2024.csv", "fnege2025.csv", "core_icore2026.csv", "quality_sources.json"]:
+    for p in ["ft50.txt", "utd24.txt", "abdc2025.csv", "abs2024.csv", "fnege2025.csv", "core_icore2026.csv", "quality_sources.json"]:
         print(" -", (DATA_DIR / p).relative_to(ROOT))
 
     return 0
