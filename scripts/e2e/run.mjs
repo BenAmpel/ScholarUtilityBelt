@@ -40,6 +40,8 @@ await ctx.route("**/*", (route) => {
     return route.fulfill({ status: 204, body: "" });
   }
   if (u.protocol === "chrome-extension:" || u.protocol === "data:") return route.continue();
+  // Crossref never answers: Copy Bib must give up on it and finish, not sit on "…".
+  if (u.hostname === "api.crossref.org" && u.pathname.endsWith("/transform/application/x-bibtex")) return;
   return route.abort();
 });
 const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 20000 });
@@ -91,6 +93,17 @@ try {
   check("first badge within 5 s on a warm page load", warmBadgeMs < 5000, `${warmBadgeMs} ms`);
   const extraOnResults = scholarHits.filter((h) => !h.startsWith("/scholar?hl=en&q=")).length;
   check("results page sends no extra Scholar requests", extraOnResults === 0, `${extraOnResults} extra: ${scholarHits.slice(1).join(", ")}`);
+  // A user click may ask Scholar for the cite page, so this runs after the no-extra-requests check above.
+  const bibBtn = p.locator('.gs_r:has(button[data-act="copydoi"]) button[data-act="copybib"]').first();
+  const bibT0 = Date.now();
+  await bibBtn.click().catch(() => {});
+  await p.waitForFunction(() => {
+    const btn = document.querySelector('.gs_r button[data-act="copydoi"]')?.closest(".gs_r")?.querySelector('button[data-act="copybib"]');
+    return btn && btn.textContent !== "…";
+  }, null, { timeout: 25000 }).catch(() => {});
+  const bibLabel = ((await bibBtn.textContent().catch(() => "")) || "").trim();
+  const bibMs = Date.now() - bibT0;
+  check("Copy Bib finishes when Crossref never answers", bibLabel !== "…" && bibMs < 20000, `"${bibLabel}" after ${(bibMs / 1000).toFixed(1)} s`);
   await p.close();
 
   // 1b. Your own journal list and the Quick read filter.

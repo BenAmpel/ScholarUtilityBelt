@@ -3190,6 +3190,13 @@
     if (el.__suFloatingTooltip) el.__suFloatingTooltip.classList.add("su-cite-tooltip");
   }
   /** Fetch a URL via the background script (works for scholar.googleusercontent.com .bib URLs). */
+  // Copy Bib tries up to four requests in turn (Crossref, then Scholar's BibTeX link, cite page and file). Without a
+  // limit one stalled server leaves the button on "…" for minutes; 8 s each, as the service worker's fetches do.
+  function fetchBibStep(url, options = {}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+  }
   async function fetchBibViaBackground(url) {
     try {
       const res = await chrome.runtime.sendMessage({ action: "fetchBib", url });
@@ -3238,7 +3245,7 @@
     if (doi) {
       try {
         const enc = encodeURIComponent(doi);
-        const r = await fetch(`https://api.crossref.org/works/${enc}/transform/application/x-bibtex`, {
+        const r = await fetchBibStep(`https://api.crossref.org/works/${enc}/transform/application/x-bibtex`, {
           headers: { Accept: "application/x-bibtex" }
         });
         if (r.ok) {
@@ -3267,7 +3274,7 @@
         const body = await fetchBibViaBackground(absUrl);
         if (body) return body;
         try {
-          const r = await fetch(absUrl);
+          const r = await fetchBibStep(absUrl);
           if (r.ok) {
             const body2 = await r.text();
             if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
@@ -3281,7 +3288,7 @@
     if (clusterId) {
       const citeUrl = `https://scholar.google.com/scholar?q=info:${clusterId}:scholar.google.com/&output=cite`;
       try {
-        const r = await fetch(citeUrl);
+        const r = await fetchBibStep(citeUrl);
         if (!r.ok) throw new Error("Cite page failed");
         const html = await r.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
@@ -3293,7 +3300,7 @@
           const body = await fetchBibViaBackground(bibUrl);
           if (body) return body;
           try {
-            const bibRes = await fetch(bibUrl);
+            const bibRes = await fetchBibStep(bibUrl);
             if (bibRes.ok) {
               const body2 = await bibRes.text();
               if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
