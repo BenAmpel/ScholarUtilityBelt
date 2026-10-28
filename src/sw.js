@@ -67,6 +67,13 @@ for (const optional of ["apppass.sw.js", "install-pages.sw.js", "ask-sw.js"]) {
     console.warn(`[SU] optional script ${optional} failed to load; that feature is off`, e);
   }
 }
+// Content scripts can only use chrome.storage.session after this call (the default is extension pages and this worker
+// only). Without it the content script's session caches (the compiled quality index, the PDF-name map read by the
+// download helper below) silently failed and every Scholar page rebuilt the index. Still extension-only: web pages
+// never see this storage. Must run on every worker start; the setting is not persisted.
+try {
+  chrome.storage.session?.setAccessLevel?.({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })?.catch?.(() => {});
+} catch (_) { /* older browsers: the caches stay off, as before */ }
 const EXTPAY_ID = "scholar-utility-belt";
 const extpay = ExtPay(EXTPAY_ID);
 extpay.startBackground();

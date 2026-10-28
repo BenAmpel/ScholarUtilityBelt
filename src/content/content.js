@@ -5464,44 +5464,6 @@
     }
   }
   // --- Quality index session cache helpers ---
-  // Serializes Maps/Sets to plain arrays so they can be stored in chrome.storage.session.
-  function serializeQualityIndex(qIndex) {
-    return {
-      ft50:      [...qIndex.ft50],
-      utd24:     [...qIndex.utd24],
-      era:       [...qIndex.era],
-      abdc:      [...qIndex.abdc.entries()],
-      vhb:       [...qIndex.vhb.entries()],
-      fnege:     [...qIndex.fnege.entries()],
-      quartiles: [...qIndex.quartiles.entries()],
-      core:      [...qIndex.core.entries()],
-      ccf:       [...qIndex.ccf.entries()],
-      jcr:       [...qIndex.jcr.entries()],
-      impact:    [...qIndex.impact.entries()],
-      norwegian: [...qIndex.norwegian.entries()],
-      abs:       [...qIndex.abs.entries()],
-      h5:        [...qIndex.h5.entries()]
-    };
-  }
-  function deserializeQualityIndex(s) {
-    return {
-      ft50:      new Set(s.ft50      || []),
-      utd24:     new Set(s.utd24     || []),
-      era:       new Set(s.era       || []),
-      abdc:      new Map(s.abdc      || []),
-      vhb:       new Map(s.vhb       || []),
-      fnege:     new Map(s.fnege     || []),
-      quartiles: new Map(s.quartiles || []),
-      core:      new Map(s.core      || []),
-      ccf:       new Map(s.ccf       || []),
-      jcr:       new Map(s.jcr       || []),
-      impact:    new Map(s.impact    || []),
-      norwegian: new Map(s.norwegian || []),
-      abs:       new Map(s.abs       || []),
-      h5:        new Map(s.h5        || [])
-    };
-  }
-  // --- End quality index session cache helpers ---
   async function refreshState(state) {
     // Batch all storage reads into a single call
     const [storageData, persistentLocalCohort] = await Promise.all([
@@ -5571,23 +5533,10 @@
     });
     // Only recompile the quality index when settings changed.
     // L1: in-memory cache (survives re-renders within a page).
-    // L2: chrome.storage.session (survives page navigations within a browser session).
-    const SESSION_QINDEX_KEY = "suQualityIndexCache";
     let qIndexResolved = false;
     if (state.qIndexCache && state.qIndexCache.settingsHash === settingsHash) {
       state.qIndex = state.qIndexCache.qIndex;
       qIndexResolved = true;
-    }
-    if (!qIndexResolved && chrome.storage?.session?.get) {
-      try {
-        const sessData = await chrome.storage.session.get({ [SESSION_QINDEX_KEY]: null });
-        const sessCache = sessData[SESSION_QINDEX_KEY];
-        if (sessCache && sessCache.hash === settingsHash && sessCache.compiled) {
-          state.qIndex = deserializeQualityIndex(sessCache.compiled);
-          state.qIndexCache = { qIndex: state.qIndex, settingsHash };
-          qIndexResolved = true;
-        }
-      } catch (_) {}
     }
     if (!qIndexResolved && settings.showQualityBadges) {
       // On cache miss, load all data sources in parallel.
@@ -5606,14 +5555,8 @@
         h5Index
       });
       state.qIndexCache = { qIndex: state.qIndex, settingsHash };
-      // Persist to session storage for future page loads in this session
-      if (chrome.storage?.session?.set) {
-        try {
-          chrome.storage.session.set({
-            [SESSION_QINDEX_KEY]: { hash: settingsHash, compiled: serializeQualityIndex(state.qIndex) }
-          });
-        } catch (_) {}
-      }
+      // No cross-page cache: the compiled index is larger than chrome.storage.session's 10 MB quota, so the old
+      // session cache never stored anything, and serializing it on every page cost more than it could save.
     } else if (!qIndexResolved) {
       state.qIndex = {
         ft50: new Set(), utd24: new Set(), preprint: new Set(),
