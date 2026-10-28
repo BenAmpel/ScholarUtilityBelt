@@ -5100,7 +5100,7 @@
       const entry = document.createElement("div");
       entry.className = "su-reading-queue-item";
       const link = document.createElement("a");
-      link.href = item.link;
+      link.href = safeHref(item.link) || "#";
       link.target = "_blank";
       link.rel = "noopener";
       link.textContent = item.title.length > 60 ? item.title.slice(0, 57) + "…" : item.title;
