@@ -15,7 +15,19 @@ const LEADING_WORD_ORDINAL_ANNUAL = new RegExp(
   `^(?:${ORDINAL_ONES}|${ORDINAL_TEENS}|${ORDINAL_TENS}|(?:${ORDINAL_TENS_WORD}) (?:${ORDINAL_ONES}))\\s+annual\\s+`
 );
 
+// The same venue names come up again and again (in several bundled lists and on every result), so each normalized
+// form is remembered for the page's lifetime. Pure function of its input, so a cached answer is always the same.
+const NORMALIZED_VENUE_CACHE = new Map();
+const NORMALIZED_VENUE_CACHE_MAX = 250000;
 export function normalizeVenueName(s) {
+  const key = String(s || "");
+  const hit = NORMALIZED_VENUE_CACHE.get(key);
+  if (hit !== undefined) return hit;
+  const t = normalizeVenueNameUncached(key);
+  if (NORMALIZED_VENUE_CACHE.size < NORMALIZED_VENUE_CACHE_MAX) NORMALIZED_VENUE_CACHE.set(key, t);
+  return t;
+}
+function normalizeVenueNameUncached(s) {
   let t = String(s || "")
     .toLowerCase()
     .replace(/&/g, " and ")
