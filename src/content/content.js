@@ -5948,8 +5948,8 @@
     const citedByLink = citedByCell?.querySelector("a.gsc_a_ac");
     if (citedByLink) {
       const citationText = text(citedByLink).trim();
-      // Parse number from text like "130" or "1,234"
-      const num = parseInt(citationText.replace(/,/g, ""), 10);
+      // Whole number in any interface language: "130", "1,234", "1.234" or "1 234".
+      const num = parseInt(citationText.replace(/\D/g, ""), 10);
       return isNaN(num) ? 0 : num;
     }
     return 0;
