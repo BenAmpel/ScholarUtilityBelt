@@ -39,7 +39,6 @@ const storage = await import("../src/common/storage.js");
 const {
   getLibraryState, setLibraryState,
   getReadingQueue, addToReadingQueue, clearReadingQueue,
-  getReadingLoadPageCounts, setReadingLoadPageCount,
   getHiddenPapers, addHiddenPaper, removeHiddenPaper, clearHiddenPapers,
   getHiddenVenues, addHiddenVenue, removeHiddenVenue, clearHiddenVenues,
   getHiddenAuthors, addHiddenAuthor, removeHiddenAuthor, clearHiddenAuthors,
@@ -102,31 +101,6 @@ describe("readingQueue", () => {
     await clearReadingQueue();
     const q = await getReadingQueue();
     assert.equal(q.length, 0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Reading load page counts
-// ---------------------------------------------------------------------------
-describe("readingLoadPageCounts", () => {
-  beforeEach(() => mockLocal.clear());
-
-  it("returns empty object when no counts set", async () => {
-    const counts = await getReadingLoadPageCounts();
-    assert.deepEqual(counts, {});
-  });
-
-  it("sets and retrieves page count for a paper", async () => {
-    await setReadingLoadPageCount("paper1", 42);
-    const counts = await getReadingLoadPageCounts();
-    assert.equal(counts.paper1, 42);
-  });
-
-  it("updates existing page count", async () => {
-    await setReadingLoadPageCount("paper1", 10);
-    await setReadingLoadPageCount("paper1", 25);
-    const counts = await getReadingLoadPageCounts();
-    assert.equal(counts.paper1, 25);
   });
 });
 

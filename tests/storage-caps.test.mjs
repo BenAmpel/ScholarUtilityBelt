@@ -40,16 +40,12 @@ describe("the maps stop growing", () => {
     assert.ok(!keys.includes("page0"), "the oldest was dropped");
     assert.ok(keys.includes(`page${s.PAGE_VISIT_CACHE_MAX + 24}`), "the newest was kept");
   });
-  it("citationSnapshots and readingLoadPageCounts are capped", async () => {
+  it("citationSnapshots are capped", async () => {
     store.citationSnapshots = Object.fromEntries(Array.from({ length: s.CITATION_SNAPSHOTS_MAX + 10 }, (_, i) => [`c${i}`, { citations: i, date: new Date(2026, 0, 1, 0, 0, i).toISOString(), history: [] }]));
     await s.setCitationSnapshot("fresh", 1, "2027-01-01T00:00:00.000Z");
     assert.equal(Object.keys(store.citationSnapshots).length, s.CITATION_SNAPSHOTS_MAX);
     assert.ok("fresh" in store.citationSnapshots);
     assert.ok(!("c0" in store.citationSnapshots));
-    store.readingLoadPageCounts = Object.fromEntries(Array.from({ length: s.READING_LOAD_PAGES_MAX }, (_, i) => [`p${i}x`, 3]));
-    await s.setReadingLoadPageCount("newest", 9);
-    assert.equal(Object.keys(store.readingLoadPageCounts).length, s.READING_LOAD_PAGES_MAX);
-    assert.equal(store.readingLoadPageCounts.newest, 9);
   });
   it("authorHIndexSnapshots keeps the most recently seen profiles", async () => {
     store.authorHIndexSnapshots = Object.fromEntries(Array.from({ length: s.AUTHOR_HINDEX_PROFILES_MAX }, (_, i) => [`https://x/${i}`, [{ date: new Date(2026, 0, 1, 0, 0, i).toISOString(), hIndex: 5 }]]));

@@ -22,7 +22,6 @@
   let getPageVisitCache;
   let getQualityJcrIndex;
   let getQualityQuartilesIndex;
-  let getReadingLoadPageCounts;
   let getReadingQueue;
   let getSavedPapers;
   let onContextInvalidated;
@@ -36,7 +35,6 @@
   let setCitationSnapshot;
   let setTrajectoryVenueExpectedCache;
   let setPageVisitCacheEntry;
-  let setReadingLoadPageCount;
   let getStorageMapEntry;
   let setStorageMapEntry;
   let getStorageMap;
@@ -154,7 +152,6 @@
       getPageVisitCache,
       getQualityJcrIndex,
       getQualityQuartilesIndex,
-      getReadingLoadPageCounts,
       getReadingQueue,
       getSavedPapers,
       onContextInvalidated,
@@ -168,7 +165,6 @@
       setCitationSnapshot,
       setTrajectoryVenueExpectedCache,
       setPageVisitCacheEntry,
-      setReadingLoadPageCount,
       getStorageMapEntry,
       setStorageMapEntry,
       getStorageMap,
@@ -5633,18 +5629,6 @@
           const best = getBestPdfUrl(container);
           if (best && isHttpUrl(best.url)) {
             window.open(best.url, "_blank", "noopener");
-            chrome.runtime.sendMessage(
-              { action: "fetchPdfPageCount", url: best.url, paperKey: p.key },
-              (res) => {
-                if (res?.ok && typeof res.pages === "number" && res.pages >= 1) {
-                  setReadingLoadPageCount(p.key, res.pages).then(() => {
-                    refreshState(state).then(() => {
-                      if (window.suProcessAll) window.suProcessAll();
-                    });
-                  });
-                }
-              }
-            );
           } else {
             const q = encodeURIComponent((p.title || "paper") + " pdf");
             window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener");

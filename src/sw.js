@@ -169,7 +169,7 @@ if (typeof chrome.downloads !== "undefined" && chrome.downloads.onDeterminingFil
 
 // Messages that make the worker fetch or open something for the caller. Anything that is not from this
 // extension (its pages, or its content script on a Scholar page) is refused.
-const CALLER_CHECKED_ACTIONS = new Set(["openTabs", "fetchBib", "fetchSnippet", "fetchExternal", "fetchPdfPageCount"]);
+const CALLER_CHECKED_ACTIONS = new Set(["openTabs", "fetchBib", "fetchSnippet", "fetchExternal"]);
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (CALLER_CHECKED_ACTIONS.has(msg?.action) && !fromOwnContext(sender)) {
@@ -228,49 +228,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       })
       .then((body) => sendResponse({ ok: true, body }))
       .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
-    return true;
-  }
-  if (msg?.action === "fetchPdfPageCount" && typeof msg.url === "string" && typeof msg.paperKey === "string") {
-    if (!isFetchableUrl(msg.url)) {
-      sendResponse({ ok: false, error: "unsupported_url" });
-      return true;
-    }
-    const tailBytes = 8192;
-    fetchWithTimeout(msg.url, {
-      credentials: "omit",
-      headers: { Range: `bytes=-${tailBytes}` }
-    }, 10000)
-      .then((r) => {
-        if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
-        // A server that ignores the Range header answers 200 with the whole file. Do not buffer a
-        // large PDF in the worker for a page count: stop unless it is small.
-        if (r.status === 200) {
-          const length = Number(r.headers.get("content-length"));
-          if (!(length > 0 && length <= 2000000)) {
-            try { r.body && r.body.cancel(); } catch { /* already closed */ }
-            throw new Error("range not supported");
-          }
-        }
-        return r.arrayBuffer();
-      })
-      .then((buf) => {
-        const bytes = new Uint8Array(buf);
-        const decoder = new TextDecoder("latin1");
-        const tail = decoder.decode(bytes);
-        const matches = tail.match(/\/Count\s+(\d+)/g);
-        if (!matches || matches.length === 0) {
-          sendResponse({ ok: false });
-          return;
-        }
-        const counts = matches.map((m) => parseInt(m.replace(/\D/g, ""), 10));
-        const pages = Math.max(...counts);
-        if (pages < 1 || pages > 50000) {
-          sendResponse({ ok: false });
-          return;
-        }
-        sendResponse({ ok: true, pages });
-      })
-      .catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (msg?.action === "graphMonitorCheck") {
@@ -636,6 +593,8 @@ const WHATS_NEW_FLAG = "whatsNewShownVersion";
 chrome.runtime.onInstalled.addListener(async (details) => {
   try {
     if (details?.reason !== "update") return;
+    // PDF page counts were stored for a reading-load badge that never shipped (removed in 1.1.0).
+    chrome.storage.local.remove("readingLoadPageCounts").catch(() => {});
     const current = chrome.runtime.getManifest().version;
     if (current !== WHATS_NEW_VERSION || details.previousVersion === current) return;
     const stored = await chrome.storage.local.get(WHATS_NEW_FLAG);

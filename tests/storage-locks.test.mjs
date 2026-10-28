@@ -82,11 +82,6 @@ describe("parallel writes keep every entry", () => {
     await Promise.all(ids.map((i) => s.setCitationSnapshot(`c${i}`, 10 + i, "2026-10-12")));
     assert.equal(Object.keys(store.citationSnapshots || store[Object.keys(store)[0]]).length, N);
   });
-  it("setReadingLoadPageCount", async () => {
-    await Promise.all(ids.map((i) => s.setReadingLoadPageCount(`p${i}`, i + 1)));
-    const map = Object.values(store)[0];
-    assert.equal(Object.keys(map).length, N);
-  });
   it("addHiddenPaper and addHiddenVenue", async () => {
     await Promise.all(ids.flatMap((i) => [s.addHiddenPaper(`p${i}`), s.addHiddenVenue(`v${i}`)]));
     assert.equal(store.hiddenPapers.length, N);

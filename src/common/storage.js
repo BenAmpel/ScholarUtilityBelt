@@ -44,7 +44,6 @@ function fireInvalidated() {
 // person reads in a few months, so normal use never loses anything.
 export const PAGE_VISIT_CACHE_MAX = 300;
 export const CITATION_SNAPSHOTS_MAX = 5000;
-export const READING_LOAD_PAGES_MAX = 5000;
 export const AUTHOR_HINDEX_PROFILES_MAX = 200;
 
 /**
@@ -566,36 +565,6 @@ export async function addToReadingQueue(item) {
 export async function clearReadingQueue() {
   try {
     await chrome.storage.local.set({ [READING_QUEUE_KEY]: [] });
-  } catch (e) {
-    if (isContextInvalidated(e)) return;
-    throw e;
-  }
-}
-
-const READING_LOAD_PAGES_KEY = "readingLoadPageCounts";
-
-export async function getReadingLoadPageCounts() {
-  try {
-    const { [READING_LOAD_PAGES_KEY]: obj } = await chrome.storage.local.get({
-      [READING_LOAD_PAGES_KEY]: {}
-    });
-    return obj && typeof obj === "object" ? obj : {};
-  } catch (e) {
-    if (isContextInvalidated(e)) return {};
-    throw e;
-  }
-}
-
-export async function setReadingLoadPageCount(paperKey, pages) {
-  if (!paperKey || typeof pages !== "number" || pages < 1) return;
-  try {
-    return await withStorageLock(READING_LOAD_PAGES_KEY, async () => {
-      const counts = await getReadingLoadPageCounts();
-      if (counts[paperKey] === pages) return;
-      counts[paperKey] = pages;
-      // No timestamp on these, so when over the cap the keys added last are kept.
-      await chrome.storage.local.set({ [READING_LOAD_PAGES_KEY]: capRecordCount(counts, READING_LOAD_PAGES_MAX, null) });
-    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
