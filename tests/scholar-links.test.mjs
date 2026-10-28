@@ -76,3 +76,20 @@ describe("classifyScholarResponse", async () => {
     assert.equal(classifyScholarResponse({}), null);
   });
 });
+
+import { cleanDoi, findResultDoi } from "../src/common/scholar-links.js";
+describe("DOIs shown on a result", () => {
+  it("cleans publisher URL tails, queries, encoding and punctuation", () => {
+    assert.equal(cleanDoi("https://onlinelibrary.wiley.com/doi/full/10.1002/jsr.12345"), "10.1002/jsr.12345");
+    assert.equal(cleanDoi("https://onlinelibrary.wiley.com/doi/10.1002/jsr.12345/full"), "10.1002/jsr.12345");
+    assert.equal(cleanDoi("https://dl.acm.org/doi/pdf/10.1145/3290605.3300233?casa_token=x"), "10.1145/3290605.3300233");
+    assert.equal(cleanDoi("https://doi.org/10.1016%2Fj.neuron.2005.01.001"), "10.1016/j.neuron.2005.01.001");
+    assert.equal(cleanDoi("see doi:10.1037/a0012345)."), "10.1037/a0012345");
+    assert.equal(cleanDoi("https://example.org/paper.pdf"), null);
+  });
+  it("prefers the result's links over its snippet", () => {
+    assert.equal(findResultDoi(["https://example.org/x", "https://doi.org/10.5555/abc"], "text 10.9999/zzz"), "10.5555/abc");
+    assert.equal(findResultDoi(["https://example.org/x"], "Published as 10.9999/zzz."), "10.9999/zzz");
+    assert.equal(findResultDoi([], ""), null);
+  });
+});

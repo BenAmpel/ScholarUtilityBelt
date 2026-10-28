@@ -59,6 +59,8 @@ try {
   await p.waitForTimeout(2500);
   const badges = await p.locator(".su-badge").count();
   const rowsWithQuality = await p.evaluate(() => [...document.querySelectorAll(".gs_r.gs_or")].filter((r) => r.querySelector(".su-quartile, .su-ft50, .su-utd24, .su-abdc, .su-h5")).length);
+  const doiBtns = await p.evaluate(() => [...document.querySelectorAll('button[data-act="copydoi"]')].map((b) => b.dataset.doi));
+  check("DOI button appears only where the result shows a DOI", doiBtns.length === 1 && doiBtns[0] === "10.1038/nature14539", JSON.stringify(doiBtns));
   check("results page shows badges", badges > 0, `${badges} badges, ${rowsWithQuality}/10 rows with a ranking badge, first after ${firstBadgeMs} ms`);
   // The first page also pays for the extension's cold start (worker boot, data files), which on a busy CI runner can
   // pass 5 s; the budget applies to a second page load, as users see on every page after the first.

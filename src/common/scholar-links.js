@@ -39,3 +39,26 @@ export function classifyScholarResponse({ status, url, html } = {}) {
   if (Number(status) === 429) return "rate_limit";
   return null;
 }
+
+const DOI_IN_TEXT = /10\.\d{4,9}\/[^\s"'<>]+/i;
+const DOI_URL_TAILS = /\/(full|abstract|pdf|epdf|pdfdirect|meta|summary|html|fulltext|references|citedby|figures|suppl(?:ementary)?)(\/.*)?$/i;
+/** A DOI cleaned of URL encoding, query strings, publisher page suffixes and trailing punctuation, or null. */
+export function cleanDoi(raw) {
+  if (!raw) return null;
+  let d = String(raw);
+  try { d = decodeURIComponent(d); } catch (_) { /* keep the raw text */ }
+  const m = DOI_IN_TEXT.exec(d);
+  if (!m) return null;
+  d = m[0].replace(/[?#&].*$/, "").replace(DOI_URL_TAILS, "").replace(/\.pdf$/i, "");
+  d = d.replace(/[.,;:)\]}>'"]+$/, "");
+  return /^10\.\d{4,9}\/\S+$/.test(d) ? d : null;
+}
+/** The DOI a Scholar result itself shows: from its links first (publisher and doi.org URLs), then its snippet text. */
+export function findResultDoi(hrefs = [], text = "") {
+  for (const h of hrefs) {
+    const d = cleanDoi(h);
+    if (d) return d;
+  }
+  return cleanDoi(text);
+}
+
