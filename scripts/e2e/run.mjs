@@ -186,6 +186,22 @@ try {
   const extraOptIn = scholarHits.filter((h) => h.includes("cstart=")).length;
   check("with the switch on, the profile loads more automatically", extraOptIn > 0, `${extraOptIn} extra`);
   await b.close();
+  // 3b. Options: the two Scholar-request switches save and survive a reload.
+  await sw.evaluate(async () => { const { settings } = await chrome.storage.local.get("settings"); await chrome.storage.local.set({ settings: { ...(settings || {}), autoLoadAuthorPapers: false, emergingSampleScholarPages: false } }); });
+  const o = await ctx.newPage();
+  await o.goto(`chrome-extension://${extId}/src/options/options.html`);
+  await o.waitForSelector("#autoLoadAuthorPapers", { state: "attached", timeout: 10000 });
+  await o.evaluate(() => { for (const id of ["autoLoadAuthorPapers", "emergingSampleScholarPages"]) { const el = document.getElementById(id); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); } });
+  await o.click("#saveTop");
+  await o.waitForTimeout(800);
+  const stored = await sw.evaluate(async () => { const { settings } = await chrome.storage.local.get("settings"); return { a: settings?.autoLoadAuthorPapers, e: settings?.emergingSampleScholarPages, n: Object.keys(settings || {}).length }; });
+  await o.reload();
+  await o.waitForSelector("#autoLoadAuthorPapers", { state: "attached", timeout: 10000 });
+  await o.waitForTimeout(500);
+  const shown = await o.evaluate(() => [document.getElementById("autoLoadAuthorPapers").checked, document.getElementById("emergingSampleScholarPages").checked]);
+  check("Options saves both Scholar-request switches and shows them after reload", stored.a === true && stored.e === true && shown[0] && shown[1], `stored ${JSON.stringify(stored)}, shown ${JSON.stringify(shown)}`);
+  await o.close();
+
   // 4. The extension's own pages load without errors.
   for (const pg of ["src/options/options.html", "src/library/library.html", "src/popup/popup.html"]) {
     const x = await ctx.newPage();
