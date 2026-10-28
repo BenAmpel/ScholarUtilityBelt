@@ -151,7 +151,9 @@ export function groupRows(matrix, rows, columnId) {
 }
 
 function csvCell(value) {
-  const s = value == null ? "" : String(value);
+  let s = value == null ? "" : String(value);
+  // Stop spreadsheet programs from running text that starts like a formula (numbers keep their sign).
+  if (typeof value !== "number" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 function mdCell(value) {
