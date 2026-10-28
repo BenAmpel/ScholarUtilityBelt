@@ -131,7 +131,9 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ## Release notes for 1.1.0 (paste into the dashboard's "What's new")
 
-Author profiles no longer press Scholar's "Show more" by themselves. Stats now cover the papers on screen, and "Load all for full stats" loads the rest when you click it. The automatic loading sent Scholar extra page requests on every profile visit, which can add to the chance of a "not a robot" check. If you prefer the old behavior, turn on "Load every paper on author profiles automatically" in Options. The Emerging score likewise no longer reads neighbouring Scholar pages in the background; it uses OpenAlex figures when a page has too few similar papers (a switch in Options turns the old behavior back on).
+Fewer requests to Google Scholar: opening an author profile no longer presses "Show more" by itself (stats cover the papers on screen, and "Load all for full stats" loads the rest), and the Emerging score no longer reads neighbouring Scholar pages in the background. Compare authors needs 5 requests instead of 25, and every feature that asks Scholar for more pages stops and waits 15 minutes after a "not a robot" check. Two switches in Options bring the old automatic loading back.
+
+Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, and text contrast meets WCAG AA in light and dark mode.
 
 ## Release notes for 1.0.2 (paste into the dashboard's "What's new")
 
