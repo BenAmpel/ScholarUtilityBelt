@@ -10,7 +10,8 @@
     "lint": "eslint src/",
     "test": "node --import ./tests/register-loader.mjs --test tests/*.test.mjs",
     "test:e2e": "node build.js && node scripts/e2e-check.mjs",
-    "e2e": "node scripts/e2e/run.mjs"
+    "e2e": "node scripts/e2e/run.mjs",
+    "store-status": "node scripts/store_status.mjs"
   },
   "keywords": [],
   "author": "",
