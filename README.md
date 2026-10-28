@@ -127,6 +127,10 @@ Local-only or packaged-data features include:
 - cached page-visit and reading-load metadata
 - many DOM-derived result annotations
 
+### Requests to Google Scholar itself
+
+Since 1.1.0 the extension asks Google Scholar for nothing you did not ask for. Opening a results page or an author profile sends Scholar no extra requests: profile stats cover the papers on screen, with a "Load all for full stats" button, and the Emerging score uses OpenAlex figures when a page has too few similar papers. Scholar is only contacted again when you press a button: Load all, Load more pages, Copy BibTeX, the abstract and venue lookups, or Compare authors (at most five requests of 100 papers each, 1.2 seconds apart). If Scholar answers with a "not a robot" check or a rate limit, those features stop and wait 15 minutes before asking again, in every tab. Two Options switches bring back the old automatic behavior for people who want it. These page loads count toward Scholar's own limits, which is why they are opt-in.
+
 ### Every host the extension contacts
 
 Nothing is sent to a server run by the project. These are all the places the extension talks to, what each receives, and when. Every request goes straight from your browser to the service, which handles it under its own policy.
@@ -247,6 +251,13 @@ scripts/
 ## Quality control
 
 The project relies on a mix of parser-level checks, local data-build scripts, and browser smoke tests. The repository already includes Playwright-based verification helpers under [`scripts/`](scripts) and [`output/playwright/`](output/playwright).
+
+Automated checks:
+
+- `npm test`: unit tests for the shared modules and wiring.
+- `npm run e2e`: the built extension in Microsoft Edge against local Scholar-shaped pages in `tests/e2e/fixtures` (every Scholar URL is answered locally, nothing reaches Google). It checks that badges render, that a results page and a profile visit send Scholar no extra requests, the custom list and Quick read filter, and that no page logs an error.
+- `npm run a11y`: axe-core WCAG 2.1 AA checks of the extension's UI, light and dark.
+- `npm run store-status`: the public version, users and ratings of each store listing.
 
 Representative validation tasks include:
 
