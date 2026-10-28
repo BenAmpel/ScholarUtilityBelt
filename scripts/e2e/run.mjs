@@ -241,6 +241,12 @@ try {
   await o.waitForTimeout(500);
   const shown = await o.evaluate(() => [document.getElementById("autoLoadAuthorPapers").checked, document.getElementById("emergingSampleScholarPages").checked]);
   check("Options saves both Scholar-request switches and shows them after reload", stored.a === true && stored.e === true && shown[0] && shown[1], `stored ${JSON.stringify(stored)}, shown ${JSON.stringify(shown)}`);
+  // Options says where each built-in badge comes from, with entry counts read from the bundled files.
+  await o.evaluate(() => { const d = document.getElementById("badgeSources"); d.open = true; });
+  await o.waitForFunction(() => [...document.querySelectorAll("#badgeSourcesTable td.num")].length >= 13 && ![...document.querySelectorAll("#badgeSourcesTable td.num")].some((td) => td.textContent === "…"), null, { timeout: 15000 }).catch(() => {});
+  const sources = await o.evaluate(() => [...document.querySelectorAll("#badgeSourcesTable tbody tr")].map((tr) => [...tr.cells].map((c) => c.textContent.trim())));
+  const badCounts = sources.filter(([, , n]) => !(Number(String(n).replace(/\D/g, "")) > 0));
+  check("Options lists where each badge comes from, with entry counts", sources.length === 13 && badCounts.length === 0, sources.map(([b, , n]) => `${b} ${n}`).join("; "));
   await o.close();
 
   // 4. The extension's own pages load without errors.
