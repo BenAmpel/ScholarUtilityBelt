@@ -41,6 +41,14 @@ describe("parseSidebarTable", () => {
     assert.deepEqual(r.i10Index, { all: 70, recent: 55 });
     assert.equal(r.sinceLabel, "Since 2021");
   });
+  it("reads the box in another interface language", () => {
+    // German Scholar: translated labels and "." as the thousands separator.
+    const r = T.parseSidebarTable({ headers: ["", "Alle", "Seit 2021"], rows: [["Zitiert von", "5.432", "3.100"], ["h-Index", "31", "25"], ["i10-Index", "70", "55"]] });
+    assert.deepEqual(r.citations, { all: 5432, recent: 3100 });
+    assert.deepEqual(r.hIndex, { all: 31, recent: 25 });
+    assert.deepEqual(r.i10Index, { all: 70, recent: 55 });
+    assert.equal(r.sinceLabel, "Seit 2021");
+  });
   it("tolerates missing, reordered or malformed input", () => {
     assert.deepEqual(T.parseSidebarTable(null).citations, null);
     assert.deepEqual(T.parseSidebarTable({ rows: [["h-index", "x", "y"], ["junk"]] }).hIndex, { all: null, recent: null });
