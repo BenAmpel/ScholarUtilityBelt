@@ -8,7 +8,8 @@
  * Dataset: https://gitlab.com/crossref/retraction-watch-data
  * CSV: retraction_watch.csv, column OriginalPaperDOI
  *
- * Bloom: ~50k items, target 0.1% FPR → m ≈ 720k bits (~90KB), k = 10.
+ * Bloom: sized from the DOI count for a 0.02% design false-positive rate (FNV double hashing measures about
+ * twice that on random DOIs). A fixed size let the rate climb as the dataset grew: 0.57% measured at 59,905 DOIs.
  */
 
 const https = require("https");
@@ -19,8 +20,12 @@ const CSV_URL =
   "https://gitlab.com/crossref/retraction-watch-data/-/raw/main/retraction_watch.csv";
 const OUT_PATH = path.join(__dirname, "..", "src", "data", "retraction_bloom.json");
 
-const BLOOM_M = 720000; // bits (~90KB)
-const BLOOM_K = 10;
+const TARGET_FPR = 0.0002;
+// Optimal Bloom size for n items: m = -n ln(p) / (ln 2)^2 bits, k = (m / n) ln 2 hashes.
+function bloomSize(n) {
+  const m = Math.ceil((-n * Math.log(TARGET_FPR)) / (Math.LN2 * Math.LN2));
+  return { m, k: Math.max(1, Math.round((m / n) * Math.LN2)) };
+}
 
 function fnv1a32(str) {
   let h = 2166136261;
@@ -155,6 +160,7 @@ function main() {
       }
       console.log(`Unique DOIs: ${dois.size}`);
 
+      const { m: BLOOM_M, k: BLOOM_K } = bloomSize(dois.size);
       const numBytes = Math.ceil(BLOOM_M / 8);
       const bits = new Uint8Array(numBytes);
       for (const doi of dois) {
