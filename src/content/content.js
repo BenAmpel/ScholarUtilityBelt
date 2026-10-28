@@ -55,7 +55,6 @@
   let qualityBadgesForVenue;
   let customBadgeForVenue;
   let compileCustomVenueIndex;
-  let venueWeightForVenue;
   let getCachedElement;
   let getCachedElements;
   let loadEraAndNorwegian;
@@ -190,8 +189,7 @@
       normalizeVenueName,
       normalizeVhbRank,
       qualityBadgesForVenue,
-      customBadgeForVenue,
-      venueWeightForVenue
+      customBadgeForVenue
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
     ({
@@ -5469,7 +5467,7 @@
     const isDetailed = state.settings.viewMode !== "minimal";
     if (isRetracted) {
       container
-        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-css-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
+        .querySelectorAll(".su-velocity, .su-skimmability-strip, .su-artifact-badge, .su-reading-load-badge, .su-external, .su-citation-spike-badge, .su-code-badge, .su-emerging-badge, .su-claim-chips, .su-repro-signals")
         .forEach((el) => el.remove());
     } else {
       renderEmergingScore(container, paper, state, isAuthorProfile);

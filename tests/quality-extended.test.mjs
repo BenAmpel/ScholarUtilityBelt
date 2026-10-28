@@ -6,51 +6,9 @@ const {
   normalizeVenueName,
   compileQualityIndex,
   qualityBadgesForVenue,
-  venueWeightForVenue,
   isPreprintVenue,
   extractVenueFromAuthorsVenue,
 } = quality;
-
-// ---------------------------------------------------------------------------
-// venueWeightForVenue (untested in original suite)
-// ---------------------------------------------------------------------------
-describe("venueWeightForVenue", () => {
-  it("returns higher weight for FT50 venue", () => {
-    const idx = compileQualityIndex({ qualityFt50List: "Nature" });
-    const weight = venueWeightForVenue("Nature", idx);
-    assert.ok(weight > 0.5, `Expected weight > 0.5, got ${weight}`);
-  });
-
-  it("returns higher weight for UTD24 venue", () => {
-    const idx = compileQualityIndex({ qualityUtd24List: "MIS Quarterly" });
-    const weight = venueWeightForVenue("MIS Quarterly", idx);
-    assert.ok(weight > 0.5, `Expected weight > 0.5, got ${weight}`);
-  });
-
-  it("returns low weight for preprint", () => {
-    const idx = compileQualityIndex({});
-    const weight = venueWeightForVenue("arXiv preprint", idx);
-    assert.ok(weight < 0.5, `Expected weight < 0.5 for preprint, got ${weight}`);
-  });
-
-  it("returns baseline 0.2 for unknown venue", () => {
-    const idx = compileQualityIndex({});
-    const weight = venueWeightForVenue("Unknown Journal 999", idx);
-    assert.equal(weight, 0.2);
-  });
-
-  it("returns higher weight for ABDC A* venue", () => {
-    const idx = compileQualityIndex({ qualityAbdcRanks: "Top Journal,A*" });
-    const weight = venueWeightForVenue("Top Journal", idx);
-    assert.ok(weight > 0.5, `Expected weight > 0.5, got ${weight}`);
-  });
-
-  it("handles null/empty venue — returns baseline", () => {
-    const idx = compileQualityIndex({});
-    assert.equal(venueWeightForVenue("", idx), 0.2);
-    assert.equal(venueWeightForVenue(null, idx), 0.2);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // qualityBadgesForVenue — extended coverage

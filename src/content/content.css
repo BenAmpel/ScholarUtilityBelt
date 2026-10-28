@@ -889,44 +889,6 @@ body[data-su-theme="dark"] .su-triage-missing {
   vertical-align: middle;
   opacity: 0.9;
 }
-/* Contribution Signal Score (CSS) badge */
-.su-css-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--su-chip-text, #1f2937);
-  margin-left: 4px;
-  padding: 0 10px;
-  height: var(--su-chip-height, 26px);
-  border-radius: var(--su-chip-radius, 8px);
-  border: 1px solid var(--su-chip-border, rgba(0,0,0,0.18));
-  background: var(--su-chip-bg, #fff);
-  cursor: help;
-  position: relative;
-}
-.su-css-tooltip {
-  display: none;
-  position: absolute;
-  left: 0;
-  bottom: 100%;
-  margin-bottom: 6px;
-  padding: 8px 10px;
-  max-width: 320px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #202124;
-  background: #fff;
-  border: 1px solid #dadce0;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-  z-index: 10001;
-  white-space: normal;
-}
-.su-css-tooltip.su-css-tooltip-visible {
-  display: block;
-}
 /* Reading load estimator: skim / read / deep read */
 .su-reading-load-badge {
   display: inline-flex;
@@ -3748,11 +3710,6 @@ body[data-su-theme="dark"] .su-author-stat-tooltip {
   color: #e8eaed;
 }
 body[data-su-theme="dark"] .su-author-stat-tooltip::after { border-top-color: #202124; }
-body[data-su-theme="dark"] .su-css-badge {
-  background: var(--su-chip-bg);
-  border-color: var(--su-chip-border);
-  color: var(--su-chip-text);
-}
 body[data-su-theme="dark"] .su-velocity { color: var(--su-chip-text); }
 body[data-su-theme="dark"] .su-velocity-accel-down { color: #f28b82; }
 body[data-su-theme="dark"] .su-retraction-badge { background: #3d3020; border-color: #5c4a28; color: #f0b429; }
@@ -3836,8 +3793,7 @@ body[data-su-theme="dark"] .su-reading-queue-action {
 }
 body[data-su-theme="dark"] .su-reading-queue-clear:hover,
 body[data-su-theme="dark"] .su-reading-queue-action:hover { background: #5f6368; color: #aac8f8; }
-body[data-su-theme="dark"] .su-badge-tooltip,
-body[data-su-theme="dark"] .su-css-tooltip {
+body[data-su-theme="dark"] .su-badge-tooltip {
   background: #202124;
   border-color: #5f6368;
   color: #e8eaed;
