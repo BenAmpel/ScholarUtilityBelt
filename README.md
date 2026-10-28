@@ -183,7 +183,7 @@ The repository includes local snapshots under [`src/data/`](src/data):
 
 - `ft50.txt`
 - `utd24.txt`
-- `abdc2022.csv`
+- `abdc2025.csv`
 - `vhb2024.csv`
 - `abs2024.csv`
 - `fnege2025.csv`

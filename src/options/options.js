@@ -621,7 +621,7 @@ el("grantOptionalPermission")?.addEventListener("click", async () => {
 const QUALITY_CUSTOM_FLAG_SOURCES = [
   { id: "qualityFt50List", customKey: "qualityFt50ListCustom", files: ["src/data/ft50.txt"] },
   { id: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
-  { id: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2022.csv"] },
+  { id: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2025.csv"] },
   { id: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
   { id: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
     files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
@@ -905,7 +905,7 @@ el("loadQualityDefaults")?.addEventListener("click", async () => {
     const [ft50, utd24, abdc, vhb, fnege, core, corePortal] = await Promise.all([
       fetchExtText("src/data/ft50.txt"),
       fetchExtText("src/data/utd24.txt"),
-      fetchExtText("src/data/abdc2022.csv"),
+      fetchExtText("src/data/abdc2025.csv"),
       fetchExtText("src/data/vhb2024.csv"),
       fetchExtText("src/data/fnege2025.csv"),
       fetchExtText("src/data/core_icore2026.csv"),

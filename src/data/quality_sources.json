@@ -1,9 +1,10 @@
 {
   "fetchedAt": "2026-04-08T13:05:00Z",
   "sources": {
-    "abdc2022": {
-      "rows": 2680,
-      "url": "https://abdc.edu.au/wp-content/uploads/2023/05/ABDC-JQL-2022-v3-100523.xlsx"
+    "abdc2025": {
+      "rows": 2648,
+      "url": "https://abdc.edu.au/wp-content/uploads/2026/09/ABDC-JQL-2025-v3-210926.xlsx",
+      "fetchedAt": "2026-10-28"
     },
     "abs2024": {
       "rows": 1635,

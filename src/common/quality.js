@@ -460,7 +460,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   if (abdc && VALID_ABDC.test(String(abdc).trim())) {
     const r = String(abdc).trim().toUpperCase();
-    badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: "ABDC Journal Quality List" } });
+    badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: "ABDC Journal Quality List 2025" } });
   }
 
   let vhb = qIndex.vhb?.get?.(v);

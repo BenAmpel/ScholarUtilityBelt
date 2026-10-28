@@ -4,7 +4,7 @@ AACE International Transactions,B
 Abacus,A
 Academia Economic Papers,C
 Academy of Management Annals,A*
-Academy of Management Discoveries,A
+Academy of Management Discoveries,A*
 Academy of Management Journal,A*
 Academy of Management Learning and Education,A*
 Academy of Management Perspectives,A
@@ -12,6 +12,7 @@ Academy of Management Review,A*
 Academy of Marketing Studies Journal,B
 Accident Analysis and Prevention,A*
 Accountancy Business and the Public Interest,B
+Accounting & Finance Journal / Revista Contabilidade & Finanças,C
 Accounting Accountability and Performance,C
 Accounting and Business Research,A
 Accounting and Finance,A
@@ -20,7 +21,7 @@ Accounting and the Public Interest,B
 Accounting Auditing and Accountability Journal,A*
 Accounting Education,A
 Accounting Educators Journal,B
-Accounting Forum,B
+Accounting Forum,A
 Accounting Historians Journal,B
 Accounting History,A
 Accounting History Review,B
@@ -28,11 +29,10 @@ Accounting Horizons,A
 Accounting in Europe,A
 Accounting Perspectives,B
 Accounting Research Journal,B
+Accounting Theory and Practice,C
 "Accounting, Economics and Law – A Convivium",B
 "Accounting, Finance and Governance Review",C
 "Accounting, Organizations and Society",A*
-ACM Transactions on Computer-Human Interaction,A*
-ACM Transactions on Computing Education,C
 ACM Transactions on Information Systems,C
 ACM Transactions on Modeling and Computer Simulation,B
 Acta Oeconomica,C
@@ -46,6 +46,7 @@ Actuarial Research Clearinghouse,C
 Adelaide Law Review,A
 Administration and Society,B
 Administrative Science Quarterly,A*
+Administrative Sciences,C
 Administrative Theory and Praxis,B
 Advances and Applications in Statistics,C
 Advances in Accounting,A
@@ -69,7 +70,6 @@ Africa Development/Afrique et Developpement,C
 African Development Review,C
 African Economic History,C
 "African Journal of Accounting, Auditing and Finance",C
-"African Journal of Accounting, Economics, Finance and Banking Research",C
 African Journal of Agricultural and Resource Economics,B
 African Journal of Business and Economic Research,C
 African Journal of Economic and Management Studies,C
@@ -87,6 +87,7 @@ Agricultural Economics Research Review,C
 Agricultural Economics Review,C
 Agricultural Finance Review,C
 Agriculture and Human Values,B
+AIMS International Journal of Management,C
 Air and Space Law,B
 AIS Educator Journal,C
 AIS Transactions on Human-Computer Interaction,A
@@ -101,21 +102,22 @@ American Bankruptcy Institute Law Review,B
 American Bankruptcy Law Journal,B
 American Behavioral Scientist,B
 American Business Law Journal,A
-American Business Review,A
+American Business Review,B
 American Economic Journal: Applied Economics,A*
 American Economic Journal: Economic Policy,A*
 American Economic Journal: Macroeconomics,A*
 American Economic Journal: Microeconomics,A*
 American Economic Review: Insights,A*
 American Economist,C
+American International Journal of Business and Management Studies,C
 American Journal of Agricultural Economics,A*
+American Journal of Business (AJB),C
 American Journal of Comparative Law,A
 American Journal of Economics and Sociology,B
 American Journal of Evaluation,C
 American Journal of Finance and Accounting,C
-American Journal of Health Economics,A
+American Journal of Health Economics,A*
 American Journal of Political Science,A*
-American Journal of Psychology,B
 American Journal of Public Health,A*
 American Journal of Recreation Therapy,C
 American Journal of Sociology,A*
@@ -127,6 +129,7 @@ American Review of Public Administration,B
 American Sociological Review,A*
 AMS Review,B
 Analisis: cuadernos de investigacion,C
+Analytic Methods in Accident Research,B
 Anatolia,B
 Annals Economy Series,C
 Annals of Actuarial Science,A
@@ -142,9 +145,10 @@ Annals of Statistics,A*
 Annals of the American Academy of Political and Social Science,B
 Annals of the Institute of Statistical Mathematics,A
 Annals of Tourism Research,A*
+Annals of Tourism Research Empirical Insights,B
 Annual Editions: Economics,C
 Annual Review of Banking and Financial Law,C
-Annual Review of Economics,B
+Annual Review of Economics,A*
 Annual Review of Financial Economics,B
 Annual Review of Organizational Psychology and Organizational Behavior,A*
 Annual Review of Psychology,A*
@@ -166,38 +170,36 @@ Applied Finance Letters,B
 Applied Financial Economics,B
 Applied Health Economics and Health Policy,C
 Applied Mathematical Finance,B
-Applied Ontology,A
 Applied Psychological Measurement,B
 Applied Psychology: An International Review,A
-Applied Soft Computing,C
+Applied Research in Quality of Life,B
 Applied Stochastic Models in Business and Industry,B
 Appraisal Journal,B
 Aquaculture Economics and Management,C
 Arizona Law Review,B
 Arkansas Business and Economic Review,C
-Art Law and Accounting Reporter,C
 Artha-Vikas: a journal of economic development,C
 Arts and the Market (formerly Arts Marketing),C
 ASEAN Journal on Hospitality and Tourism,C
 Asia Europe Journal,B
 Asia Pacific Business Review,B
-Asia Pacific Sustainable Development Journal,B
-Asia Pacific Journal of Arts and Cultural Management,C
 Asia Pacific Journal of Economics and Business,B
 Asia Pacific Journal of Finance,B
 Asia Pacific Journal of Health Management,C
-Asia Pacific Journal of Information Systems,C
+Asia Pacific Journal of Information Systems,B
 Asia Pacific Journal of Management,A
 Asia Pacific Journal of Marketing and Logistics,A
 Asia Pacific Journal of Taxation,C
 Asia Pacific Journal of Tourism Research,A
 Asia Pacific Law Review,C
 Asia Pacific Public Relations Journal,B
+Asia Pacific Sustainable Development Journal,B
 Asia-Pacific Financial Markets,C
 Asia-Pacific Journal of Accounting and Economics,B
-Asia-Pacific Journal of Business Administration,C
+Asia-Pacific Journal of Business Administration,B
 Asia-Pacific Journal of Financial Studies,B
-Asia-Pacific Journal of Human Resources,B
+Asia-Pacific Journal of Human Resources,A
+Asia-Pacific Journal of Innovation in Hospitality and Tourism,C
 Asia-Pacific Journal of Risk and Insurance,B
 Asia-Pacific Management Accounting Journal,C
 Asia-Pacific Management Review,C
@@ -211,9 +213,10 @@ Asian Development Review,C
 Asian Economic Journal,B
 Asian Economic Papers,B
 Asian Economic Policy Review,C
+Asian Economics Letters,C
 Asian Economies,C
 Asian Journal of Accounting and Governance,C
-Asian Journal of Accounting Research,C
+Asian Journal of Accounting Research,B
 Asian Journal of Agriculture and Development,C
 Asian Journal of Business and Accounting,C
 Asian Journal of Business Ethics,C
@@ -223,16 +226,14 @@ Asian Journal of Management Cases,C
 Asian Journal of Marketing (SING),C
 Asian Journal of Political Science,B
 Asian Journal of Social Science,C
-Asian Journal of Tourism and Hospitality Research,C
 Asian Population Studies,B
 Asian Review of Accounting,B
 Asian Survey,C
 Asian-Pacific Economic Literature,C
-Aslib Proceedings: New information perspectives,B
 ASOR Bulletin,C
 Asper Review of International Business and Trade Law,C
 AStA Advances in Statistical Analysis,C
-ASTIN Bulletin,A
+ASTIN Bulletin,A*
 ATA Journal of Legal Tax Research,C
 Atlantic Economic Journal,C
 Auckland University Law Review,C
@@ -241,57 +242,47 @@ Auditing: A Journal of Practice and Theory,A*
 Australasian Accounting Business and Finance Journal,B
 Australasian Agribusiness Review,C
 Australasian Dispute Resolution Journal,C
-Australasian Journal of Business and Behavioural Sciences,C
 Australasian Journal of Economics Education,C
-Australasian Journal of Environmental Management,A
 Australasian Journal of Information Systems,A
 Australasian Journal of Natural Resources Law and Policy,B
 Australasian Journal of Regional Studies,B
 Australasian Journal on Ageing,B
 Australasian Marketing Journal,A
-Australasian Parks and Leisure,C
 Australian Accounting Review,B
 Australian and New Zealand Journal of Criminology,A
 Australian and New Zealand Journal of Statistics,A
 Australian Bar Review,A
-Australian Bulletin of Labour,B
 Australian Business Law Review,A
 Australian Commodities,C
-Australian Economic History Review,B
+Asia‐Pacific Economic History Review,B
 Australian Economic Papers,B
 Australian GST Journal,C
-Australian Intellectual Property Journal,C
+Australian Intellectual Property Journal,B
 Australian Journal of Actuarial Practice (formerly Australian Actuarial Journal),C
 Australian Journal of Asian Law,C
-Australian Journal of Business and Management Research,C
 Australian Journal of Career Development,B
 Australian Journal of Competition and Consumer Law (formerly Trade Practices Law Journal),B
 Australian Journal of Corporate Law,A
 Australian Journal of Environmental Education,B
-Australian Journal of Human Rights,C
+Australian Journal of Human Rights,B
 Australian Journal of International Affairs,A
 Australian Journal of Labour Economics: a journal of labour economics and labour relations,B
 Australian Journal of Labour Law,A
 Australian Journal of Management,A
 Australian Journal of Political Science,A
-Australian Journal of Psychology,B
 Australian Journal of Public Administration,A
-Australian Journal of Social Issues,B
 Australian Law Journal,A
 Australian Property Law Journal,B
 Australian Psychologist,B
-Australian Review of Public Affairs,C
 Australian Tax Forum,A*
 Australian Tax Law Bulletin,C
 Australian Tax Review,A
 Austrian Economic Quarterly,C
-Automation in Construction,A*
 Baltic Journal of Economics,C
-Baltic Journal of Management,C
+Baltic Journal of Management,B
 Bank Parikrama: A Journal of Banking and Finance,C
 Banking and Finance Law Review,B
 Banking Law Journal,C
-Banks and Bank Systems,C
 Basic and Applied Social Psychology,B
 Basic Income Studies,C
 Bayesian Analysis,A
@@ -307,24 +298,22 @@ Bioinformatics,A
 Biometrical Journal,B
 Biometrika,A*
 Biostatistics,A
-BMC Medical Informatics and Decision Making,B
 Bond Law Review,B
+Borsa Istanbul Review,B
 Boston University Law Review,A*
 Brazilian Electronic Journal of Economics,C
 Brazilian Journal of Business Economics,C
 Brazilian Journal of Rural Economy and Sociology,C
 Briefing Notes in Economics,C
-Briefings in Real Estate Finance,C
 British Accounting Review,A*
 British Actuarial Journal,B
 British Food Journal,B
 British Journal of Educational Technology,A
 British Journal of Health Care Management,C
 British Journal of Industrial Relations,A*
-British Journal of Management,A
+British Journal of Management,A*
 British Journal of Mathematical and Statistical Psychology,B
-British Journal of Political Science,A
-British Journal of Psychology,A
+British Journal of Political Science,A*
 British Journal of Social Psychology,A
 British Journal of Sociology,A
 British Tax Review,A*
@@ -340,20 +329,22 @@ Bulletin of Indonesian Economic Studies,B
 Bulletin of Monetary Economics and Banking,C
 Bulletin of the Czech Econometric Society,C
 Business & Information Systems Engineering,A
+Business Analyst Journal,C
 Business and Economics Research Journal,C
-Business and Human Rights Journal,C
-Business and Politics,A
+Business and Human Rights Journal,B
+Business and Politics,C
+Business and Professional Communication Quarterly,C
 Business and Professional Ethics Journal,C
 Business and Society,A
 Business and Society Review,C
-Business and Professional Communication Quarterly,C
+Business Case Journal,C
 Business Economics,B
+Business Ethics and Leadership,C
 Business Ethics Quarterly,A
-Business Ethics: A European review,B
-Business History,A
+"Business Ethics, the Environment & Responsibility",B
+Business History,A*
 Business History Review,A
 Business Horizons,B
-Business Intelligence Journal,C
 Business Law Review,C
 Business Law Today,C
 Business Perspectives and Research,C
@@ -374,7 +365,6 @@ Canadian Journal of Development Studies / Revue canadienne d'etudes du developpe
 Canadian Journal of Economics / Revue Canadienne D'Economique,A
 Canadian Journal of Marketing Research,C
 Canadian Journal of Statistics,A
-Canadian Journal of Transportation,C
 Canadian Public Policy / Analyse de Politiques,B
 Canadian Tax Journal,A*
 Canberra Law Review,C
@@ -384,7 +374,7 @@ Capital Markets Law Journal,A
 Capital Markets Review,C
 Capitalism and Society,C
 Career Development and Transition for Exceptional Individuals,C
-Career Development International,B
+Career Development International,A
 Case Studies on Transport Policy,C
 Cayapa: revista venezolana de economia social,C
 Central Bank Review,C
@@ -394,26 +384,28 @@ CESifo Economic Studies,C
 Charity Law and Practice Review,B
 Chilean Journal of Statistics,C
 China Accounting and Finance Review,A
-China Agricultural Economic Review,C
+China Agricultural Economic Review,B
 China and World Economy,B
+China Economic Journal,B
+China Economic Quarterly International,C
 China Economic Review,A
-China Finance Review International,C
+China Finance Review International,A
 China Information,B
-China Journal of Accounting Research,B
+China Journal of Accounting Research,A
 China Journal of Accounting Studies,B
-The China Quarterly,A
 Chinese Management Studies,C
 Chinese Rural Economy,C
 "Choices: The Magazine of Food, Farm, and Resource Issues",C
 "Ciclos: en la historia, la economia y la sociedad",C
 Citizenship Studies,C
 Civil Justice Quarterly,A
+Cleaner Logistics and Supply Chain,B
 Climate and Development,B
 Climate Change Economics,B
 Climate Policy,C
 Cliometrica: journal of historical economics and econometric history,C
+Cogent Business & Management,C
 Cogent Economics and Finance,B
-Cognitive Psychology,A
 Columbia Business Law Review,A
 Columbia Journal of Asian Law,A
 Columbia Journal of Law and the Arts,A
@@ -424,13 +416,12 @@ Common Law World Review,B
 Common Market Law Review,B
 Commonwealth and Comparative Politics,C
 Communication & Sport,B
-Communication Monographs,A
 Communication Research,A
 Communication Research and Practice,C
 Communication Theory,A
 Communications in Statistics: Theory and Methods,B
+Communications in Transportation Research,C
 Communications Law Bulletin,C
-Communications of the ACM,A
 Communications of the Association for Information Systems,A
 Community Development Journal,B
 "Community, Work and Family",C
@@ -438,8 +429,9 @@ Company and Securities Law Journal,A
 Company Lawyer,B
 Comparative Economic Studies,B
 Comparative Labor Law and Policy Journal,A
-Comparative Political Studies,B
+Comparative Political Studies,A
 Comparative Politics,A
+Compensation & Benefits Review,C
 Competition and Change,B
 Competition and Consumer Law Journal,A
 Competition and Regulation in Network Industries,B
@@ -454,7 +446,6 @@ Computer Law & Security Review,B
 Computer Supported Cooperative Work,B
 Computers & Industrial Engineering,A
 Computers and Operations Research,A
-Computers and Security,A
 Computers in Human Behavior,A
 Conflict Management and Peace Science,B
 Conflict Resolution Quarterly,B
@@ -470,6 +461,7 @@ Contemporary Accounting Research,A*
 Contemporary Economic Policy,B
 Contemporary Economics,C
 Contemporary Sociology,C
+Contract and Commercial Law Review,C
 Contributions to Political Economy,B
 Copernican Journal of Finance & Accounting,C
 Copyright Society of the USA Journal,B
@@ -479,17 +471,15 @@ Cornell Law Review,A*
 Corporate Board,C
 Corporate Communications,B
 Corporate Finance Review,C
-Corporate Governance and Sustainability Review,C
+Corporate Governance,B
 Corporate Governance International,B
-Corporate Governance,C
 Corporate Governance: an international review,A
-Corporate Ownership and Control,B
 Corporate Reputation Review,C
 Corporate Social Responsibility and Environmental Management,C
 Corporate Taxation,C
 Cost Effectiveness and Resource Allocation,C
 Cost Management,C
-Creativity and Innovation Management,C
+Creativity and Innovation Management,B
 Credit and Capital Markets,C
 "Crime, Law and Social Change",B
 Critical Asian Studies,B
@@ -512,15 +502,15 @@ Cyprus Economic Policy Review,C
 Czech Economic Review,C
 Czech Journal of Economics and Finance / Finance a uver,C
 Dalhousie Law Journal,A
-Data and Knowledge Engineering,A
 Data Base for Advances in Information Systems,A
 De Economist,C
 Deakin Law Review,A
-Decision,A
+Decision,B
 Decision Analysis,A
 Decision Sciences,A*
 Decision Sciences Journal of Innovative Education,C
 Decision Support Systems,A*
+DECISION: Official journal of indian institute of management calcutta,C
 Decisions in Economics and Finance,B
 Defence and Peace Economics,B
 Defense Transportation Journal,C
@@ -535,6 +525,7 @@ Development and Change,B
 Development and Learning in Organizations,C
 Development Policy Review,B
 Development Southern Africa,C
+Digital Business,C
 "Digital Policy, Regulation and Governance",B
 Disasters,A
 Discourse & Communication,A
@@ -557,12 +548,12 @@ Econometric Theory,A*
 Econometrica,A*
 Econometrics,B
 Econometrics and Statistics,B
-Econometrics Journal,A
+Econometrics Journal,A*
 Economia,C
 Economia Internazionale,C
 "Economia, the Journal of Latin American and Caribbean Economic Association (LACEA)",B
 Economic Affairs,C
-Economic Analysis and Policy,B
+Economic Analysis and Policy,A
 Economic and Business Review,C
 Economic and Industrial Democracy: an international journal,A
 Economic and Labour Market Review,C
@@ -579,11 +570,10 @@ Economic Issues,B
 Economic Modelling,A
 Economic Notes,B
 Economic Papers: a journal of applied economics and policy,B
-Economic Policy: a European forum,A
 Economic Policy / Ekonomicheskaya Politika,C
+Economic Policy: a European forum,A
 Economic Quarter / Trimestre Economico,B
 Economic Review / Revue Economique,B
-Economic Sciences,C
 Economic Studies / Estudios de Economia,C
 Economic Studies Journal,C
 Economic Systems,B
@@ -592,7 +582,6 @@ Economic Theory,A*
 Economic Theory Bulletin,B
 Economic Thought Journal,C
 Economica,A
-"Economics: The Open Access, Open Assessment E-journal",B
 Economics & Politics,A
 Economics and Applied Informatics,C
 Economics and Business Review,C
@@ -602,12 +591,15 @@ Economics and Philosophy,A
 Economics and Policy of Energy and the Environment,C
 Economics Bulletin,C
 Economics Letters,A
+Economics of Disasters and Climate Change,C
 Economics of Education Review,A
 Economics of Energy & Environmental Policy,B
 Economics of Governance,B
 Economics of Innovation and New Technology,B
+Economics of Transition and Institutional Change,A
 Economics of Transportation,B
 "Economics, Management, and Financial Markets",C
+"Economics: The Open Access, Open Assessment E-journal",B
 Economies,C
 Economists' Voice,B
 Economy and Society,A
@@ -619,31 +611,31 @@ Educational Management Administration & Leadership,B
 eJournal of Tax Research,A
 Ekonomia,C
 Electronic Commerce Research,A
-Electronic Commerce Research and Applications,C
+Electronic Commerce Research and Applications,B
 Electronic Communication Law Review,C
 Electronic Journal of Evolutionary Modeling and Economic Dynamics,C
-Electronic Journal of IS Evaluation,B
+Electronic Journal of Information Systems in Developing Countries,B
 Electronic Journal of Knowledge Management,C
 Electronic Journal of Probability,A
-Electronic Journal of Information Systems in Developing Countries,C
 Electronic Markets,A
-Emergence: complexity and organization,B
 Emerging Markets Finance and Trade,B
 Emerging Markets Review,A
-Empirica,C
+Empirica,B
 Empirical Economics,A
 Empirical Economics Letters,C
-Employee Relations,B
+Employee Relations,A
 Employee Relations Law Journal,B
 Employee Responsibilities and Rights Journal,C
 Energy and Environment,C
 Energy Economics,A*
 Energy Journal,A
 Energy Policy,A
+Energy Research Letters,C
 "Energy Sources, Part B: Economics, Planning, and Policy",C
 Energy Studies Review,C
 Engineering Economics,B
 Engineering Economist,C
+Engineering Management Journal,B
 "Engineering, Construction and Architectural Management",A
 Enometrica,C
 Enterprise and Society,A
@@ -657,7 +649,7 @@ Entrepreneurship Research Journal,B
 Entrepreneurship Theory and Practice,A*
 Environment and Development Economics,B
 Environment and Planning A: Economy and Space,A*
-Environment and Planning B: planning and design,A*
+Environment and Planning B: Urban Analytics and City Science,A*
 Environment and Planning C: politics and space,B
 Environment and Planning D: society and space,A
 Environment and Urbanization Asia,C
@@ -666,9 +658,10 @@ Environmental and Planning Law Journal,B
 Environmental and Resource Economics,A
 Environmental Economics and Policy Studies,B
 Environmental Education Research,A
-Environmental Innovation and Societal Transitions,B
+Environmental Innovation and Societal Transitions,A
 Environmental Management,C
 Environmetrics,B
+EPH-International Journal of Business & Management Science,C
 "Equality, Diversity and Inclusion",B
 Erasmus Journal for Philosophy and Economics,C
 Erasmus Law and Economics Review,C
@@ -676,16 +669,16 @@ ESAIM: Probability and Statistics,C
 Essays in Economic & Business History,B
 Estudos Economicos,C
 Ethics and Economics,C
-Ethics and Information Technology,C
+Ethics and Information Technology,B
 "Ethics: an international journal of social, political, and legal philosophy",A
-Eurasian Business Review,C
+Eurasian Business Review,B
 Eurasian Economic Review,C
 Eurasian Geography and Economics,B
 Eurasian Journal of Business and Economics,C
 EURO Journal on Transportation and Logistics,B
 EuroChoices,C
-EuroMed Journal of Business,C
-Europe-Asia Studies,C
+EuroMed Journal of Business,B
+Europe-Asia Studies,B
 European Actuarial Journal,B
 European Business Law Review,C
 European Business Organization Law Review,B
@@ -693,7 +686,6 @@ European Business Review,B
 European Company Law,C
 European Competition Journal,C
 European Competition Law Review,A
-European Economic Letters,C
 European Economic Review,A*
 European Financial Management,A
 European Intellectual Property Review,A
@@ -710,6 +702,7 @@ European Journal of International Law,A
 European Journal of International Management,C
 European Journal of International Relations,A
 European Journal of Law and Economics,C
+European Journal of Management and Business Economics,B
 European Journal of Management Studies,C
 European Journal of Marketing,A*
 European Journal of Operational Research,A*
@@ -720,15 +713,16 @@ European Journal of Population,B
 European Journal of Psychological Assessment,B
 European Journal of Public Health,B
 European Journal of Social Psychology,A
-European Journal of Sociology,A
 European Journal of the History of Economic Thought,B
+European Journal of Tourism Research,C
 European Journal of Training and Development,C
 European Journal of Transport and Infrastructure Research,B
 European Journal of Work and Organizational Psychology,A
 European Law Journal,B
 European Law Review,A
-European Management Journal,B
-European Management Review,C
+European Management Journal,A
+European Management Review,B
+European Research on Management and Business Economics,A
 European Review of Agricultural Economics,A
 European Review of Economic History,A
 European Sport Management Quarterly,A
@@ -739,10 +733,9 @@ European Urban and Regional Studies,A
 Evaluation,B
 Evaluation Review,A
 Event Management,A
-Evidence-based HRM,B
+Evidence-based HRM (EBHRM): A Global Forum for Empirical Scholarship,B
 Experimental Economics,A*
 Expert Review of Pharmacoeconomics & Outcomes Research,C
-Expert Systems with Applications,C
 Explorations in Economic History,A
 Facilities,B
 Facta Universitatas: Economics and Organization,C
@@ -751,7 +744,7 @@ Family Business Review,A
 Farm and Business - The Journal of the Caribbean Agro-Economic Society,C
 Federal Law Review,A*
 Feminist Economics,A
-FIIB Business Review,C
+FIIB Business Review,B
 Finance,C
 Finance and Stochastics,A
 Finance India,C
@@ -759,25 +752,26 @@ Finance Research Letters,A
 Financial Accountability and Management,A
 Financial Analysts Journal,A
 Financial History Review,B
-Financial Management,A
+Financial Innovation,B
+Financial Management,A*
 Financial Markets and Portfolio Management,B
-"Financial Markets, Institutions and Instruments",B
+"Financial Markets, Institutions and Instruments",A
 Financial Planning Research Journal,C
+Financial Planning Review,B
 Financial Reporting,C
-"Financial Reporting, Regulation & Governance",C
 Financial Review (US),A
 Financial Services Newsletter,C
 Financial Services Review,B
 Financijska Teorija i Praksa,C
 Finnish Economic Papers,B
-First Monday,B
+First Monday,C
 Fiscal Studies,B
 Flexible Services and Manufacturing Journal,C
 Food Policy,B
 Food Quality and Preference,A
 Fordham Journal of Corporate & Financial Law,B
-Foreign Affairs,A*
-Foreign Policy (Washington),A*
+Foreign Affairs,C
+Foreign Policy (Washington),C
 Foreign Trade Review,B
 Foresight,C
 Forest Policy and Economics,B
@@ -786,35 +780,33 @@ Forum for Social Economics,C
 Forum of International Development Studies,B
 Foundations and Trends in Accounting,A
 Foundations and Trends in Econometrics,C
-Foundations and Trends in Entrepreneurship,C
 Foundations and Trends in Finance,B
 Foundations and Trends in Microeconomics,C
 Frontiers in Finance and Economics,C
 Frontiers of Economics in China,C
 Futures,B
 Fuzzy Economic Review,C
-Gambling Research,C
+Gadjah Mada International Journal of Business,C
 Games,B
 Games and Economic Behavior,A*
 Gender and Society,A*
-Gender in Management: an international journal,C
+Gender in Management: an international journal,B
 "Gender, Work and Organization",A
 German Economic Review,B
 German Journal of Agricultural Economics,C
 German Journal of Human Resource Management,B
 Global Business and Economics Review,C
 Global Business and Organizational Excellence,C
-Global Business Review,C
+Global Business Review,B
 Global Economic Review,C
 Global Economy Journal,B
 Global Environmental Change,A*
-Global Environmental Politics,C
+Global Environmental Politics,B
 Global Finance Journal,A
 Global Journal of Accounting and Finance,C
 Global Journal of Flexible Systems Management,A
 "Global Knowledge, Memory and Communication",B
 Global Networks: A Journal of Transnational Affairs,A
-Global Perspectives on Accounting Education,C
 Global Social Policy,C
 Global Strategy Journal,A
 Gospodarka Narodowa,C
@@ -842,11 +834,10 @@ Health Economics Review,C
 Health Informatics Journal,C
 Health Marketing Quarterly,B
 Health Policy,A
-Health Policy and Technology,B
 Health Promotion International,A
-Health Services and Outcomes Research Methodology,C
 Health Services Management Research,C
 Health Services Research,A
+Health Systems,C
 Higher Education Quarterly,C
 "Higher Education, Skills and Work-based Learning",C
 Historical Materialism,C
@@ -862,30 +853,26 @@ Hospitality & Society,C
 Housing Policy Debate,B
 Housing Studies,A
 Houston Business and Tax Law Journal,C
-Human Communication Research,A
-Human IT,B
 Human Performance,A
 Human Relations,A*
 Human Resource Development International,B
-Human Resource Development Quarterly,B
+Human Resource Development Quarterly,A
 Human Resource Development Review,B
 Human Resource Management (US),A*
 Human Resource Management International Digest,C
-Human Resource Management Journal (UK),A
+Human Resource Management Journal (UK),A*
 Human Resource Management Review,A
 Human Systems Management,C
 Human-Computer Interaction,A
 IATSS Research,C
-IBM Systems Journal,A
 ICSID Review: foreign investment law journal,C
 IEEE Transactions on Engineering Management,A
 IEEE Transactions on Intelligent Transportation Systems,A
 IEEE Transactions on Professional Communication,B
-IEEE Transactions on Vehicular Technology,A
 IIC International Review of Intellectual Property and Competition Law,A
-IISE Transactions,A
 IIM Kozhikode Society and Management Review,C
-IIMB Management Review,B
+IIMB Management Review,C
+IISE Transactions,A
 ILR Review (Industrial and Labor Relations Review),A*
 IMA Educational Case Journal,C
 IMF Economic Review,A
@@ -895,7 +882,6 @@ Indian Economic Review,C
 Indian Growth and Development Review,B
 Indian Journal of Corporate Governance,C
 Indian Journal of Economics,C
-Indian Journal of Finance,C
 Indian Journal of Gender Studies,C
 Indian Journal of Industrial Relations,C
 Indian Journal of Labour Economics,C
@@ -910,41 +896,34 @@ Industrial Marketing Management,A*
 Industrial Relations Journal,A
 Industrial Relations: a journal of economy and society,A*
 Industry and Higher Education,C
-Industry and Innovation,B
+Industry and Innovation,A
 INFOR (INFOR: Information Systems and Operational Research),B
 Informatics for Health and Social Care,C
-Information Knowledge Systems Management,C
 Information & Management,A*
-Information and Communications Technology Law,C
+Information and Communications Technology Law,B
 Information and Computation,B
 Information and Computer Security,B
 Information and Organization,A*
-Information and Software Technology,A
 Information Discovery and Delivery,C
 Information Economics and Policy,A
-Information Polity,C
-Information Processing & Management,B
-Information Processing Letters,C
-Information Research,C
+Information Polity,B
 Information Resources Management Journal,C
-Information Retrieval Journal,C
 Information Systems and e-Business Management,B
 Information Systems Frontiers,A
 Information Systems Journal,A*
-Information Systems Management,B
+Information Systems Management,A
 Information Systems Research,A*
 Information Technology & People,A
-Information Technology & Tourism,B
-Information Technology and Libraries,C
+Information Technology & Tourism,A
 Information Technology and Management,B
-Information Technology for Development,B
-Information Technology Management,B
-Information Visualization,C
+Information Technology for Development,A
 "Information, Communication & Society",A
 INFORMS Journal on Applied Analytics,B
-INFORMS Journal on Computing,B
+INFORMS Journal on Computing,A
+INFORMS Transactions on Education,C
+Innovation and Green Development,B
 Innovation Policy and the Economy,B
-Innovation: Organization & Management,C
+Innovation: Organization & Management,B
 Innovation: The European Journal of Social Sciences Research,B
 Insolvency Law Bulletin,C
 Insolvency Law Journal,A
@@ -955,14 +934,13 @@ Intellectual Property and Technology Law Journal,C
 Intellectual Property Journal,A
 Intellectual Property Quarterly,C
 "Intelligent Systems in Accounting, Finance and Management: An International Journal",B
-Interacting with Computers,C
+Interacting with Computers,B
 Interdisciplinary Environmental Review,C
+Interdisciplinary Journal of Management Studies,C
 Intereconomics: review of European economic policy,C
-Internal Auditing,C
 International & Comparative Law Quarterly,A*
 International Advances in Economic Research,C
 International Affairs,A
-International and Comparative Corporate Law Journal,A
 International Business Lawyer,C
 International Business Review,A
 International Company and Commercial Law Review,B
@@ -971,19 +949,20 @@ International Development Planning Review,B
 International Economic Journal,C
 International Economic Review,A*
 International Economics and Economic Policy,B
-International Entrepreneurship and Management Journal,C
+International Entrepreneurship and Management Journal,B
 "International Environmental Agreements: Politics, Law and Economics",A
 International Finance,B
 International Gambling Studies,B
 International Game Theory Review,B
 International Hospitality Review,C
 International Insolvency Review,B
-International Insurance Law Review,A
+International Journal of Accounting & Finance Review,C
 International Journal of Accounting and Business Finance,C
 International Journal of Accounting and Finance,C
 International Journal of Accounting and Information Management,B
 International Journal of Accounting Information Systems,A
 "International Journal of Accounting, Auditing and Performance Evaluation",C
+"International Journal of Accounting, Business and Finance",C
 International Journal of Advertising,A
 "International Journal of Agricultural Resources, Governance and Ecology",C
 International Journal of Applied Economic Sciences & Applied Research,C
@@ -1001,7 +980,7 @@ International Journal of Behavioural Accounting and Finance,C
 International Journal of Bonds and Derivatives,C
 International Journal of Business,C
 International Journal of Business and Economics,B
-International Journal of Business and Information,C
+International Journal of Business and Management (IJBM),C
 International Journal of Business and Society,C
 International Journal of Business Communication,C
 International Journal of Business Information Systems,C
@@ -1010,11 +989,10 @@ International Journal of Business Law,C
 International Journal of Cases on Electronic Commerce,C
 International Journal of Central Banking,A
 International Journal of Computational Economics and Econometrics,C
-International Journal of Computer Integrated Manufacturing,B
 International Journal of Conflict Management,A
+International Journal of Construction Management,B
 International Journal of Consumer Studies,A
 International Journal of Contemporary Hospitality Management,A
-International Journal of Cooperative Information Systems,A
 International Journal of Corporate Governance,B
 International Journal of Critical Accounting,C
 International Journal of Cross Cultural Management,B
@@ -1046,21 +1024,18 @@ International Journal of Energy Economics and Policy,C
 International Journal of Energy Sector Management,C
 International Journal of Enterprise Information Systems,C
 International Journal of Enterprise Network Management,B
-International Journal of Entrepreneurial Behaviour and Research,B
+International Journal of Entrepreneurial Behaviour and Research,A
 International Journal of Entrepreneurship and Innovation,C
 International Journal of Environment and Pollution,C
 International Journal of Ethics and Systems,C
 International Journal of Event and Festival Management,B
-International Journal of Event Management Research,B
-International Journal of Finance,C
 International Journal of Finance & Economics,B
 International Journal of Financial Engineering,C
 International Journal of Financial Markets and Derivatives,C
 International Journal of Financial Services Management,C
-International Journal of Financial Studies,B
 International Journal of Forecasting,A
 International Journal of Game Theory,A
-International Journal of Gender and Entrepreneurship,C
+International Journal of Gender and Entrepreneurship,B
 International Journal of General Systems,A
 International Journal of Global Business and Competitiveness,C
 International Journal of Global Energy Issues,C
@@ -1077,24 +1052,24 @@ International Journal of Hospitality Management,A*
 International Journal of Housing Markets and Analysis,B
 International Journal of Housing Policy,B
 International Journal of Human Resource Management,A
-International Journal of Human-Computer Interaction,B
+International Journal of Human-Computer Interaction,C
 International Journal of Human-Computer Studies,B
-International Journal of Industrial Organization,A
+International Journal of Industrial Organization,A*
 International Journal of Information and Communication Technology Education,C
 International Journal of Information and Learning Technology,C
-International Journal of Information Management,A*
-International Journal of Information Security,B
+International Journal of Information Management,A
 International Journal of Information Security and Privacy,C
 International Journal of Information Systems and Change Management,C
 International Journal of Information Systems and Supply Chain Management,C
 International Journal of Information Technology and Decision Making,C
 International Journal of Information Technology and Web Engineering,C
+International Journal of Innovation Science,B
+International Journal of Innovation Studies,B
 International Journal of Intellectual Property Management,C
 International Journal of Intelligent Information Technologies,C
-International Journal of Intercultural Relations,A
+International Journal of Intercultural Relations,B
 International Journal of Internet and Enterprise Management,C
 International Journal of Internet Marketing and Advertising,C
-International Journal of Internet Science,C
 International Journal of Islamic and Middle Eastern Finance and Management,B
 International Journal of Knowledge and Learning,C
 International Journal of Knowledge Management,B
@@ -1107,17 +1082,17 @@ International Journal of Logistics Economics and Globalisation,C
 International Journal of Logistics: research and applications,B
 International Journal of Management,C
 International Journal of Management and Network Economics,C
-International Journal of Management Reviews,A
+International Journal of Management Reviews,A*
+International Journal of Management Science and Engineering Management,C
 International Journal of Managerial and Financial Accounting,B
 International Journal of Managerial Finance,A
 International Journal of Managing Projects in Business,C
 International Journal of Manpower,A
 International Journal of Market Research,A
-International Journal of Medical Informatics,A
 International Journal of Monetary Economics and Finance,C
-International Journal of Nonprofit and Voluntary Sector Marketing,B
 International Journal of Operations & Production Management,A
 International Journal of Operations and Quantitative Management,C
+International Journal of Organization Theory & Behavior,C
 International Journal of Organizational Analysis,B
 International Journal of Pharmaceutical and Healthcare Marketing,C
 International Journal of Physical Distribution & Logistics Management,A
@@ -1126,7 +1101,7 @@ International Journal of Portfolio Analysis and Management,B
 International Journal of Production Economics,A
 International Journal of Production Research,A
 International Journal of Productivity and Performance Management,B
-International Journal of Project Management,A
+International Journal of Project Management,A*
 International Journal of Public Administration,B
 International Journal of Public Opinion Research,A
 International Journal of Public Sector Management,B
@@ -1137,8 +1112,9 @@ International Journal of Retail & Distribution Management,A
 International Journal of Revenue Management,C
 International Journal of Risk Assessment and Management,C
 International Journal of Selection and Assessment,A
-International Journal of Social Economics,B
+International Journal of Small and Medium Enterprises,C
 International Journal of Social and Humanistic Computing,C
+International Journal of Social Economics,B
 International Journal of Social Research Methodology,B
 International Journal of Sociology and Social Policy,B
 International Journal of Spa and Wellness,C
@@ -1156,6 +1132,7 @@ International Journal of Stress Management,A
 International Journal of Sustainable Design,C
 International Journal of Sustainable Economy,C
 International Journal of Sustainable Transportation,B
+International Journal of Systems Science: Operations and Logistics,C
 International Journal of Technology and Human Interaction,C
 International Journal of Technology Management,B
 International Journal of Technology Management and Sustainable Development,C
@@ -1163,17 +1140,16 @@ International Journal of Technology Marketing,C
 "International Journal of Technology, Knowledge and Society",C
 International Journal of the Economics of Business,B
 International Journal of Theoretical and Applied Finance,B
-International Journal of Tourism Cities,C
+International Journal of Tourism Cities,B
 International Journal of Tourism Policy,C
 International Journal of Tourism Research,A
-International Journal of Tourism Sciences,C
 International Journal of Trade and Global Markets,C
 International Journal of Training and Development,C
 International Journal of Transport Economics,C
 International Journal of Urban and Regional Research,B
 "International Journal of Vehicle Design: journal of vehicle engineering, automotive technology and components",B
 International Journal of Volunteer Administration,C
-International Journal of Web Based Communities,B
+International Journal of Web Based Communities,C
 International Journal of Wine Business Research,B
 International Journal of Work Organisation and Emotion,B
 International Labor and Working-Class History,B
@@ -1184,11 +1160,11 @@ International Migration Review,A
 International Negotiation: a journal of theory and practice,A
 International Organization,B
 International Papers in Political Economy,C
-International Public Management Journal,C
+International Public Management Journal,B
 International Real Estate Review,C
 International Regional Science Review,B
 International Review for the Sociology of Sport,B
-International Review of Administrative Sciences,C
+International Review of Administrative Sciences,B
 International Review of Applied Economics,B
 International Review of Economics,C
 International Review of Economics & Finance,A
@@ -1198,7 +1174,7 @@ International Review of Finance,A
 International Review of Financial Analysis,A
 International Review of Information Ethics,C
 International Review of Law and Economics,B
-"International Review of Law, Computers and Technology",B
+"International Review of Law, Computers and Technology",A
 International Review of Public Administration,B
 "International Review of Retail, Distribution and Consumer Research",B
 International Review on Public and Nonprofit Marketing,B
@@ -1207,7 +1183,7 @@ International Social Science Journal,B
 International Statistical Review,A
 International Studies of Management & Organization,B
 International Studies Quarterly,A
-International Tax and Public Finance,B
+International Tax and Public Finance,A
 International Tax Journal,C
 International Tax Review,C
 International Trade Journal,B
@@ -1217,7 +1193,6 @@ International VAT Monitor,B
 Internet Research,A
 Intertax: International Tax Review,C
 Investment Analysts Journal,B
-Investment Management and Financial Innovations,B
 IPPR Progressive Review,B
 Irish Journal of Management,C
 Irish Marketing Review,C
@@ -1226,7 +1201,8 @@ Islamic Economic Studies,C
 ISRA International Journal of Islamic Finance,C
 Issues in Accounting Education,A
 Issues in Social and Environmental Accounting: An International Journal,C
-ITE Journal,C
+Italian Economic Journal,B
+Italian Journal of Marketing,C
 IUP Journal of Accounting Research & Audit Practices,C
 IUP Journal of Corporate Governance,C
 IZA Journal of Labor Economics,A
@@ -1234,7 +1210,7 @@ Japan and the World Economy,B
 Japan Labor Issues,C
 Japanese Economic Review,B
 JASSA: The Finsia Journal of Applied Finance,B
-Journal of Information Systems and Technology Management,C
+Jindal Global Law Review,C
 Journal Ensayos Sobre Politica Economica (ESPE) / Essays on Economic Policy,C
 Journal for Advancement of Marketing Education (JAME),C
 Journal for Quality and Participation,C
@@ -1244,16 +1220,19 @@ Journal of Academy of Business and Economics,C
 Journal of Accountancy,C
 Journal of Accounting & Organizational Change,B
 Journal of Accounting and Economics,A*
+Journal of Accounting and Finance in Emerging Economies,C
 Journal of Accounting and Management Information Systems (JAMIS),C
-Journal of Accounting and Public Policy,A
+Journal of Accounting and Public Policy,A*
 Journal of Accounting Auditing and Finance,A
 Journal of Accounting Education,B
 Journal of Accounting in Emerging Economies,B
 Journal of Accounting Literature,A
 Journal of Accounting Research,A*
+Journal of Accounting Review,C
+"Journal of Accounting, Auditing and Business",C
 "Journal of Accounting, Business and Management",C
 "Journal of Accounting, Ethics and Public Policy",C
-Journal of Advanced Transportation,A
+Journal of Advanced Transportation,B
 Journal of Advertising,A
 Journal of Advertising Education,C
 Journal of Advertising Research,A
@@ -1270,7 +1249,6 @@ Journal of Air Law and Commerce,A
 Journal of Air Transport Management,B
 Journal of Applied Accounting Research,B
 Journal of Applied Business and Economics,C
-Journal of Applied Communication Research,B
 Journal of Applied Corporate Finance,A
 Journal of Applied Econometrics,A*
 Journal of Applied Economic Sciences,C
@@ -1280,7 +1258,6 @@ Journal of Applied Law and Policy,C
 Journal of Applied Management and Entrepreneurship,C
 Journal of Applied Probability,A
 Journal of Applied Psychology,A*
-Journal of Applied Research in Accounting and Finance,C
 Journal of Applied Social Psychology,B
 Journal of Applied Sport Management,C
 Journal of Applied Sport Psychology,A
@@ -1293,7 +1270,7 @@ Journal of Asia Pacific Business,C
 Journal of Asian Business and Economic Studies,B
 Journal of Asian Economics,B
 Journal of Australian Political Economy,B
-Journal of Australian Taxation,B
+Journal of Australian Taxation,A
 Journal of Banking & Finance,A*
 Journal of Banking and Finance - Law and Practice,A
 Journal of Banking Regulation,C
@@ -1316,56 +1293,57 @@ Journal of Business and Psychology,A
 Journal of Business and Technical Communication,C
 Journal of Business Chemistry,C
 Journal of Business Cycle Research,B
+Journal of Business Economics,B
 Journal of Business Economics and Management,B
 Journal of Business Ethics,A
 Journal of Business Finance & Accounting,A*
 Journal of Business Law,A
 Journal of Business Logistics,A
 Journal of Business Market Management,B
+Journal of Business Models,C
 Journal of Business Research,A
 Journal of Business Strategy,B
+Journal of Business Studies,C
 Journal of Business Thought,C
 Journal of Business Venturing,A*
 Journal of Business Venturing Insights,A
 Journal of Business-to-Business Marketing,B
 Journal of Career Assessment,A
 Journal of Career Development,B
+Journal of Case Studies,C
 Journal of Cases on Information Technology,C
 Journal of Change Management,C
 Journal of China Tourism Research,B
 Journal of Chinese Economic and Foreign Trade Studies,C
 Journal of Chinese Economics and Business Studies,C
 Journal of Chinese Tax and Policy,C
-Journal of Choice Modelling,B
-Journal of Cleaner Production,A
+Journal of Choice Modelling,A
+Journal of Cleaner Production,C
 Journal of Co-operative Studies,C
 Journal of Commerce and Accounting Research,C
 Journal of Commodity Markets,A
 Journal of Common Market Studies,B
 Journal of Communication,A
 Journal of Communication Management,B
-Journal of Community Informatics,B
+Journal of Community Informatics,C
 Journal of Comparative Economics,A
 Journal of Comparative International Management,C
 Journal of Comparative Policy Analysis: research and practice,B
 Journal of Competition Law and Economics,B
 Journal of Computational and Graphical Statistics,A*
 Journal of Computational Finance,C
-Journal of Computer and System Sciences,C
 Journal of Computer Information Systems,A
 Journal of Conflict Resolution,A*
 Journal of Construction Accounting and Taxation,C
 Journal of Construction Engineering and Management,A*
-Journal of Construction Procurement,C
 Journal of Constructivist Psychology,B
-Journal of Consulting and Clinical Psychology,B
 Journal of Consumer Affairs,A
 Journal of Consumer Behaviour,A
 Journal of Consumer Marketing,A
 Journal of Consumer Policy,C
 Journal of Consumer Psychology,A*
 Journal of Consumer Research,A*
-"Journal of Consumer Satisfaction, Dissatisfaction and Complaining Behavior",B
+"Journal of Consumer Satisfaction, Dissatisfaction and Complaining Behavior",C
 Journal of Contemporary Accounting and Economics,A
 Journal of Contemporary Business Issues,C
 Journal of Contract Law,A
@@ -1374,9 +1352,10 @@ Journal of Corporate Accounting and Finance,B
 Journal of Corporate Finance,A*
 Journal of Corporate Law Studies,A
 Journal of Corporate Real Estate,C
-Journal of Corporation Law,B
+Journal of Corporation Law,A
 Journal of Cost & Management,C
-Journal of Cost Analysis and Parametrics,C
+Journal of Creating Value,C
+Journal of Creative Communications,C
 Journal of Credit Risk,C
 Journal of Cross-Cultural Psychology,A
 Journal of Culinary Science and Technology,C
@@ -1393,6 +1372,7 @@ Journal of Destination Marketing & Management,A
 Journal of Development Economics,A*
 Journal of Development Studies,A
 Journal of Digital & Social Media Marketing,C
+Journal of Digital Economy,B
 Journal of Documentation,B
 Journal of East European Management Studies,C
 Journal of East-West Business,C
@@ -1425,6 +1405,7 @@ Journal of Economics,B
 Journal of Economics / Ekonomicky casopis,B
 Journal of Economics & Management Strategy,A
 Journal of Economics and Business,B
+Journal of Economics and Development,C
 Journal of Economics and Finance,B
 Journal of Economics and Finance Education,C
 Journal of Economics and Statistics,B
@@ -1434,6 +1415,7 @@ Journal of Education and Work,B
 Journal of Education Finance,C
 Journal of Education for Business,C
 Journal of Educational Administration,B
+Journal of Electronic Business & Digital Economics,C
 Journal of Electronic Commerce in Organizations,B
 Journal of Electronic Commerce Research,B
 Journal of Emerging Market Finance,B
@@ -1448,12 +1430,12 @@ Journal of Engineering and Technology Management,B
 Journal of Enterprise Information Management,A
 Journal of Enterprising Communities: People and Places in the Global Community,C
 Journal of Entrepreneurship,C
-Journal of Entrepreneurship in Emerging Economies,C
+Journal of Entrepreneurship in Emerging Economies,B
 Journal of Environment and Development,B
 Journal of Environmental Economics and Management,A*
 Journal of Environmental Law,B
-Journal of Environmental Management,A
 Journal of Environmental Planning and Management,B
+Journal of Environmental Psychology,A
 Journal of Euromarketing,C
 Journal of European Economic History,B
 Journal of European Public Policy,A
@@ -1469,7 +1451,7 @@ Journal of Family Business Strategy,B
 Journal of Fashion Marketing and Management,B
 Journal of Finance Case Research,C
 Journal of Financial and Quantitative Analysis,A*
-Journal of Financial Counseling and Planning,C
+Journal of Financial Counseling and Planning,B
 Journal of Financial Crime,B
 Journal of Financial Econometrics,A*
 Journal of Financial Economic Policy,B
@@ -1481,25 +1463,23 @@ Journal of Financial Management of Property and Construction,C
 "Journal of Financial Management, Markets and Institutions",C
 Journal of Financial Markets,A*
 Journal of Financial Regulation,B
-Journal of Financial Regulation and Compliance,C
+Journal of Financial Regulation and Compliance,B
 Journal of Financial Reporting,A
 Journal of Financial Reporting and Accounting,C
 Journal of Financial Research,A
 Journal of Financial Services Marketing,B
 Journal of Financial Services Research,A
-Journal of Financial Stability,A
+Journal of Financial Stability,A*
 Journal of Food Distribution Research,C
 Journal of Food Products Marketing,B
-Journal of Foodservice,C
 Journal of Foodservice Business Research,C
 Journal of Forecasting,A
 Journal of Forensic & Investigative Accounting,B
 Journal of Forensic Accounting Research,B
 Journal of Forensic Economics,C
 Journal of Forest Economics,B
-Journal of Gambling Issues,B
 Journal of Gambling Studies,A
-Journal of General Management,B
+Journal of General Management,C
 Journal of Global Business and Economics,C
 Journal of Global Economic Analysis,B
 Journal of Global Fashion Marketing,B
@@ -1518,65 +1498,65 @@ Journal of Health Economics,A*
 Journal of Health Services Research and Policy,B
 "Journal of Health, Organization and Management",B
 "Journal of Health, Safety and Environment",B
+Journal of Healthcare Management,C
 Journal of Heritage Tourism,B
 Journal of Higher Education Policy and Management,B
 Journal of Historical Research in Marketing,B
 Journal of Hospitality and Tourism Education,B
-Journal of Hospitality and Tourism Insights,C
-Journal of Hospitality and Tourism Management,A
+Journal of Hospitality and Tourism Insights,B
+Journal of Hospitality and Tourism Management,A*
 Journal of Hospitality and Tourism Research,A
 Journal of Hospitality and Tourism Technology,B
-Journal of Hospitality Application and Research,C
 Journal of Hospitality Marketing and Management,A
 "Journal of Hospitality, Leisure, Sport & Tourism Education",B
 Journal of Housing Economics,A
 Journal of Housing Research,B
 Journal of Human Capital,A
 Journal of Human Development and Capabilities,B
-Journal of Human Resource Costing and Accounting,C
 Journal of Human Resources,A*
 Journal of Human Resources in Hospitality and Tourism,B
-Journal of Humanitarian Logistics and Supply Chain Management,C
+Journal of Humanitarian Logistics and Supply Chain Management,B
 Journal of Income Distribution,B
 Journal of Index Investing,C
 Journal of Indian Business Research,C
+Journal of Indonesian Economy and Business,C
+Journal of Industrial and Business Economics,B
 Journal of Industrial and Management Optimization,B
 Journal of Industrial Information Integration,C
 Journal of Industrial Relations,A
 "Journal of Industry, Competition and Trade",C
-Journal of Informatics Education and Research,C
 Journal of Information and Knowledge Management,C
-Journal of Information and Optimization Sciences,C
 Journal of Information Communication and Ethics in Society,B
 Journal of Information Systems,A
+Journal of Information Systems and Technology Management,C
 Journal of Information Systems Education,B
-Journal of Information Systems Security,C
 Journal of Information Technology,A*
 Journal of Information Technology Case and Application Research,C
 Journal of Information Technology Education: Research,C
-Journal of Information Technology Theory and Application,A
-Journal of Innovation & Knowledge,A
+Journal of Innovation & Knowledge,C
 Journal of Innovation Economics,C
 Journal of Innovation Management,C
-Journal of Institutional and Theoretical Economics,A
+Journal of Institutional and Theoretical Economics,B
 Journal of Institutional Economics,B
 Journal of Insurance Issues,B
 Journal of Intellectual Capital,B
-Journal of Intellectual Property Law and Practice,B
+Journal of Intellectual Property Law & Practice,B
 Journal of Intelligent Information Systems,B
 Journal of Intelligent Manufacturing,B
 Journal of Intelligent Transportation Systems,B
 Journal of Interactive Advertising,B
 Journal of Interactive Marketing,A
+Journal of Intercultural Communication,C
 Journal of Interdisciplinary Economics,C
 Journal of International Accounting Research,A
 "Journal of International Accounting, Auditing and Taxation",B
 Journal of International Agricultural Trade and Development,C
 Journal of International Banking Law and Regulation,C
 Journal of International Business and Economy,C
+Journal of International Business Education,C
+Journal of International Business Policy,B
 Journal of International Business Studies,A*
 Journal of International Commercial Law,C
-Journal of International Commercial Law and Technology,C
 Journal of International Consumer Marketing,B
 Journal of International Development,B
 Journal of International Economic Law,A
@@ -1584,7 +1564,7 @@ Journal of International Economic Studies,C
 Journal of International Economics,A*
 Journal of International Education in Business,C
 Journal of International Finance and Economics,C
-Journal of International Financial Management and Accounting,B
+Journal of International Financial Management and Accounting,A
 "Journal of International Financial Markets, Institutions and Money",A
 Journal of International Food and Agribusiness Marketing,B
 Journal of International Management,A
@@ -1596,9 +1576,7 @@ Journal of International Money and Finance,A
 Journal of International Relations and Development,C
 Journal of International Taxation,C
 Journal of International Technology and Information Management,C
-Journal of Internet Banking and Commerce,C
 Journal of Internet Commerce,B
-Journal of Inter-Organizational Relationships,B
 Journal of Investing,B
 Journal of Investment Compliance,C
 Journal of Investment Consulting,C
@@ -1607,31 +1585,29 @@ Journal of Islamic Accounting and Business Research,C
 "Journal of Islamic Economics, Banking and Finance",C
 Journal of Islamic Marketing,B
 Journal of Knowledge Management,A
-Journal of Knowledge Management Practice,B
+Journal of Knowledge Management Practice,C
 Journal of Korea Trade,C
 Journal of Labor and Society,C
 Journal of Labor Economics,A*
 Journal of Labor Research,B
-Journal of Language and Social Psychology,B
 Journal of Law and Financial Management,C
 Journal of Law and Society,B
 "Journal of Law, Economics & Policy",B
 "Journal of Law, Economics and Organization",A
 "Journal of Law, Information and Science",B
-Journal of Leadership and Organizational Studies,B
+Journal of Leadership and Organizational Studies,A
 Journal of Legal Aspects of Sport,C
 Journal of Legal Economics,B
 Journal of Legal Studies in Business,C
 Journal of Legal Technology Risk Management,C
 Journal of Leisure Research,A
-Journal of Librarianship and Information Science,B
 Journal of Macroeconomics,A
 Journal of Macromarketing,A
 Journal of Malaysian and Comparative Law,C
 Journal of Management,A*
-Journal of Management & Organization,B
+Journal of Management & Organization,A
 Journal of Management Accounting Research,A*
-Journal of Management Analytics,C
+Journal of Management Analytics,B
 Journal of Management and Governance,C
 Journal of Management Control,A
 Journal of Management Development,C
@@ -1648,9 +1624,7 @@ Journal of Manufacturing Systems,B
 Journal of Manufacturing Technology Management,B
 Journal of Maritime Law and Commerce,A
 Journal of Marketing,A*
-Journal of Marketing & Social Research,C
 Journal of Marketing Analytics,C
-Journal of Marketing Behaviour,B
 Journal of Marketing Communications,B
 Journal of Marketing Education,B
 Journal of Marketing for Higher Education,B
@@ -1667,14 +1641,14 @@ Journal of Modern Applied Statistical Methods,B
 Journal of Monetary Economics,A*
 Journal of Money Laundering Control,C
 "Journal of Money, Credit and Banking",A*
-"Journal of Money, Investment and Banking",C
 Journal of Multi-Criteria Decision Analysis,B
 Journal of Multinational Financial Management,B
 Journal of Multivariate Analysis,A
 Journal of New Business Ideas and Trends,C
 Journal of Nonparametric Statistics,B
 Journal of Nonprofit & Public Sector Marketing,B
-Journal of Occupational and Organizational Psychology,A
+Journal of Nursing Management,C
+Journal of Occupational and Organizational Psychology,A*
 Journal of Occupational Health Psychology,A
 Journal of Operational Risk,C
 Journal of Operations Management,A*
@@ -1686,6 +1660,8 @@ Journal of Organizational Behavior Management,B
 Journal of Organizational Change Management,B
 Journal of Organizational Computing and Electronic Commerce,A
 Journal of Organizational Effectiveness,B
+Journal of Organizational Ethnography,C
+Journal of Outdoor Recreation and Tourism,B
 Journal of Park and Recreation Administration,B
 Journal of Pension Economics and Finance,B
 Journal of Performance Management,C
@@ -1693,7 +1669,6 @@ Journal of Performance of Constructed Facilities,C
 Journal of Personal Selling & Sales Management,A
 Journal of Personality,A
 Journal of Personality and Social Psychology,A*
-Journal of Personality Assessment,A
 Journal of Personnel Psychology,B
 "Journal of Pharmaceutical Finance, Economics and Policy",C
 Journal of Place Management and Development,C
@@ -1701,9 +1676,11 @@ Journal of Policy Analysis and Management,A
 Journal of Policy Modeling,A
 "Journal of Policy Research in Tourism, Leisure and Events",B
 Journal of Political Economy,A*
+Journal of Political Economy: Macroeconomics,A
+Journal of Political Economy: Microeconomics,A
 Journal of Political Marketing,B
 Journal of Political Power,C
-Journal of Population Economics,A
+Journal of Population Economics,A*
 Journal of Population Research,A
 Journal of Post Keynesian Economics,B
 Journal of Product & Brand Management,A
@@ -1739,24 +1716,21 @@ Journal of Real Estate Research,B
 Journal of Regional Science,A
 Journal of Regulatory Economics,A
 Journal of Relationship Marketing,B
-Journal of Research and Practice in Information Technology,C
 Journal of Research for Consumers,C
 Journal of Research in Interactive Marketing,B
 Journal of Research in Marketing and Entrepreneurship,B
-Journal of Research in Personality,A
-Journal of Research on Technology in Education,C
+Journal of Research in Personality,B
 Journal of Retailing,A*
 Journal of Retailing and Consumer Services,A
 Journal of Retirement,B
 Journal of Revenue & Pricing Management,B
 Journal of Risk,B
-Journal of Risk and Financial Management,B
 Journal of Risk and Insurance,A
 Journal of Risk and Uncertainty,A*
 Journal of Risk Management in Financial Institutions,C
 Journal of Risk Research,C
 Journal of Safety Research,A
-Journal of Scheduling,A
+Journal of Scheduling,B
 Journal of Science and Technology Policy Management,C
 Journal of Selling,C
 Journal of Service Management,A
@@ -1766,7 +1740,7 @@ Journal of Services Marketing,A
 Journal of Services Research,C
 Journal of Simulation,B
 Journal of Small Business and Enterprise Development,C
-Journal of Small Business and Entrepreneurship,C
+Journal of Small Business and Entrepreneurship,B
 Journal of Small Business Management,A
 Journal of Small Business Strategy,C
 Journal of Social and Economic Development,C
@@ -1777,11 +1751,9 @@ Journal of Social Policy,A
 Journal of Social Psychology,B
 "Journal of Social, Political and Economic Studies",C
 Journal of Sociology,B
-Journal of Software: Evolution and Process,C
 Journal of South Asian Development,C
 Journal of Southeast Asian Economies,C
 Journal of Southeast Asian Studies,C
-Journal of Sponsorship,C
 Journal of Sport and Social Issues,B
 Journal of Sport and Tourism,B
 Journal of Sport Behavior,B
@@ -1796,15 +1768,16 @@ Journal of Statistical Research,C
 Journal of Statistical Software,A
 Journal of Statistical Theory and Applications,C
 Journal of Statistics and Management Systems,C
-Journal of Statistics Education,B
+Journal of Statistics and Data Science Education,B
 Journal of Strategic Information Systems,A*
 Journal of Strategic Marketing,A
-Journal of Strategy and Management,C
-Journal of Supply Chain Management,A
+Journal of Strategy & Innovation,C
+Journal of Strategy and Management,B
+Journal of Supply Chain Management,A*
+Journal of Sustainable Finance & Investment,B
+Journal of Sustainable Real Estate,C
 Journal of Sustainable Tourism,A*
 Journal of Systems and Information Technology,B
-Journal of Systems and Software,B
-"Journal of Targeting, Measurement and Analysis for Marketing",C
 Journal of Tax Administration,B
 Journal of Taxation,B
 Journal of Taxation of Investments,C
@@ -1812,25 +1785,21 @@ Journal of Teaching in International Business,C
 Journal of Teaching in Travel & Tourism,B
 Journal of Technology Management & Innovation,C
 Journal of Technology Management in China,C
-Journal of Technology Transfer,B
+Journal of Technology Transfer,A
 Journal of the Academy of Marketing Science,A*
-Journal of the ACM,C
-Journal of the American Medical Informatics Association,A
 Journal of the American Statistical Association,A*
 Journal of the American Taxation Association,A
-Journal of the Asia Pacific Centre for Environmental Accountability,C
 Journal of the Asia Pacific Economy,B
 Journal of the Association for Consumer Research,B
-Journal of the Association for Information Science and Technology,A*
 Journal of the Association for Information Systems,A*
-Journal of the Association of Environmental and Resource Economists,A
+Journal of the Association of Environmental and Resource Economists,A*
 Journal of the Australasian Law Academics Association,B
 Journal of the Australasian Tax Teachers Association,B
 Journal of the Economic and Social History of the Orient,B
 Journal of the Economics of Ageing,B
 Journal of the European Economic Association,A*
 Journal of the History of Economic Thought,B
-Journal of the International Academy of Hospitality Research,C
+Journal of the International Council for Small Business,C
 Journal of the Japan Statistical Society,C
 Journal of the Japanese and International Economies,A
 Journal of the Knowledge Economy,C
@@ -1842,31 +1811,30 @@ Journal of the Operations Research Society of Japan,B
 "Journal of the Royal Statistical Society, Series C (Applied Statistics)",A
 "Journal of the Royal Statistical Society, Series D (The Statistician)",A
 Journal of the Statistical and Social Inquiry Society of Ireland,C
-Journal of the Transportation Research Forum,C
 Journal of the UK Association of Christian Economists,C
-Journal of Theoretical and Applied Electronic Commerce Research,B
 Journal of Theoretical Probability,A
 Journal of Time Series Analysis,A
 Journal of Time Series Econometrics,B
 Journal of Tourism and Cultural Change,B
-Journal of Tourism Challenges and Trends,C
-Journal of Tourism Futures,C
+Journal of Tourism and Development (REVISTA TURISMO & DESENVOLVIMENTO - RT&D),C
+Journal of Tourism and Services,C
+Journal of Tourism Futures,B
 Journal of Tourism History,C
+"Journal of Tourism, Heritage & Services Marketing",C
+"Journal of Tourism, Sustainability and Well-being",C
 Journal of Transnational Management,C
 Journal of Transport and Health,B
 Journal of Transport and Land Use,B
 Journal of Transport Geography,A
 Journal of Transport History,C
-"Journal of Transport, Economics and Policy",A
-Journal of Transportation and Statistics,C
-Journal of Transportation Engineering,B
+"Journal of Transport, Economics and Policy",B
 "Journal of Transportation Law, Logistics and Policy",C
 Journal of Transportation Security,B
-Journal of Transportation System Engineering and Information Technology,B
 Journal of Travel & Tourism Marketing,A
 Journal of Travel and Tourism Research,C
 Journal of Travel Research,A*
 Journal of Trust Research,B
+Journal of University Teaching and Learning Practice,C
 Journal of Urban Affairs,A
 Journal of Urban Economics,A*
 Journal of Urban Planning and Development,B
@@ -1881,6 +1849,8 @@ Journal of World Trade,B
 Journal Transition Studies Review,C
 Judgment and Decision Making,A
 Juridical Review: law journal of Scottish universities,B
+Jurnal Akuntansi dan Keuangan Indonesia,C
+Jurnal Akuntansi Multiparadigma,C
 Keio Economic Studies,C
 Keizai Kagaku,C
 Kerala: an economic review,C
@@ -1888,23 +1858,23 @@ King's Law Journal,B
 Knowledge and Information Systems,C
 Knowledge and Process Management,B
 Knowledge Management Research and Practice,A
-Knowledge-Based Systems,A
 Kobe Economic and Business Review,C
 Kobe University Economic Review,C
 Korea and the World Economy,C
 Korea Review of International Studies,C
+Korean Accounting Review,C
 Kyklos,A
 Kyoto Economic Review,C
 Labor History,A
 Labor Studies Journal,B
 Labor: Studies in working class history,B
+Labour,B
 Labour / Le Travail,B
 Labour & Industry,B
-Labour Economics,A
+Labour Economics,A*
 Labour History Review,B
 Labour History: a journal of labour and social history,A
 Labour Law Journal,C
-Labour,B
 Lahore Journal of Economics,C
 Land Economics,A
 Land Use Policy,A
@@ -1923,6 +1893,7 @@ Leisure,B
 Leisure Sciences: an interdisciplinary journal,A
 Leisure Studies,A
 Les Cahiers Scientifiques du Transport / Scientific Papers in Transportation,C
+Letters in Spatial and Resource Science,C
 Library Management,C
 Lifetime Data Analysis: an international journal devoted to the methods and applications of reliability and survival analysis,B
 Lloyd's Maritime and Commercial Law Quarterly,A
@@ -1930,7 +1901,7 @@ Lloyd's Shipping and Trade Law,B
 Local Economy,C
 Local Government Studies,A
 Loisir et Societe (Society and Leisure),B
-Long Range Planning,A
+Long Range Planning,A*
 Macquarie Journal of Business Law,C
 Macquarie Law Journal,C
 Macroeconomic Dynamics,A
@@ -1939,6 +1910,7 @@ Malayan Law Journal,C
 Malaysian Journal of Economic Studies,C
 Management,B
 Management & Organizational History,C
+Management & Sustainability: An Arab Review,C
 Management Accounting Frontiers,C
 Management Accounting Quarterly,C
 Management Accounting Research,A*
@@ -1951,8 +1923,8 @@ Management Decision,B
 Management International Review,A
 Management Learning,A
 Management of Environmental Quality,C
-Management Research Review,C
 Management Research,C
+Management Research Review,C
 Management Review Quarterly,B
 Management Science,A*
 Management Teaching Review,C
@@ -1999,7 +1971,6 @@ Middle East Development Journal,C
 Millenium: journal of international studies,B
 Millennial Asia: An International Journal of Asian Studies,C
 Mineral Economics,C
-Minnesota Journal of Business Law and Entrepreneurship,B
 MIS Quarterly,A*
 MIS Quarterly Executive,A
 MIT Sloan Management Review,A
@@ -2011,8 +1982,6 @@ Monte Carlo Methods and Applications,C
 Motivation and Emotion,A
 Multinational Business Review,B
 Multinational Finance Journal,B
-Multivariate Behavioral Research,A
-Mustang Journal of Accounting and Finance,C
 Narrative Inquiry,B
 National Economic Review,C
 National Institute Economic Review,B
@@ -2033,6 +2002,7 @@ New York Economic Review,C
 New Zealand Business Law Quarterly,B
 New Zealand Economic Papers,B
 New Zealand Intellectual Property Journal,B
+New Zealand Journal of Applied Business Research,C
 New Zealand Journal of Employment Relations,B
 New Zealand Journal of Human Resources Management,C
 New Zealand Journal of Taxation Law and Policy,A
@@ -2041,6 +2011,7 @@ New Zealand Law Review,B
 New Zealand Population Review,C
 New Zealand Universities Law Review,A
 New Zealand Yearbook of International Law,C
+NMIMS Management Review,C
 Nonprofit and Voluntary Sector Quarterly,A
 Nonprofit Management and Leadership,B
 Nordic Journal of Commercial Law,C
@@ -2062,18 +2033,19 @@ Operational Research,C
 Operations and Supply Chain Management,C
 Operations Management Research,C
 Operations Research,A*
-Operations Research Letters,A
+Operations Research Letters,B
 Opsearch,C
 Optimal Control Applications and Methods,B
-Optimization,B
+Optimization,C
 OR Spectrum,B
 Oregon Law Review,A
+Organization,A
 Organization & Environment,A
 Organization Development Journal,C
-Organization Management Journal,C
+Organization Management Journal,B
 Organization Science,A*
 Organization Studies,A*
-Organization,A
+Organization Theory,A
 Organizational Behavior and Human Decision Processes,A*
 Organizational Dynamics,A
 Organizational Psychology Review,A
@@ -2105,24 +2077,20 @@ Pasos. Journal of Tourism and Cultural Heritage,C
 Pennsylvania Economic Review,C
 Pepperdine Law Review,C
 Performance Measurement and Metrics,C
-Personal and Ubiquitous Computing,A
 Personality and Individual Differences,A
 Personality and Social Psychology Bulletin,A*
-Personality and Social Psychology Review,A*
 Personnel Psychology,A*
 Personnel Review,A
 "Perspectives of Innovations, Economics & Business",C
 Perspectives on Work,C
-Petroleum Accounting and Financial Management Journal,C
 PharmacoEconomics,A
 Philippine Journal of Labor and Industrial Relations,C
 Philippine Review of Economics,C
 Philosophy & Public Affairs,A
-Philosophy of Management,C
+Philosophy of Management,B
 Philosophy of the Social Sciences,B
 Pittsburgh Tax Review,C
 Place Branding and Public Diplomacy,B
-Poetics,A
 Policy and Politics: an international journal,A
 Policy and Society,B
 Policy Science,B
@@ -2139,7 +2107,7 @@ Politics and Society,B
 Population,B
 Population and Development Review,A
 Population and Environment,A
-Population Bulletin,A
+Population Bulletin,C
 Population Research and Policy Review,A
 Population Studies: a journal of demography,A
 "Population, Space and Place",A
@@ -2154,10 +2122,12 @@ Problems of Economic Transition,B
 Production and Operations Management,A*
 Production Planning and Control,A
 Progress in Development Studies,C
+Project Leadership & Society,C
 Project Management Journal,B
 Prometheus: Critical Studies in Innovation,B
 Property Management,B
 Psychological Bulletin,A*
+Psychological Methods,B
 Psychological Research,A
 Psychological Review,A*
 Psychological Science,A*
@@ -2174,7 +2144,7 @@ Public Finance and Management,B
 Public Finance Review,B
 Public Law: the constitutional and administrative law of the Commonwealth,A
 Public Management Review,A
-Public Money & Management,B
+Public Money & Management,A
 Public Opinion Quarterly,A
 Public Performance & Management Review,B
 Public Personnel Management,B
@@ -2183,6 +2153,7 @@ Public Policy Research,C
 Public Relations Inquiry,B
 Public Relations Review,A
 Publishing Research Quarterly,C
+"Q Open: A Journal of Agricultural, Climate, Environmental, Food, Resource, and Rural Development Economics",C
 Qualitative Market Research: an international journal,B
 Qualitative Research in Accounting and Management,A
 Qualitative Research in Financial Markets,B
@@ -2190,6 +2161,7 @@ Qualitative Research in Organizations and Management,B
 Quality & Quantity,B
 Quality Management Journal,B
 Quality of Life Research,A
+Quality Technology and Quantitative Management,C
 Quantitative Economics,A*
 Quantitative Finance,A
 Quantitative Marketing and Economics,A
@@ -2198,10 +2170,11 @@ Quarterly Journal of Finance,A
 Quarterly Journal of Finance and Accounting,B
 Quarterly Journal of Political Science,B
 Quarterly Review of Economics and Finance,B
-Queensland Review,C
+Queen Mary Journal of Intellectual Property,B
 Quest,C
 QUT Law Review,C
 R&D Management,A
+RAE-Revista de Administracao de Empresas,C
 RAND Journal of Economics,A*
 Rationality and Society,B
 Reading in Political Economy,C
@@ -2218,24 +2191,23 @@ Regional Studies,A*
 Regulation and Governance,A
 Relations Industrielles/Industrial Relations,B
 Reliability Engineering & System Safety,A
+Renewable and Sustainable Energy Reviews,A
 Research Evaluation,C
-Research in Accounting in Emerging Economies,C
-Research in Accounting Regulation,B
 Research in Consumer Behavior: a research annual,C
 Research in Economics,B
 Research in Experimental Economics,B
 Research in Finance,C
 Research in Financial Services,C
-Research in Governmental and Non-Profit Accounting,B
-Research in International Business and Finance,B
+Research in Hospitality Management,C
+Research in International Business and Finance,A
 Research in Organizational Behavior,A
 Research in the History of Economic Thought and Methodology,C
-Research in the Sociology of Organizations,A
-Research in Transportation Business & Management,C
+Research in the Sociology of Organizations,B
+Research in Transportation Business & Management,B
 Research in Transportation Economics,B
 Research on Professional Responsibility and Ethics in Accounting,B
 Research Policy,A*
-Research-Technology Management,A
+Research-Technology Management,B
 Resource and Energy Economics,A
 Resources Policy,B
 Restitution Law Review,A
@@ -2247,15 +2219,16 @@ Review of African Political Economy,C
 Review of Asset Pricing Studies,A*
 Review of Behavioral Economics,B
 Review of Behavioral Finance,B
-Review of Business Information Systems,C
+Review of Corporate Finance,A
 Review of Corporate Finance Studies,A*
 Review of Derivatives Research,B
-Review of Development Economics,B
+Review of Development Economics,A
 Review of Economic Analysis,B
 Review of Economic and Business Studies,C
 Review of Economic Design,B
 Review of Economic Dynamics,A*
 Review of Economics (Jahrbuch fur Wirtschaftswissenschaften),C
+Review of Economics and Political Science,C
 Review of Economics of the Household,A
 Review of Environmental Economics and Policy,A
 Review of Finance,A*
@@ -2263,7 +2236,7 @@ Review of Financial Economics,B
 Review of Futures Markets,B
 Review of Income and Wealth,A
 Review of Industrial Organization,A
-Review of International Business and Strategy,C
+Review of International Business and Strategy,B
 Review of International Economics,A
 Review of International Organizations,C
 Review of International Political Economy,A
@@ -2271,6 +2244,7 @@ Review of International Studies,B
 Review of Islamic Economics,C
 Review of Keynesian Economics,C
 Review of Law & Economics,B
+Review of Managerial Science,A
 Review of Marketing and Agricultural Economics,C
 Review of Marketing Science,C
 Review of Middle East Economics and Finance,C
@@ -2286,17 +2260,16 @@ Review of Urban & Regional Development Studies,B
 Review of World Economics,B
 Review on Economic Cycles,C
 Revista de Economia,C
-Revista Portuguesa de Marketing,C
+Revista do CAAP,C
 Revue d'Etudes Comparatives Est-Ouest: economies et techniques de planification - droit et sciences sociales,B
 Revue de l'OFCE,C
 Richmond Journal of Global Law and Business,C
 Rikkyo Economic Review,C
 Risk Management,C
 Risk Management and Insurance Review,C
-"Risk, Decision and Policy",B
-Risks,B
 Romanian Economic Business Review,C
 Romanian Journal of Economic Forecasting,C
+Russian Journal of Economics,C
 Rutgers Business Law Review,C
 Rutgers Business Review,B
 Rutgers Computer and Technology Law Journal,B
@@ -2326,19 +2299,17 @@ Service Science,B
 Services Marketing Quarterly,B
 Sex Roles,A
 SIAM Journal on Applied Mathematics,A
-SIAM Journal on Computing,C
 SIAM Journal on Financial Mathematics,B
 Singapore Academy of Law Journal,C
 Singapore Economic Review,B
 Singapore Journal of Legal Studies,A
 Small Business Economics,A
-Small Enterprise Research,C
+Small Enterprise Research,B
 Small Group Research,A
 Smart and Sustainable Built Environment,C
 Soccer & Society,C
 Social and Economic Studies,C
 Social and Environmental Accountability Journal,B
-Social Business: An Interdisiplinary Journal,B
 Social Choice and Welfare,A
 Social Enterprise Journal,C
 Social Forces,A
@@ -2349,18 +2320,18 @@ Social Policy & Administration,A
 Social Problems,A
 Social Psychological and Personality Science,B
 Social Responsibility Journal,B
+Social Science & Medicine,A
 Social Science Information,C
 Social Science Japan Journal,C
 Social Science Quarterly,B
 Social Service Review,B
 Society and Business Review,B
 Society and Economy in Central and Eastern Europe,C
-SocioEconomic Challenges,C
 Socio-Economic Planning Sciences,C
 Socio-Economic Review,A
+SocioEconomic Challenges,C
 Sociological Inquiry,A
 Sociological Methodology,A
-Sociological Methods & Research,A
 Sociological Theory,A
 Sociologie du Travail,B
 Sociology,A*
@@ -2371,7 +2342,8 @@ South African Journal of Economic and Management Sciences,C
 South African Journal of Economics,B
 South African Statistical Journal,B
 South Asia Economic Journal,C
-South Asian Journal of Business Studies,C
+South Asian Journal of Business and Management Cases,C
+South Asian Journal of Business Studies,B
 South Asian Journal of Human Resources Management,C
 South Asian Journal of Macroeconomics and Public Finance,C
 South Asian Journal of Management,C
@@ -2389,7 +2361,7 @@ Sport Management Education Journal,C
 Sport Management Review,A
 Sport Marketing Quarterly,B
 Sport Psychologist,B
-"Sport, Business and Management",C
+"Sport, Business and Management",B
 "Sport, Education and Society",B
 Sporting Traditions,C
 Sri Lanka Economic Journal,C
@@ -2400,26 +2372,26 @@ Stanford Social Innovation Review,B
 Statistica Neerlandica,A
 Statistica Sinica,A
 Statistical Inference for Stochastic Processes,C
-Statistical Journal of the International Association for Official Statistics,C
+Statistical Journal of the IAOS,C
 Statistical Methodology,C
 Statistical Methods and Applications,C
 Statistical Methods In Medical Research,B
 Statistical Modelling,B
 Statistical Papers,B
 Statistical Science,A
+Statistics,B
+Statistics & Probability Letters,B
 Statistics & Risk Modeling,C
 Statistics and Computing,A
-Statistics & Probability Letters,B
 Statistics Education Research Journal,B
 Statistics in Medicine,A
-Statistics,B
 Statute Law Review,A
 Stochastic Analysis and Applications,B
 Stochastic Environmental Research and Risk Assessment,B
 Stochastic Models,B
 Stochastic Processes and their Applications,A
 Stochastics: an international journal of probability and stochastic processes,B
-Strategic Change: Briefings in Entrepreurial Finance,C
+Strategic Change: Briefings in Entrepreurial Finance,B
 Strategic Entrepreneurship Journal,A
 Strategic Management Journal,A*
 Strategic Organization,A
@@ -2438,11 +2410,13 @@ Studies in Microeconomics,C
 Studies in Nonlinear Dynamics & Econometrics,A
 Studies in Political Economy: a socialist review,C
 Suffolk University Law Review,B
+Supply Chain Forum: An International Journal,C
 Supply Chain Management Review,B
 Supply Chain Management: an international journal,A
 Survival,B
-"Sustainability Accounting, Management and Policy Journal",B
+"Sustainability Accounting, Management and Policy Journal",A
 Sustainable Development,C
+Sustainable Futures,C
 Swedish Economic Policy Review,C
 Syracuse Journal of International Law and Commerce,C
 System Dynamics Review,A
@@ -2457,9 +2431,9 @@ Taxation in Australia,C
 Teaching Business and Economics,C
 Team Performance Management,C
 Technological Forecasting and Social Change,A
+Technological Sustainability,C
 Technology Analysis and Strategic Management,B
 Technology in Society,C
-Technology Innovation Management Review,C
 Technometrics,A
 Technovation,A
 Telematics and Informatics,C
@@ -2477,20 +2451,19 @@ The Baltic Journal of Road and Bridge Engineering,C
 The BE Journal of Economic Analysis and Policy,A
 The BE Journal of Macroeconomics,A
 The BE Journal of Theoretical Economics,A
+The Bottom Line,C
 "The Brooklyn Journal of Corporate, Financial and Commercial Law",C
 The Business Lawyer,A
+The CASE Journal,C
+The China Quarterly,A
 The China Review: an interdisciplinary journal on greater China,C
 The Chinese Economy: translation and studies,B
-The Computer Journal,C
-The Consortium Journal of Hospitality and Tourism,C
 The Corporate Governance Law Review,C
 The Economic and Labour Relations Review,B
-The Economic History Review: a journal of economic and social history,A
+The Economic History Review: a journal of economic and social history,A*
 The Economic Journal,A*
 The Economic Record,A
-The Economics of Transition,A
 The Electronic Journal of Statistics,A
-The Electronic Library,B
 The European Accounting Review,A*
 The European Journal of Finance,A
 The Florida Tax Review,A
@@ -2498,16 +2471,16 @@ The Geneva Papers on Risk and Insurance - Issues and Practice,B
 The Geneva Risk and Insurance Review,B
 The Independent Review: a journal of political economy,C
 The Indonesian Journal of Accounting Research,C
-Information Management,B
 The Information Society,A
 The International Journal of Accounting,A
 The International Journal of Comparative Labour Law and Industrial Relations,B
 The International Journal of Digital Accounting Research,B
 "The International Journal of Environmental, Cultural, Economic and Social Sustainability: Annual Review",C
 The International Journal of Logistics Management,A
-The International Journal of Management Education,C
+The International Journal of Management Education,B
 The IUP Journal of Agricultural Economics,C
 The IUP Journal of Applied Economics (previously ICFAI),C
+The IUP Journal of Applied Finance,C
 The IUP Journal of Managerial Economics,C
 The IUP Journal of Monetary Economics (previously ICFAI),C
 The IUP Journal of Public Finance,C
@@ -2523,12 +2496,12 @@ The Journal of Economic Education,B
 The Journal of Economic History,A*
 The Journal of Economic Inequality,A
 The Journal of Finance,A*
+The Journal of Finance and Data Science,B
 The Journal of Fixed Income,A
 The Journal of Futures Markets,A
 The Journal of Gambling Business and Economics,B
-The Journal of High Technology Management Research,C
-The Journal of Hospitality Financial Management,C
-The Journal of Industrial Economics,A
+Journal of Hospitality & Tourism Cases,C
+The Journal of Industrial Economics,A*
 The Journal of International Maritime Law,C
 The Journal of International Trade and Economic Development: an international and comparative review,B
 The Journal of Law and Economics,A*
@@ -2539,13 +2512,11 @@ The Journal of Private Equity,C
 The Journal of Risk Finance,B
 The Journal of Risk Model Validation,C
 The Journal of Structured Finance,C
-The Journal of Theoretical Accounting Research,B
 The Journal of Trading,C
 The Journal of Wealth Management,B
 The Journal of World Intellectual Property,C
 The Leadership Quarterly,A*
 The Learning Organization,C
-The Marketing Review,C
 The Milbank Quarterly,B
 The Modern Law Review,A*
 The North American Journal of Economics and Finance,B
@@ -2571,31 +2542,31 @@ Theoretical and Applied Economics,C
 Theoretical Economics,A*
 Theory and Decision: an international journal for multidisciplinary advances in decision sciences,A
 Theory of Probability and its Applications,A
-"Theory, Culture and Society",A
 Third Sector Review,C
 Third World Quarterly,A
 Thunderbird International Business Review,B
 Tijdschrift voor Economische en Sociale Geografie,B
 Time and Society,B
 Tobacco Control,B
+TOP - Transactions in Operations Research,B
 Tort Law Review,A
 Torts Law Journal,A
 Total Quality Management and Business Excellence,C
+Tourism & Management Studies,C
 Tourism Analysis,A
+Tourism and Hospitality Management,C
 Tourism and Hospitality Research,B
 Tourism Economics,A
 Tourism Geographies,A
 Tourism in Marine Environments,C
 Tourism Management,A*
-Tourism Management Perspectives,A
-Tourism Planning & Development,B
+Tourism Management Perspectives,A*
+Tourism Planning & Development,A
 Tourism Recreation Research,A
-Tourism Research Journal,C
-Tourism Review,B
+Tourism Review,A
 Tourism Review International,C
 "Tourism, Culture and Communication",C
-Tourism: An International Interdisciplinary Journal,C
-Tourismus Journal,C
+Tourism: An International Interdisciplinary Journal,B
 Tourist Studies,B
 Transfer: European review of labour and research,C
 Transformations in Business and Economics,C
@@ -2605,7 +2576,6 @@ Transport Policy,A
 Transport Reviews,A
 Transportation,A
 Transportation Journal,B
-Transportation Law Journal,C
 Transportation Letters,B
 Transportation Planning and Technology,B
 Transportation Research Part A: Policy and Practice,A*
@@ -2615,15 +2585,13 @@ Transportation Research Part D: Transport and Environment,A
 Transportation Research Part E: Logistics and Transportation Review,A*
 Transportation Research Part F: Traffic Psychology and Behaviour,A
 Transportation Research Record,B
-Transportation Science,A
+Transportation Science,A*
 Transportmetrica A: Transport Science,B
 Transportmetrica B: Transport Dynamics,B
-Travel and Tourism Analyst,C
-Travel Behaviour and Society,B
+Travel Behaviour and Society,A
 Tulane Maritime Law Journal,A
 UBC Law Review,B
 UCLA Pacific Basin Law Journal,B
-Universal Access in the Information Society,C
 University of Chicago Law Review,A*
 University of Miami Business Law Review,C
 University of New South Wales Law Journal,A
@@ -2638,6 +2606,7 @@ UNLV Gaming Research and Review Journal,B
 Urban Affairs Review,B
 Urban Studies: an international journal for research in urban studies,A*
 US Bureau of Labor Statistics: Monthly Labor Review,B
+Value in Health,A
 Vanderbilt Journal of Transnational Law,B
 Variance: advancing the science of risk,C
 Venture Capital,B
@@ -2655,25 +2624,24 @@ Washington International Law Journal,B
 "Washington Journal of Law, Technology & Arts",C
 Water Resources Research,A
 West European Politics,B
+Western Australian Law Teachers' Review,C
 Western Economics Forum,C
 Western Journal of Communication,C
 "Work & Stress: An international Journal of Work, Health and Organisations",A
 Work and Occupations,A
+"Work, Aging and Retirement",B
 "Work, Employment and Society",A
 World Bank Research Observer,B
 World Competition Law and Economics Review,C
-World Development,A
+World Development,A*
 World Economics,B
 World Journal of Management and Economics,C
 World Journal of VAT/GST,C
 World Leisure Journal,B
-World Policy Journal,C
 World Politics,A
 "World Review of Science, Technology and Sustainable Development",C
 World Tax Journal,B
 World Trade Review,C
-World Transport Policy and Practice,C
-World Wide Web: Internet and Web Information Systems,C
 Worldwide Hospitality and Tourism Themes,C
 Written Communication,B
 Yale Journal on Regulation,B

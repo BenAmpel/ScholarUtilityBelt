@@ -514,7 +514,7 @@ chrome.alarms?.onAlarm?.addListener?.((alarm) => {
 const QUALITY_DATASETS = [
   { key: "qualityFt50List", customKey: "qualityFt50ListCustom", files: ["src/data/ft50.txt"] },
   { key: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
-  { key: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2022.csv"] },
+  { key: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2025.csv"] },
   { key: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
   { key: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
     files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
