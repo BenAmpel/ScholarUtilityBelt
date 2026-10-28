@@ -165,7 +165,9 @@ function formatRIS(p) {
 }
 
 function escapeCsvField(val) {
-  const s = String(val ?? "");
+  let s = String(val ?? "");
+  // Stop spreadsheet programs from running text that starts like a formula (numbers keep their sign).
+  if (typeof val !== "number" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
     return '"' + s.replace(/"/g, '""') + '"';
   }
