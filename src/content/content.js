@@ -3083,11 +3083,17 @@
     }
   }
   /** Escape BibTeX special characters (braces, backslash). */
+  // Same rules as escapeBibText in src/common/bibtex.js (this classic script cannot import it): Scholar text is
+  // plain, so backslashes are dropped, unbalanced braces removed, and the characters LaTeX treats specially escaped.
   function escapeBibTeX(s) {
-    return String(s || "")
-      .replace(/\\/g, "\\\\")
-      .replace(/[{}]/g, (c) => (c === "{" ? "\\{" : "\\}"))
-      .trim();
+    let t = String(s || "").replace(/\s+/g, " ").trim();
+    let depth = 0;
+    for (const ch of t) {
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth < 0) break;
+    }
+    if (depth !== 0) t = t.replace(/[{}]/g, "");
+    return t.replace(/\\/g, "").replace(/([&%#_$])/g, "\\$1");
   }
   /** Build a minimal BibTeX entry from paper when Scholar export is unavailable. */
   function buildMinimalBibTeX(paper) {
@@ -10667,16 +10673,16 @@
     if (kind === "csv") {
       const rows = [["Title", "Year", "Citations", "DOI", "URL"]];
       nodes.forEach((n) => rows.push([n.title || "", n.year || "", n.citedByCount || 0, n.doi || "", n.url || ""]));
-      const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\\n");
+      const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
       downloadBlob(`${authorName}-graph.csv`, "text/csv;charset=utf-8", csv);
       return;
     }
     if (kind === "bib") {
       const entries = nodes.map((n) => {
-        const key = `${authorName}${n.year || ""}${hashString(n.title || "")}`.slice(0, 30);
-        const authors = Array.isArray(n.authors) ? n.authors.join(" and ") : "";
-        return `@article{${key},\\n  title={${n.title || ""}},\\n  author={${authors}},\\n  year={${n.year || ""}},\\n  doi={${n.doi || ""}},\\n  url={${n.url || ""}}\\n}`;
-      }).join("\\n\\n");
+        const key = `${authorName}${n.year || ""}${hashString(n.title || "")}`.replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 30);
+        const authors = Array.isArray(n.authors) ? n.authors.map(escapeBibTeX).join(" and ") : "";
+        return `@article{${key},\n  title={${escapeBibTeX(n.title)}},\n  author={${authors}},\n  year={${n.year || ""}},\n  doi={${n.doi || ""}},\n  url={${n.url || ""}}\n}`;
+      }).join("\n\n");
       downloadBlob(`${authorName}-graph.bib`, "text/plain;charset=utf-8", entries);
       return;
     }
@@ -10685,15 +10691,15 @@
         const authors = Array.isArray(n.authors) ? n.authors : [];
         const lines = [
           "TY  - JOUR",
-          `TI  - ${n.title || ""}`,
-          ...authors.map((a) => `AU  - ${a}`),
+          `TI  - ${String(n.title || "").replace(/\s+/g, " ").trim()}`,
+          ...authors.map((a) => `AU  - ${String(a).replace(/\s+/g, " ").trim()}`),
           `PY  - ${n.year || ""}`,
           n.doi ? `DO  - ${n.doi}` : "",
           n.url ? `UR  - ${n.url}` : "",
           "ER  -"
         ].filter(Boolean);
-        return lines.join("\\n");
-      }).join("\\n\\n");
+        return lines.join("\n");
+      }).join("\n\n");
       downloadBlob(`${authorName}-graph.ris`, "application/x-research-info-systems;charset=utf-8", entries);
       return;
     }

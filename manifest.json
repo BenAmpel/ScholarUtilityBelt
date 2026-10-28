@@ -190,6 +190,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "dist/common/bibtex.js",
         "dist/common/claim-signals.js",
         "dist/common/custom-venues.js",
         "dist/common/entitlement.js",
