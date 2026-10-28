@@ -10,6 +10,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+// EXT_DIR: which unpacked build to load (default: the repo root, the Chrome build). For the Edge package:
+//   EXT_DIR=output/variants/edge node scripts/e2e/run.mjs
+const EXT = path.resolve(ROOT, process.env.EXT_DIR || ".");
 const EDGE = process.env.EDGE_PATH || "/Volumes/Extreme SSD/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge";
 const FX = (n) => fs.readFileSync(path.join(ROOT, "tests/e2e/fixtures", n), "utf8");
 const results = [];
@@ -18,7 +21,7 @@ const check = (name, ok, detail = "") => { results.push({ name, ok, detail }); c
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), "sub-e2e-"));
 const ctx = await chromium.launchPersistentContext(profileDir, {
   executablePath: EDGE, headless: false,
-  args: [`--disable-extensions-except=${ROOT}`, `--load-extension=${ROOT}`, "--headless=new", "--no-first-run"],
+  args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, "--headless=new", "--no-first-run"],
   viewport: { width: 1400, height: 900 },
 });
 const scholarHits = [];

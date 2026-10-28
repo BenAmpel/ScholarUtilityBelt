@@ -31,3 +31,9 @@ jobs:
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
           if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping a11y"; exit 0; fi
           EDGE_PATH="$EDGE" npm run a11y
+      - name: Package all stores, then end-to-end on the Edge package
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          bash scripts/package_release.sh
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping"; exit 0; fi
+          EDGE_PATH="$EDGE" EXT_DIR=output/variants/edge npm run e2e
