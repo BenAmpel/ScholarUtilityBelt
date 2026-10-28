@@ -81,6 +81,7 @@
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let classifyScholarResponse = () => null;
+  let findResultDoi = () => null;
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
   // Resolves with `fallback` if the promise is slow or fails. Entitlement lookups can wait on
   // ExtensionPay's server, which has no timeout of its own; page boot must not wait on it.
@@ -134,7 +135,7 @@
       importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -5581,6 +5582,19 @@
         const copyBibBtn = createButton("Copy Bib", { act: "copybib" });
         copyBibBtn.title = "Copy a BibTeX entry for this paper to the clipboard for use in LaTeX or reference managers.";
         bar.append(copyBibBtn);
+        // Scholar does not show DOIs. When the result's own links or snippet contain one, offer to copy it.
+        // Read from the page only: no lookup.
+        const doi = findResultDoi(
+          Array.from(container.querySelectorAll("a[href]")).map((a) => a.getAttribute("href") || ""),
+          container.querySelector(".gs_rs")?.textContent || ""
+        );
+        if (doi) {
+          const doiBtn = createButton("DOI", { act: "copydoi" });
+          doiBtn.dataset.doi = doi;
+          doiBtn.title = `Copy the DOI ${doi}`;
+          doiBtn.setAttribute("aria-label", `Copy DOI ${doi}`);
+          bar.append(doiBtn);
+        }
         const mdBtn = createButton("M", { act: "copymd" });
         const mdTip = "Copy to clipboard as Markdown: title (linked), authors, year, abstract, and #tags. Paste into Obsidian or Notion for a formatted note.";
         mdBtn.title = mdTip;
@@ -5652,6 +5666,15 @@
             btn.textContent = label;
             btn.disabled = false;
           }, 1500);
+        } else if (act === "copydoi") {
+          const label = btn.textContent;
+          try {
+            await navigator.clipboard.writeText(btn.dataset.doi || "");
+            btn.textContent = "Copied!";
+          } catch {
+            btn.textContent = "Failed";
+          }
+          setTimeout(() => { btn.textContent = label; }, 1500);
         } else if (act === "copymd") {
           const p = isAuthorProfile
             ? getCachedAuthorPaper(container)
