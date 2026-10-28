@@ -31,6 +31,11 @@ jobs:
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
           if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping a11y"; exit 0; fi
           EDGE_PATH="$EDGE" npm run a11y
+      - name: A theme switch repaints the open Scholar page and survives a reload
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping theme check"; exit 0; fi
+          EDGE_PATH="$EDGE" npm run theme
       - name: Keyboard focus is visible on every extension control
         run: |
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"

@@ -5404,6 +5404,13 @@
     const resolved = theme === "dark" ? "dark" : theme === "light" ? "light" : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     if (document.body) document.body.setAttribute("data-su-theme", resolved);
     if (document.documentElement) document.documentElement.setAttribute("data-su-theme", resolved);
+    // content-early.js painted the background at document_start with !important; repaint it for a theme picked later,
+    // or a switch to Light leaves dark text on the early dark background until the next reload.
+    const early = document.getElementById("su-early-theme");
+    if (early) {
+      const [bg, fg] = resolved === "dark" ? ["#202124", "#e8eaed"] : ["#fff", "#202124"];
+      early.textContent = early.textContent.replace(/\{[^}]*\}/, `{ background: ${bg} !important; color: ${fg} !important; }`);
+    }
   }
   function applyBadgePalette(palette) {
     const value = ["soft", "bold", "colorblind", "mono", "material", "fluent", "nord", "solarized", "monoAccent", "highContrast", "inverted", "warm"].includes(palette)
