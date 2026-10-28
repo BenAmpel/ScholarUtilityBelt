@@ -7839,6 +7839,12 @@
         if (loadAllBtn) {
           e.stopPropagation();
           e.preventDefault();
+          const waitMs = await scholarCooldownLeftMs();
+          if (waitMs > 0) {
+            loadAllBtn.textContent = `Scholar blocked a request recently. Try again in ${Math.ceil(waitMs / 60000)} min.`;
+            setTimeout(() => { loadAllBtn.textContent = "Load all for full stats"; }, 6000);
+            return;
+          }
           if (window.suState) window.suState.authorAutoLoadDisabled = false;
           renderAuthorStats({ qualityCounts: { q1: 0, a: 0, vhb: 0, utd24: 0, ft50: 0, abs4star: 0 }, totalPublications: 0, totalCitations: 0, avgCitations: 0, recentActivity: { last5Years: 0 } }, true);
           try {

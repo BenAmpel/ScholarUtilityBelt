@@ -142,6 +142,15 @@ try {
   check("profile visit (default) sends no extra Scholar requests", extraOnProfile === 0, `${extraOnProfile} extra: ${scholarHits.filter((h) => h.includes("cstart=")).join(", ")}`);
   const partial = await a.evaluate(() => !!document.querySelector(".su-author-partial-note") && !!document.querySelector("[data-load-all-publications]"));
   check("profile shows partial-stats note and Load all", partial);
+  // During a Scholar cooldown, Load all asks Scholar for nothing.
+  await sw.evaluate(() => chrome.storage.local.set({ scholarCooldownUntil: Date.now() + 10 * 60 * 1000 }));
+  scholarHits.length = 0;
+  await a.click("[data-load-all-publications]").catch(() => {});
+  await a.waitForTimeout(2500);
+  const duringCooldown = scholarHits.filter((h) => h.includes("cstart=")).length;
+  const msg = await a.locator("[data-load-all-publications]").first().textContent().catch(() => "");
+  check("Load all waits out a Scholar cooldown", duringCooldown === 0 && /Try again in/.test(msg || ""), `${duringCooldown} requests, "${(msg || "").trim()}"`);
+  await sw.evaluate(() => chrome.storage.local.remove("scholarCooldownUntil"));
   await a.close();
 
   // 3. Opt-in switch brings the automatic loading back.
