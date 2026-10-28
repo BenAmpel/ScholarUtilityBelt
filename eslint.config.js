@@ -99,6 +99,7 @@ module.exports = [
       "src/common/storage.js",
       "src/common/quality.js",
       "src/common/scholar-links.js",
+      "src/common/article-page.js",
       "src/common/bibtex.js",
       "src/common/url-policy.js",
       "src/common/reload-banner.js",

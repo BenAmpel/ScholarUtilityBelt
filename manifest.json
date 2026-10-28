@@ -190,11 +190,13 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "dist/common/article-page.js",
         "dist/common/bibtex.js",
         "dist/common/claim-signals.js",
         "dist/common/custom-venues.js",
         "dist/common/entitlement.js",
         "dist/common/evidence-matrix.js",
+        "dist/common/export-model.js",
         "dist/common/pro-prompt.js",
         "dist/common/quality.js",
         "dist/common/reading-order.js",
@@ -210,6 +212,7 @@
         "dist/common/triage-verify.js",
         "dist/common/watchlist-runner.js",
         "dist/common/watchlist.js",
+        "dist/common/zotero-export.js",
         "dist/content/content-author.js",
         "dist/content/data-loader.js",
         "dist/content/dom-cache.js",

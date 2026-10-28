@@ -36,6 +36,9 @@ Results whose DOI matches a list built from the Retraction Watch database, bundl
 ★ QUICK ACTIONS
 One-click Save to library, BibTeX export, abstract preview, DOI lookup, and code/dataset link detection (from the result's own links and DataCite) — all inline on search results.
 
+★ ARTICLE PAGES
+On a Scholar profile's article page, the venue gets the same journal badges, and you can save the paper or copy BibTeX or RIS with every author, volume, issue, pages and publisher. The citation chart gets plain numbers (average per year, peak year, last year against the years before), and a line says where the profile's owner sits among the authors. A DOI in the title link gets a copy button and the retraction check.
+
 ★ DARK MODE
 Full dark theme that matches Scholar's interface, with all badges and panels adapting automatically.
 
@@ -133,7 +136,7 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 Fewer requests to Google Scholar: opening an author profile no longer presses "Show more" by itself (stats cover the papers on screen, and "Load all for full stats" loads the rest), and the Emerging score no longer reads neighbouring Scholar pages in the background. Compare authors needs 5 requests instead of 25, and every feature that asks Scholar for more pages stops and waits 15 minutes after a "not a robot" check. Two switches in Options bring the old automatic loading back.
 
-New: a DOI button on results whose own links or snippet contain a DOI copies it (Scholar does not show DOIs), and "Copy DOIs" in the filter bar copies every DOI on the page. Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, the retraction list is refreshed (64,385 DOIs) and wrongly flags far fewer papers, ABDC badges use the 2025 list (111 journals moved up, 27 down), citation counts and velocity work when Scholar is set to another language, BibTeX exports escape the characters that stop a LaTeX build, the citation graph's BibTeX, CSV and RIS downloads have proper line breaks again, BibTeX imports keep accented names (Müller, Peña), the review workspace logs each Scholar search you add results from (query, date, page address, counts) next to database imports, and text contrast meets WCAG AA in light and dark mode.
+New: a DOI button on results whose own links or snippet contain a DOI copies it (Scholar does not show DOIs), and "Copy DOIs" in the filter bar copies every DOI on the page. Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, the retraction list is refreshed (64,385 DOIs) and wrongly flags far fewer papers, ABDC badges use the 2025 list (111 journals moved up, 27 down), citation counts and velocity work when Scholar is set to another language, BibTeX exports escape the characters that stop a LaTeX build, the citation graph's BibTeX, CSV and RIS downloads have proper line breaks again, BibTeX imports keep accented names (Müller, Peña), and article pages on Scholar profiles get journal badges, full-metadata BibTeX, RIS and Save, plain numbers for the citation chart and the owner's author position, all free, the review workspace logs each Scholar search you add results from (query, date, page address, counts) next to database imports, and text contrast meets WCAG AA in light and dark mode.
 
 For Firefox (AMO "Release notes"), leave out the PDF file-name sentence: Firefox has no API for suggesting a download name, so the Firefox build drops that feature. The text is in output/firefox-store/release-notes.txt.
 
