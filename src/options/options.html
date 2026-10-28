@@ -155,7 +155,7 @@
         <label class="field">
           <div class="label">Result view</div>
           <select id="viewMode">
-            <option value="detailed">Detailed (velocity, skimmability, artifacts, reading load)</option>
+            <option value="detailed">Detailed (citation velocity, code and data links, outside signals)</option>
             <option value="minimal">Minimal (quality badges and authorship only)</option>
           </select>
         </label>
@@ -213,10 +213,6 @@
           <input type="text" id="openalexApiKey" placeholder="e.g. oa_k1a2b3c4&hellip;" autocomplete="off" />
         </label>
 
-        <label class="field">
-          <div class="label">Default tags (comma-separated)</div>
-          <input type="text" id="defaultTagsCsv" placeholder="e.g. phishing, auth, detection" />
-        </label>
 
         <label class="field">
           <div class="label">Keyword highlights (comma-separated)</div>
@@ -328,25 +324,13 @@
           <span class="toggle-switch"><input type="checkbox" id="showAuthorshipHeatmap" /><span class="slider"></span></span>
         </label>
 
-        <label class="toggle-row">
-          <span>Show <strong>relevancy sparkline</strong>: small bar chart under each snippet showing where your search terms appear (left = start). Clustered at start suggests the paper focuses on your query.</span>
-          <span class="toggle-switch"><input type="checkbox" id="showRelevancySparkline" /><span class="slider"></span></span>
-        </label>
 
         <label class="toggle-row">
           <span>Bold <strong>abstract cues</strong> in snippets (e.g. "We propose…", "We evaluate…", "Using X dataset…", "We find that…"). Visual salience only — no summarization.</span>
           <span class="toggle-switch"><input type="checkbox" id="showSnippetCueEmphasis" /><span class="slider"></span></span>
         </label>
 
-        <label class="toggle-row">
-          <span>Show <strong>skimmability heat strip</strong>: green = PDF + abstract + citations; yellow = missing abstract or venue; red = no PDF, no citations, odd venue.</span>
-          <span class="toggle-switch"><input type="checkbox" id="showSkimmabilityStrip" /><span class="slider"></span></span>
-        </label>
 
-        <label class="toggle-row">
-          <span>Show <strong>reading load</strong> label: skim / read / deep read (from venue type; page count from PDF metadata when you click PDF).</span>
-          <span class="toggle-switch"><input type="checkbox" id="showReadingLoadEstimator" /><span class="slider"></span></span>
-        </label>
 
         <label class="toggle-row">
           <span><strong>Group versions</strong>: collapse near-identical titles (preprint + journal + mirror) into one row; show best version first with a chevron to expand.</span>
