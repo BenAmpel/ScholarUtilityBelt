@@ -26,3 +26,32 @@ describe("Scholar page search-log entries", () => {
     assert.match(csv.split("\n")[1], /^Google Scholar,2026-10-28,,,scholar-page,3,0,0$/);
   });
 });
+
+import { spreadsheetSafe } from "../src/common/reference-import.js";
+describe("search-log CSV and spreadsheets", () => {
+  it("neutralises cells that a spreadsheet would run as formulas", () => {
+    assert.equal(spreadsheetSafe('=HYPERLINK("http://x","y")'), `'=HYPERLINK("http://x","y")`);
+    assert.equal(spreadsheetSafe("+1"), "'+1");
+    assert.equal(spreadsheetSafe("@SUM(A1)"), "'@SUM(A1)");
+    assert.equal(spreadsheetSafe("sleep deprivation"), "sleep deprivation");
+    assert.equal(spreadsheetSafe(-3), "-3", "real numbers keep their sign");
+  });
+  it("applies to the exported search log", () => {
+    const csv = searchLogToCsv([{ database: "Google Scholar", query: "=cmd|' /c calc'!A0", recordsInFile: 1, added: 1, duplicates: 0 }]);
+    assert.match(csv.split("\n")[1], /^Google Scholar,,'=cmd\|' \/c calc'!A0,/);
+  });
+});
+
+describe("content-script CSV exports", () => {
+  it("the shared csvEscape guards formula cells and keeps numbers", async () => {
+    const fs = await import("node:fs");
+    const src = fs.readFileSync(new URL("../src/content/content.js", import.meta.url), "utf8");
+    const fn = src.slice(src.indexOf("function csvEscape(value) {"), src.indexOf("/** Venue tier for version ordering"));
+    // eslint-disable-next-line no-new-func
+    const csvEscape = new Function(`${fn}; return csvEscape;`)();
+    assert.equal(csvEscape("=1+1"), "'=1+1");
+    assert.equal(csvEscape('=HYPERLINK("a","b")'), `"'=HYPERLINK(""a"",""b"")"`);
+    assert.equal(csvEscape(-5), "-5");
+    assert.equal(csvEscape("Deep learning"), "Deep learning");
+  });
+});

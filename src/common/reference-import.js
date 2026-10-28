@@ -294,9 +294,18 @@ export function searchLogRows(log) {
   ]);
 }
 
+/**
+ * A text cell made safe for spreadsheets: Excel and Sheets run a cell that starts with = + - @ (or a tab or carriage
+ * return) as a formula, and search strings and page addresses now come from Scholar URLs anyone can craft.
+ */
+export function spreadsheetSafe(v) {
+  const s = String(v ?? "");
+  return typeof v !== "number" && /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+}
+
 export function searchLogToCsv(log, csvEscape) {
   const esc = csvEscape || ((v) => {
-    const s = String(v ?? "");
+    const s = spreadsheetSafe(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   });
   return [SEARCH_LOG_COLUMNS, ...searchLogRows(log)].map((r) => r.map(esc).join(",")).join("\n");
