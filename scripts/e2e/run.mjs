@@ -174,13 +174,23 @@ try {
   const partial = await a.evaluate(() => !!document.querySelector(".su-author-partial-note") && !!document.querySelector("[data-load-all-publications]"));
   check("profile shows partial-stats note and Load all", partial);
   // During a Scholar cooldown, Load all asks Scholar for nothing.
-  await sw.evaluate(() => chrome.storage.local.set({ scholarCooldownUntil: Date.now() + 10 * 60 * 1000 }));
+  // Same value noteScholarBlock() writes: blocked now, wait 15 min.
+  await sw.evaluate(() => chrome.storage.local.set({ scholarCooldownUntil: Date.now() + 15 * 60 * 1000 }));
   scholarHits.length = 0;
   await a.click("[data-load-all-publications]").catch(() => {});
   await a.waitForTimeout(2500);
   const duringCooldown = scholarHits.filter((h) => h.includes("cstart=")).length;
   const msg = await a.locator("[data-load-all-publications]").first().textContent().catch(() => "");
   check("Load all waits out a Scholar cooldown", duringCooldown === 0 && /Try again in/.test(msg || ""), `${duringCooldown} requests, "${(msg || "").trim()}"`);
+  // The CAPTCHA message says "complete it, then try again": a normal Scholar page loaded after the block ends the wait.
+  await a.reload();
+  await a.waitForSelector("[data-load-all-publications]", { timeout: 20000 }).catch(() => {});
+  scholarHits.length = 0;
+  await a.click("[data-load-all-publications]").catch(() => {});
+  await a.waitForTimeout(2500);
+  const afterReload = scholarHits.filter((h) => h.includes("cstart=")).length;
+  const leftKey = await sw.evaluate(async () => (await chrome.storage.local.get("scholarCooldownUntil")).scholarCooldownUntil || 0);
+  check("a normal page loaded after the block ends the cooldown", afterReload > 0 && !leftKey, `${afterReload} requests, cooldown key ${leftKey ? "still set" : "cleared"}`);
   await sw.evaluate(() => chrome.storage.local.remove("scholarCooldownUntil"));
   await a.close();
 

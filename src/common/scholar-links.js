@@ -40,6 +40,20 @@ export function classifyScholarResponse({ status, url, html } = {}) {
   return null;
 }
 
+/**
+ * Minutes-to-wait logic for the cooldown that follows a CAPTCHA or 429. The cooldown ends early when this
+ * page was loaded after the block and Scholar served it normally: the user has done the check (or the
+ * limit has lifted), which is what the CAPTCHA message asks them to do. A page loaded before the block,
+ * or a page that is itself a check, keeps the wait.
+ */
+export function scholarCooldownLeft({ until, now, cooldownMs, pageLoadedAt, pageIsNormal } = {}) {
+  const left = Math.max(0, Number(until || 0) - Number(now || 0));
+  if (!left) return 0;
+  const blockedAt = Number(until) - Number(cooldownMs || 0);
+  if (pageIsNormal && Number(pageLoadedAt) > blockedAt) return 0;
+  return left;
+}
+
 const DOI_IN_TEXT = /10\.\d{4,9}\/[^\s"'<>]+/i;
 const DOI_URL_TAILS = /\/(full|abstract|pdf|epdf|pdfdirect|meta|summary|html|fulltext|references|citedby|figures|suppl(?:ementary)?)(\/.*)?$/i;
 /** A DOI cleaned of URL encoding, query strings, publisher page suffixes and trailing punctuation, or null. */

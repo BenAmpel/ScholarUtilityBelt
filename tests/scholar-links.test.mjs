@@ -129,3 +129,21 @@ describe("scholarRowLinkKind and citedByCount", async () => {
     assert.equal(citedByCount("Cited by"), null);
   });
 });
+
+describe("scholarCooldownLeft", async () => {
+  const { scholarCooldownLeft } = await import("../src/common/scholar-links.js");
+  const MIN = 60000, COOL = 15 * MIN, blockedAt = 1_000_000, until = blockedAt + COOL;
+  it("is zero with no cooldown or after it ends", () => {
+    assert.equal(scholarCooldownLeft({ until: 0, now: blockedAt, cooldownMs: COOL }), 0);
+    assert.equal(scholarCooldownLeft({ until, now: until + 1, cooldownMs: COOL, pageLoadedAt: 0, pageIsNormal: true }), 0);
+  });
+  it("keeps the wait on a page loaded before the block", () => {
+    assert.equal(scholarCooldownLeft({ until, now: blockedAt + MIN, cooldownMs: COOL, pageLoadedAt: blockedAt - MIN, pageIsNormal: true }), 14 * MIN);
+  });
+  it("keeps the wait when the newer page is itself a check", () => {
+    assert.equal(scholarCooldownLeft({ until, now: blockedAt + 2 * MIN, cooldownMs: COOL, pageLoadedAt: blockedAt + MIN, pageIsNormal: false }), 13 * MIN);
+  });
+  it("ends the wait on a normal page loaded after the block (the user did the check)", () => {
+    assert.equal(scholarCooldownLeft({ until, now: blockedAt + 2 * MIN, cooldownMs: COOL, pageLoadedAt: blockedAt + MIN, pageIsNormal: true }), 0);
+  });
+});

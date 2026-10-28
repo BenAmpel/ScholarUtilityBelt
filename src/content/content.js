@@ -78,6 +78,7 @@
   // Quick read links share the file column with [PDF]; until the module loads, fall back to Google's class.
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let classifyScholarResponse = () => null;
+  let scholarCooldownLeft = ({ until, now }) => Math.max(0, Number(until || 0) - Number(now || 0));
   let findResultDoi = () => null;
   // Until scholar-links.js loads, row links are read the old English-only way.
   let scholarRowLinkKind = () => null;
@@ -136,7 +137,7 @@
       importModuleWithRetry("dist/common/reload-banner.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -13421,7 +13422,14 @@
   async function scholarCooldownLeftMs() {
     try {
       const got = await chrome.storage.local.get(SCHOLAR_COOLDOWN_KEY);
-      return Math.max(0, Number(got?.[SCHOLAR_COOLDOWN_KEY] || 0) - Date.now());
+      const until = Number(got?.[SCHOLAR_COOLDOWN_KEY] || 0);
+      // This page is a normal Scholar page (results or a profile, not a check) loaded after the block: Scholar is
+      // answering again, so the "complete the check, then try again" advice works without a 15 min wait.
+      const pageIsNormal = !!document.querySelector("#gs_res_ccl_mid, #gsc_rsb_cit, #gsc_a_b")
+        && !classifyScholarResponse({ url: location.href, html: document.body?.innerHTML?.slice(0, 200000) || "" });
+      const left = scholarCooldownLeft({ until, now: Date.now(), cooldownMs: SCHOLAR_COOLDOWN_MS, pageLoadedAt: performance.timeOrigin, pageIsNormal });
+      if (!left && until > Date.now()) await chrome.storage.local.remove(SCHOLAR_COOLDOWN_KEY);
+      return left;
     } catch (_) { return 0; }
   }
   async function fetchNextPageAndStitch(state) {
