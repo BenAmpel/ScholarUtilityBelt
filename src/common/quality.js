@@ -390,20 +390,29 @@ function findBestMatch(normalizedVenue, map) {
  *    When several entries extend it and their values differ, the venue is ambiguous ("journal of neuroscience" ->
  *    "...nursing" 52 or "...psychology and economics" 31) and no badge beats a wrong one.
  *  - reverse: the venue extends a list entry (a venue line with extra words); the longest such entry wins.
+ * `known` (the SJR title index) holds full journal names. When the venue is one of them, an entry that is another of
+ * them is a different journal ("acta orthopaedica belgica" is not "acta orthopaedica"), so it is never a match;
+ * nor is a shorter entry inside it (reverse), since a complete title with more words is a different journal.
+ * A forward match needs a venue name specific enough to be a truncation: one generic word ("computer", or "ieee"
+ * from "Proceedings of the IEEE") would match whatever list entry starts with it.
  */
-function findBestMatchEntry(normalizedVenue, map) {
+function findBestMatchEntry(normalizedVenue, map, known = null) {
   if (map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
+  const venueIsKnownJournal = !!known?.has?.(normalizedVenue);
+  const venueIsSpecific = normalizedVenue.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || normalizedVenue.includes(" ");
   let forward = null;
   let forwardAgrees = true;
   let forwardCount = 0;
   let reverse = null;
   for (const [key, value] of map.entries()) {
+    if (venueIsKnownJournal && known.has(key)) continue;
     if (key.startsWith(normalizedVenue + " ")) {
+      if (!venueIsSpecific) continue;
       forwardCount += 1;
       if (!forward) forward = [key, value];
       else if (String(forward[1]) !== String(value)) forwardAgrees = false;
       else if (key.length < forward[0].length) forward = [key, value];
-    } else if (normalizedVenue.startsWith(key + " ")) {
+    } else if (!venueIsKnownJournal && normalizedVenue.startsWith(key + " ")) {
       // Require key to be multi-word or long enough so "ais" doesn't match "ais transactions on replication research" (journal)
       if ((key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" ")) && (!reverse || key.length > reverse[0].length)) {
         reverse = [key, value];
@@ -503,7 +512,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // Badge kind -> the list entry a prefix (not exact) match landed on, shown on hover so a wrong match is visible.
   const nearMatch = {};
   const fuzzy = (kind, map) => {
-    const entry = findBestMatchEntry(v, map);
+    const entry = findBestMatchEntry(v, map, qIndex.quartiles);
     if (!entry) return null;
     if (entry[0] !== v) nearMatch[kind] = { key: entry[0], count: entry[2] || 1 };
     return entry[1];
