@@ -1,0 +1,33 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: node build.js
+      # The built extension in Microsoft Edge (preinstalled on GitHub's Ubuntu runners) against local Scholar-shaped
+      # fixtures; every Scholar URL is answered locally and other requests are blocked.
+      - name: End-to-end (offline fixtures, Edge)
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping e2e"; exit 0; fi
+          EDGE_PATH="$EDGE" npm run e2e
+      - name: Accessibility (axe-core, light and dark)
+        run: |
+          EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
+          if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping a11y"; exit 0; fi
+          EDGE_PATH="$EDGE" npm run a11y

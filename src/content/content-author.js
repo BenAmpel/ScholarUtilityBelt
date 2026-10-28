@@ -30,7 +30,7 @@ function oaKey() {
 function normalizeText(str) {
   return String(str || "")
     .toLowerCase()
-    .replace(/[\.,\/#!$%\^&\*;:{}=\_`~?"""()\[\]]/g, " ")
+    .replace(/[.,/#!$%^&*;:{}=_`~?"()[\]]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
