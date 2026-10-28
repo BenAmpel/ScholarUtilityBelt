@@ -1321,3 +1321,71 @@ initAskSettings().catch(() => {});
 renderProStatus();
 initPromoCard();
 initRatingPrompt();
+
+// "Where the built-in badges come from": one row per bundled list. Counts are read from the files themselves when the
+// section is first opened (about 2 MB of local files), so the table cannot drift from the data that makes the badges.
+const BADGE_SOURCES = [
+  { badge: "Q1–Q4", name: "SCImago Journal Rank", file: "scimago_2024_quartiles.json", url: "https://www.scimagojr.com/journalrank.php" },
+  { badge: "ABDC", name: "ABDC Journal Quality List 2025", file: "abdc2025.csv", key: "abdc2025" },
+  { badge: "ABS", name: "Chartered ABS Academic Journal Guide 2024", file: "abs2024.csv", key: "abs2024" },
+  { badge: "VHB", name: "VHB JOURQUAL 2024", file: "vhb2024.csv", key: "vhb2024" },
+  { badge: "FNEGE", name: "FNEGE 2025, from the Harzing Journal Quality List (72nd edition)", file: "fnege2025.csv", key: "fnege2025" },
+  { badge: "FT50", name: "Financial Times 50 research journals", file: "ft50.txt", key: "ft50" },
+  { badge: "UTD24", name: "UT Dallas 24 journals", file: "utd24.txt", key: "utd24" },
+  { badge: "CORE", name: "CORE/ICORE 2026 conference ranking", file: "core_icore2026.csv", key: "core_icore2026" },
+  { badge: "CCF", name: "China Computer Federation recommended venues", file: "ccf_ranks.csv" },
+  { badge: "ERA 2023", name: "Excellence in Research for Australia 2023 journal list", file: "era2023.txt" },
+  { badge: "Level 1/2", name: "Norwegian Register for Scientific Journals", file: "norwegian_compact.json" },
+  { badge: "h5", name: "Google Scholar Metrics 5-year h-index", file: "venue_h5_index.json" },
+  { badge: "IF", name: "Journal Impact Factor 2024", file: "journal_impact_2024.csv" },
+];
+
+function countListEntries(file, text) {
+  if (file.endsWith(".json")) {
+    const data = JSON.parse(text);
+    if (data?.meta?.journalCount) return { count: data.meta.journalCount, year: data.meta.year };
+    return { count: Object.keys(data?.index || data || {}).length };
+  }
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+  const header = /^(venue|journal name)\b/i.test(lines[0] || "") ? 1 : 0;
+  return { count: lines.length - header };
+}
+
+async function renderBadgeSources() {
+  const tbody = document.querySelector("#badgeSourcesTable tbody");
+  if (!tbody || tbody.childElementCount) return;
+  const base = chrome.runtime.getURL("src/data/");
+  let manifest = {};
+  try { manifest = (await (await fetch(base + "quality_sources.json")).json())?.sources || {}; } catch (_) { /* links are optional */ }
+  for (const src of BADGE_SOURCES) {
+    const tr = document.createElement("tr");
+    const badgeCell = document.createElement("td");
+    badgeCell.textContent = src.badge;
+    const nameCell = document.createElement("td");
+    const countCell = document.createElement("td");
+    countCell.className = "num";
+    countCell.textContent = "…";
+    const url = src.url || manifest[src.key]?.url;
+    let name = src.name;
+    try {
+      const { count, year } = countListEntries(src.file, await (await fetch(base + src.file)).text());
+      if (year) name = `${name} ${year}`;
+      countCell.textContent = count.toLocaleString();
+    } catch (_) {
+      countCell.textContent = "not loaded";
+    }
+    if (url && /^https:\/\//.test(url)) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = name;
+      nameCell.appendChild(a);
+    } else {
+      nameCell.textContent = name;
+    }
+    tr.append(badgeCell, nameCell, countCell);
+    tbody.appendChild(tr);
+  }
+}
+el("badgeSources")?.addEventListener("toggle", (e) => { if (e.target.open) renderBadgeSources(); });

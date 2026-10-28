@@ -879,3 +879,13 @@ a:focus-visible {
   a:not([class]) { color: var(--accent); }
 }
 .badge-preview-mini { overflow-x: hidden; }
+
+/* Where the built-in badges come from */
+.badge-sources { margin: 4px 0 16px; }
+.badge-sources summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.badge-sources summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.badge-sources-wrap { overflow-x: auto; }
+.badge-sources table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.badge-sources th, .badge-sources td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(127, 127, 127, 0.25); vertical-align: top; }
+.badge-sources td:first-child { white-space: nowrap; font-weight: 600; }
+.badge-sources td.num, .badge-sources th:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
