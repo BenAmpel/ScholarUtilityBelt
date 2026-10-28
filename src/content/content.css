@@ -5503,3 +5503,8 @@ body[data-su-theme="dark"] .su-pro-prompt-btn:hover { background: #3c4043; }
 .su-reload-banner-btn:focus-visible { outline: 2px solid #6d28d9; outline-offset: 2px; }
 body[data-su-theme="dark"] .su-reload-banner { background: #3a2a07; border-color: #b45309; color: #fde68a; }
 body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-color: #b45309; color: #fde68a; }
+
+/* Badge from a close (prefix) list match rather than an exact venue match: a dashed edge marks it, and the
+   tooltip names the list entry so a wrong match can be spotted. */
+.su-badge.su-badge-near-match { outline: 1px dashed currentColor; outline-offset: 1px; }
+.su-badge-tooltip .su-badge-near { display: inline-block; margin-top: 4px; max-width: 280px; white-space: normal; }

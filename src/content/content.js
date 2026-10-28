@@ -3690,6 +3690,14 @@
       const val = Number(meta.impact);
       if (Number.isFinite(val)) parts.push(`Impact Factor: <strong>${val.toFixed(1)}</strong>`);
     }
+    // A prefix match can land on a different venue that shares a name start; say which entry it was so a wrong
+    // badge is visible rather than silently trusted.
+    if (meta.nearMatch) {
+      const read = escapeHtml(meta.venueRead || "");
+      parts.push(meta.nearMatchCount > 1
+        ? `<span class="su-badge-near">Close match, not exact. ${meta.nearMatchCount} list entries begin with "${read}" (one is "${escapeHtml(meta.nearMatch)}") and all give this value.</span>`
+        : `<span class="su-badge-near">Close match, not exact. This result's venue reads "${read}"; the list entry is "${escapeHtml(meta.nearMatch)}". If those are different venues, ignore this badge.</span>`);
+    }
     tooltip.innerHTML = parts.join("<br>");
     return tooltip;
   }
@@ -4213,6 +4221,10 @@
         span.className = `su-badge su-${b.kind}${extraClass}`;
         span.textContent = b.text;
         span.title = badgeKindTitles[b.kind] || (b.metadata?.system ? `${b.text}: ${b.metadata.system}` : b.text);
+        if (b.metadata?.nearMatch) {
+          span.title += ` Close match, not exact: list entry "${b.metadata.nearMatch}".`;
+          span.classList.add("su-badge-near-match");
+        }
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {
           const tooltip = createBadgeTooltip(b);
