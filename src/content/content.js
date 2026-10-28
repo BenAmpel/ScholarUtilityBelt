@@ -14008,6 +14008,36 @@
       }
       return urls.length;
     };
+    // Copy the DOIs the visible results show (from their links or snippets; no lookup), one per line.
+    const copyDoisBtn = document.createElement("button");
+    copyDoisBtn.type = "button";
+    copyDoisBtn.className = "su-filter-clear su-copy-dois";
+    copyDoisBtn.textContent = "Copy DOIs";
+    copyDoisBtn.title = "Copy the DOIs shown by the visible results, one per line (only results whose own links or snippet contain a DOI).";
+    copyDoisBtn.addEventListener("click", async () => {
+      const { results } = scanResults();
+      const dois = [];
+      for (const r of results) {
+        if (r.classList.contains("su-filtered-out") || r.classList.contains("su-hidden") || r.style.display === "none") continue;
+        const doi = findResultDoi(
+          Array.from(r.querySelectorAll("a[href]")).map((a) => a.getAttribute("href") || ""),
+          r.querySelector(".gs_rs")?.textContent || ""
+        );
+        if (doi && !dois.includes(doi)) dois.push(doi);
+      }
+      const prev = "Copy DOIs";
+      if (!dois.length) {
+        copyDoisBtn.textContent = "No DOIs on this page";
+      } else {
+        try {
+          await navigator.clipboard.writeText(dois.join("\n"));
+          copyDoisBtn.textContent = `Copied ${dois.length} DOI${dois.length === 1 ? "" : "s"}`;
+        } catch (_) {
+          copyDoisBtn.textContent = "Could not copy";
+        }
+      }
+      setTimeout(() => { copyDoisBtn.textContent = prev; }, 2500);
+    });
     const openPdfBtn = document.createElement("button");
     openPdfBtn.type = "button";
     openPdfBtn.className = "su-filter-clear su-batch-open-pdf";
@@ -14375,6 +14405,7 @@
       row.appendChild(clearBtn);
       row.appendChild(loadMoreBtn);
       row.appendChild(openPdfBtn);
+      row.appendChild(copyDoisBtn);
       row.appendChild(reviewBtn);
       if (summarizeBtn) row.appendChild(summarizeBtn);
       if (triageBtn) row.appendChild(triageBtn);

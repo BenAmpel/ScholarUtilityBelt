@@ -60,6 +60,13 @@ try {
   const badges = await p.locator(".su-badge").count();
   const rowsWithQuality = await p.evaluate(() => [...document.querySelectorAll(".gs_r.gs_or")].filter((r) => r.querySelector(".su-quartile, .su-ft50, .su-utd24, .su-abdc, .su-h5")).length);
   const doiBtns = await p.evaluate(() => [...document.querySelectorAll('button[data-act="copydoi"]')].map((b) => b.dataset.doi));
+  await p.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://scholar.google.com" }).catch(() => {});
+  await p.locator("button", { hasText: /^Filter/ }).first().click().catch(() => {});
+  await p.locator("button.su-copy-dois").first().click().catch(() => {});
+  await p.waitForTimeout(500);
+  const copyLabel = (await p.locator("button.su-copy-dois").first().textContent().catch(() => "")) || "";
+  const clip = await p.evaluate(() => navigator.clipboard.readText().catch(() => "")).catch(() => "");
+  check("Copy DOIs copies the page's DOIs", /Copied 1 DOI/.test(copyLabel) && clip.trim() === "10.1038/nature14539", `"${copyLabel.trim()}" clipboard "${clip.trim()}"`);
   check("DOI button appears only where the result shows a DOI", doiBtns.length === 1 && doiBtns[0] === "10.1038/nature14539", JSON.stringify(doiBtns));
   check("results page shows badges", badges > 0, `${badges} badges, ${rowsWithQuality}/10 rows with a ranking badge, first after ${firstBadgeMs} ms`);
   // The first page also pays for the extension's cold start (worker boot, data files), which on a busy CI runner can
