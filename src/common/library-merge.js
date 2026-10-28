@@ -17,6 +17,7 @@ function isPlainObject(v) {
 export function normalizeTitleForMatch(title) {
   return String(title || "")
     .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }

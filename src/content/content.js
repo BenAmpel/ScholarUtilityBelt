@@ -1077,7 +1077,7 @@
     const entry = doc.querySelector("entry");
     if (!entry) return null;
     const idText = entry.querySelector("id")?.textContent || "";
-    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\\d+)?/i);
+    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\d+)?/i);
     const version = idMatch?.[2] || "";
     const published = entry.querySelector("published")?.textContent || "";
     const updated = entry.querySelector("updated")?.textContent || "";
@@ -1216,14 +1216,14 @@
   function normalizeOpenAlexId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/W\\d+/i);
+    const match = raw.match(/W\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
   function normalizeOpenAlexAuthorId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/A\\d+/i);
+    const match = raw.match(/A\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
@@ -1284,8 +1284,9 @@
   function normalizeTitleForMatch(title) {
     return String(title || "")
       .toLowerCase()
-      .replace(/[^a-z0-9\\s]/g, " ")
-      .replace(/\\s+/g, " ")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
   function looksLikeDoi(raw) {
@@ -1699,9 +1700,9 @@
   }
   function extractArxivIdFromUrl(url) {
     const u = String(url || "");
-    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\\d+)?/i);
+    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\d+)?/i);
     if (m) return m[1];
-    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\\d+)?/i);
+    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\d+)?/i);
     if (m2) return m2[1];
     return null;
   }
@@ -1944,7 +1945,7 @@
       const lower = tok.toLowerCase();
       if (lower.length < 2) continue;
       if (TOPIC_TOKEN_STOPWORDS.has(lower)) continue;
-      if (/^\\d+$/.test(lower)) continue;
+      if (/^\d+$/.test(lower)) continue;
       const existing = map.get(lower);
       if (existing) {
         existing.count++;
