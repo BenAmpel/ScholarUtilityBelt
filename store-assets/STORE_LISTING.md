@@ -135,6 +135,8 @@ Fewer requests to Google Scholar: opening an author profile no longer presses "S
 
 New: a DOI button on results whose own links or snippet contain a DOI copies it (Scholar does not show DOIs), and "Copy DOIs" in the filter bar copies every DOI on the page. Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, the review workspace logs each Scholar search you add results from (query, date, page address, counts) next to database imports, and text contrast meets WCAG AA in light and dark mode.
 
+For Firefox (AMO "Release notes"), leave out the PDF file-name sentence: Firefox has no API for suggesting a download name, so the Firefox build drops that feature. The text is in output/firefox-store/release-notes.txt.
+
 ## Release notes for 1.0.2 (paste into the dashboard's "What's new")
 
 The store name is now "Scholar Utility Belt for Google Scholar". Nothing else changed.
