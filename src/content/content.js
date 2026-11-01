@@ -11699,7 +11699,8 @@
   async function fetchGzipText(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load ${url}`);
-    if (!res.body || typeof DecompressionStream === "undefined") {
+    // The Edge package stores these files uncompressed (Edge refuses compressed files in a package).
+    if (!url.endsWith(".gz") || !res.body || typeof DecompressionStream === "undefined") {
       return await res.text();
     }
     const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
