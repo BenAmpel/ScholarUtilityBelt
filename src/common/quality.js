@@ -90,9 +90,10 @@ export function extractVenueFromAuthorsVenue(authorsVenue) {
       // Remove page numbers if present (e.g., "236-265")
       venue = venue.replace(/,\s*\d+[-–]\d+$/, "");
       // Remove volume/issue numbers - these prevent matching with quality indices
-      // Patterns: "41 (1)", "41(1)", "Vol. 41", "Volume 41", "V41", "No. 1", etc.
-      venue = venue.replace(/\s*(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
-      venue = venue.replace(/\s*(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
+      // Patterns: "41 (1)", "41(1)", "Vol. 41", "Volume 41", "V41", "No. 1", etc. The \b keeps the V of "ICCV 2021",
+      // "ECCV 2020" and "WACV 2021" (they read as "ICC", "ECC", "WAC" and took those conferences' ranks).
+      venue = venue.replace(/\s*\b(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
+      venue = venue.replace(/\s*\b(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
       venue = venue.replace(/\s*\d+\s*\([^)]*\)/g, ""); // "41 (1)" or "41(1)"
       venue = venue.replace(/\s*\(\d+\)/g, ""); // "(1)" standalone
       // Remove common publisher suffixes like "· Publisher Name"
@@ -106,8 +107,8 @@ export function extractVenueFromAuthorsVenue(authorsVenue) {
     // Remove trailing page numbers
     venue = venue.replace(/,\s*\d+[-–]\d+$/, "");
     // Remove volume/issue numbers
-    venue = venue.replace(/\s*(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
-    venue = venue.replace(/\s*(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
+    venue = venue.replace(/\s*\b(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
+    venue = venue.replace(/\s*\b(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
     venue = venue.replace(/\s*\d+\s*\([^)]*\)/g, "");
     venue = venue.replace(/\s*\(\d+\)/g, "");
     return venue.trim();
@@ -124,8 +125,8 @@ export function extractVenueFromAuthorsVenue(authorsVenue) {
       // Remove page numbers if present
       venue = venue.replace(/,\s*\d+[-–]\d+$/, "");
       // Remove volume/issue numbers
-      venue = venue.replace(/\s*(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
-      venue = venue.replace(/\s*(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
+      venue = venue.replace(/\s*\b(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
+      venue = venue.replace(/\s*\b(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
       venue = venue.replace(/\s*\d+\s*\([^)]*\)/g, "");
       venue = venue.replace(/\s*\(\d+\)/g, "");
       // Remove publisher suffixes
@@ -139,8 +140,8 @@ export function extractVenueFromAuthorsVenue(authorsVenue) {
       // Remove page numbers if present
       venue = venue.replace(/,\s*\d+[-–]\d+$/, "");
       // Remove volume/issue numbers
-      venue = venue.replace(/\s*(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
-      venue = venue.replace(/\s*(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
+      venue = venue.replace(/\s*\b(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
+      venue = venue.replace(/\s*\b(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
       venue = venue.replace(/\s*\d+\s*\([^)]*\)/g, "");
       venue = venue.replace(/\s*\(\d+\)/g, "");
       return venue.trim();
@@ -150,8 +151,8 @@ export function extractVenueFromAuthorsVenue(authorsVenue) {
     // Remove trailing page numbers
     venue = venue.replace(/,\s*\d+[-–]\d+$/, "");
     // Remove volume/issue numbers
-    venue = venue.replace(/\s*(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
-    venue = venue.replace(/\s*(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
+    venue = venue.replace(/\s*\b(?:Vol\.?|Volume|V\.?)\s*\d+/gi, "");
+    venue = venue.replace(/\s*\b(?:No\.?|Number|Issue|Iss\.?)\s*\d+/gi, "");
     venue = venue.replace(/\s*\d+\s*\([^)]*\)/g, "");
     venue = venue.replace(/\s*\(\d+\)/g, "");
     return venue.trim();
@@ -288,6 +289,19 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
+  // MDPI journals are in SJR as "Applied Sciences (Switzerland)", while Scholar writes "Applied Sciences", which is
+  // also the name of a different, smaller journal. Where the two quartiles differ the bare name is ambiguous: no
+  // quartile, and no near match to either journal's other badges.
+  const ambiguousTitles = new Set();
+  for (const key of [...quartiles.keys()]) {
+    if (!key.endsWith(" switzerland")) continue;
+    const bare = key.slice(0, -" switzerland".length);
+    if (quartiles.has(bare) && quartiles.get(bare) !== quartiles.get(key)) {
+      quartiles.delete(bare);
+      ambiguousTitles.add(bare);
+    }
+  }
+
   const extraJcr = extra?.jcrIndex || null;
   if (extraJcr && typeof extraJcr === "object") {
     for (const [name, obj] of Object.entries(extraJcr)) {
@@ -375,17 +389,12 @@ export function compileQualityIndex(settings, extra = {}) {
   const eraMap = new Map();
   for (const entry of era) eraMap.set(entry, "listed");
 
-  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, eraMap, norwegian, abs, h5 };
+  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, eraMap, norwegian, abs, h5, ambiguousTitles };
 }
 
 
 // Minimum key length when venue "starts with key" so short abbreviations (e.g. "ais") don't match journals like "AIS Transactions on Replication Research"
 const MIN_KEY_LENGTH_FOR_PREFIX_MATCH = 12;
-
-function findBestMatch(normalizedVenue, map) {
-  const entry = findBestMatchEntry(normalizedVenue, map);
-  return entry ? entry[1] : null;
-}
 
 /**
  * findBestMatch, returning the [listKey, value] pair so a badge can say which list entry it came from.
@@ -400,10 +409,32 @@ function findBestMatch(normalizedVenue, map) {
  * A forward match needs a venue name specific enough to be a truncation: one generic word ("computer", or "ieee"
  * from "Proceedings of the IEEE") would match whatever list entry starts with it.
  */
-function findBestMatchEntry(normalizedVenue, map, known = null) {
-  if (map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
-  const venueIsKnownJournal = !!known?.has?.(normalizedVenue);
-  const venueIsSpecific = normalizedVenue.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || normalizedVenue.includes(" ");
+// Words that make a venue line a different, lesser venue than the list entry it starts with: "ACM CCS Workshops",
+// "... Companion", "... Doctoral Consortium". A reverse match is never allowed to drop them.
+const COMPANION_WORDS = new Set(["workshop", "workshops", "companion", "consortium", "doctoral", "abstracts", "demo",
+  "demos", "demonstrations", "poster", "posters", "tutorial", "tutorials", "symposium", "student", "industry", "letters",
+  "supplement"]);
+
+// What a reverse match may leave over after the list entry. Allowed: numbers, "special issue", an acronym or short
+// code ("journal of marketing research jmr"), or the acronym and year a conference line repeats before a main-program
+// track ("... neurips 2026 evaluations and datasets track"). Anything else is another title: "management science and
+// engineering" is not "management science", "acm ccs workshops" is not ACM CCS.
+function reverseLeftoverOk(leftover) {
+  const words = leftover.split(" ").filter(Boolean);
+  if (!words.length || words.some((w) => COMPANION_WORDS.has(w))) return false;
+  if (words.every((w) => /^\d+$/.test(w))) return true;
+  if (words[0] === "special" && words[1] === "issue") return true;
+  if (/^[a-z]{2,10}\d{0,2} (?:19|20)\d{2}\b/.test(leftover)) return true;
+  return words.length === 1 && words[0].length <= 8 && !["and", "of", "on", "for", "in", "the"].includes(words[0]);
+}
+
+function findBestMatchEntry(normalizedVenue, map, known = null, { truncated = false, noReverse = false } = {}) {
+  // A venue Scholar cut short ("Information Systems …") is not that exact title; only longer entries can be it.
+  if (!truncated && map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
+  const venueIsKnownJournal = !truncated && !!known?.has?.(normalizedVenue);
+  // A forward match needs at least two words: one word ("sustainability", "communications") is a whole title of its
+  // own far more often than the cut-off start of a longer one.
+  const venueIsSpecific = normalizedVenue.includes(" ");
   let forward = null;
   let forwardAgrees = true;
   let forwardCount = 0;
@@ -416,9 +447,10 @@ function findBestMatchEntry(normalizedVenue, map, known = null) {
       if (!forward) forward = [key, value];
       else if (String(forward[1]) !== String(value)) forwardAgrees = false;
       else if (key.length < forward[0].length) forward = [key, value];
-    } else if (!venueIsKnownJournal && normalizedVenue.startsWith(key + " ")) {
+    } else if (!truncated && !noReverse && !venueIsKnownJournal && normalizedVenue.startsWith(key + " ")) {
       // Require key to be multi-word or long enough so "ais" doesn't match "ais transactions on replication research" (journal)
-      if ((key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" ")) && (!reverse || key.length > reverse[0].length)) {
+      if ((key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" ")) && (!reverse || key.length > reverse[0].length)
+        && reverseLeftoverOk(normalizedVenue.slice(key.length + 1))) {
         reverse = [key, value];
       }
     }
@@ -432,13 +464,30 @@ function findBestMatchEntry(normalizedVenue, map, known = null) {
  * normalised venue to label. Exact match first, then the same prefix match the built-in
  * lists use. Kept out of compileQualityIndex so editing the list never invalidates its cache.
  */
+// Scholar marks a cut-off venue with "…" (or "..."). One at the start means the name's head is missing.
+const ELLIPSIS = /…|\.\.\./;
+function isTruncatedVenue(venue) {
+  return ELLIPSIS.test(String(venue || ""));
+}
+
+function cutNameIsAmbiguous(v, known) {
+  if (!known?.keys) return false;
+  let n = 0;
+  for (const key of known.keys()) if (key === v || key.startsWith(v + " ")) if (++n > 1) return true;
+  return false;
+}
+
 export function customBadgeForVenue(venue, custom) {
   if (!custom || !custom.map || !custom.map.size) return null;
   const v = normalizeVenueName(venue);
   if (!v) return null;
-  const label = custom.map.get(v) || findBestMatch(v, custom.map);
-  if (!label) return null;
-  return { kind: "custom", text: String(label), metadata: { system: `Your list: ${custom.name || "My list"}` } };
+  // Exact, or a list entry that the venue is the cut-off start of; never a shorter entry inside a longer venue
+  // ("Journal of Marketing" on the list is not "Journal of Marketing Research"). A near match says so on hover.
+  const entry = findBestMatchEntry(v, custom.map, null, { truncated: isTruncatedVenue(venue), noReverse: true });
+  if (!entry) return null;
+  const metadata = { system: `Your list: ${custom.name || "My list"}` };
+  if (entry[0] !== v) Object.assign(metadata, { nearMatch: entry[0], nearMatchCount: entry[2] || 1, venueRead: v });
+  return { kind: "custom", text: String(entry[1]), metadata };
 }
 
 // Pre-print server identifiers; display label used for badge. Checked against raw venue string (case-insensitive).
@@ -515,9 +564,18 @@ export function qualityBadgesForVenue(venue, qIndex) {
   let impactBadge = null;
   // Badge kind -> the list entry a prefix (not exact) match landed on, shown on hover so a wrong match is visible.
   const nearMatch = {};
-  const venueIsKnownTitle = !!qIndex.quartiles?.has?.(v);
+  // "Information Systems …" is the start of a longer name, not the journal Information Systems: no exact matches,
+  // only list entries that begin with it. "… Science" has lost its head, so no list badge at all.
+  const truncated = isTruncatedVenue(venue);
+  // A cut name that several journals start with ("Information Systems …": Information Systems Journal, ... Research,
+  // ... Frontiers) could be any of them, even when one list holds only one of them. Then no list badge.
+  const headCut = /^\s*(?:…|\.\.\.)/.test(String(venue || "")) || (truncated && cutNameIsAmbiguous(v, qIndex.quartiles))
+    || !!qIndex.ambiguousTitles?.has?.(v);
+  const exact = (map) => (truncated ? undefined : map?.get?.(v));
+  const venueIsKnownTitle = !truncated && !!qIndex.quartiles?.has?.(v);
   const fuzzy = (kind, map) => {
-    const entry = findBestMatchEntry(v, map, qIndex.quartiles);
+    if (headCut) return null;
+    const entry = findBestMatchEntry(v, map, qIndex.quartiles, { truncated });
     if (!entry) return null;
     if (entry[0] !== v) nearMatch[kind] = { key: entry[0], count: entry[2] || 1 };
     return entry[1];
@@ -531,7 +589,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (findings) badges.push(findings);
 
   // Try exact match first, then fuzzy match for ABDC
-  let abdc = qIndex.abdc.get(v);
+  let abdc = exact(qIndex.abdc);
   if (!abdc) {
     abdc = fuzzy("abdc", qIndex.abdc);
   }
@@ -541,7 +599,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
     badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: "ABDC Journal Quality List 2025" } });
   }
 
-  let vhb = qIndex.vhb?.get?.(v);
+  let vhb = exact(qIndex.vhb);
   if (!vhb && qIndex.vhb) vhb = fuzzy("vhb", qIndex.vhb);
   const VALID_VHB = /^A\+?$|^[BCDE]$/i;
   if (vhb && VALID_VHB.test(String(vhb).trim())) {
@@ -549,7 +607,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
     badges.push({ kind: "vhb", text: `VHB ${r}`, metadata: { rank: r, system: "VHB JOURQUAL 2024" } });
   }
 
-  let fnege = qIndex.fnege?.get?.(v);
+  let fnege = exact(qIndex.fnege);
   if (!fnege && qIndex.fnege) fnege = fuzzy("fnege", qIndex.fnege);
   const VALID_FNEGE = /^1\*?$|^[234]$/i;
   if (fnege && VALID_FNEGE.test(String(fnege).trim())) {
@@ -557,7 +615,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
     badges.push({ kind: "fnege", text: `FNEGE ${r}`, metadata: { rank: r, system: "FNEGE 2025 (via Harzing JQL 72)" } });
   }
 
-  let abs = qIndex.abs?.get?.(v);
+  let abs = exact(qIndex.abs);
   if (!abs && qIndex.abs) abs = fuzzy("abs", qIndex.abs);
   const VALID_ABS = /^4\*?$|^[1234]$/i;
   if (abs && VALID_ABS.test(String(abs).trim())) {
@@ -566,7 +624,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   const VALID_QUARTILE = /^Q[1-4]$/i;
-  const jcr = qIndex.jcr?.get?.(v) || null;
+  const jcr = exact(qIndex.jcr) || null;
   if (jcr) {
     if (jcr.jifQ && VALID_QUARTILE.test(String(jcr.jifQ))) badges.push({ kind: "jcr", text: `JIF ${String(jcr.jifQ).toUpperCase()}`, metadata: { quartile: jcr.jifQ, system: "JCR Journal Impact Factor", jif: jcr.jif, jcrData: jcr } });
     if (jcr.jciQ && VALID_QUARTILE.test(String(jcr.jciQ))) badges.push({ kind: "jcr", text: `JCI ${String(jcr.jciQ).toUpperCase()}`, metadata: { quartile: jcr.jciQ, system: "JCR Journal Citation Indicator", jci: jcr.jci, jcrData: jcr } });
@@ -575,7 +633,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
       badges.push({ kind: "jcr", text: `5Y ${String(jcr.fiveYJifQ).toUpperCase()}`, metadata: { quartile: jcr.fiveYJifQ, system: "JCR 5-Year Impact Factor", fiveYJif: jcr.fiveYJif, jcrData: jcr } });
   }
 
-  let impact = qIndex.impact?.get?.(v);
+  let impact = exact(qIndex.impact);
   if (impact == null && qIndex.impact) impact = fuzzy("if", qIndex.impact);
   const impactNum = typeof impact === "number" ? impact : parseFloat(String(impact || "").replace(/[^0-9.]/g, ""));
   if (Number.isFinite(impactNum) && impactNum > 0) {
@@ -583,29 +641,33 @@ export function qualityBadgesForVenue(venue, qIndex) {
     impactBadge = { kind: "if", text: `IF ${display}`, metadata: { impact: impactNum, system: "Journal Impact Factor (2024)" } };
   }
 
-  // Resolve CORE and CCF first so we can treat venue as conference when present
-  let core = qIndex.core.get(v);
+  // Resolve CORE and CCF first so we can treat venue as conference when present.
+  // ICIS first: the bare acronym "icis" is also another, C-ranked conference in the CORE portal list.
   // TREOs ("Technology, Research, Education, and Opinion") are ICIS's own separate,
   // non-archival 1-2 page extended-abstract track -- not the peer-reviewed main
-  // proceedings the CORE A* rank below describes, e.g. "ICIS 2025 TREOS, 98".
-  if (!core && (v.startsWith("icis ") || v === "icis") && !/\btreos?\b/.test(v)) {
+  // proceedings the CORE A* rank below describes, e.g. "ICIS 2025 TREOS, 98". Workshops and the
+  // doctoral consortium are not the main proceedings either.
+  const companionTrack = /\b(?:treos?|workshops?|doctoral|consortium)\b/.test(v);
+  let core = null;
+  if ((v.startsWith("icis ") || v === "icis") && !companionTrack) {
     core = qIndex.core.get("international conference on information systems");
   }
+  if (!core) core = exact(qIndex.core);
   // "42nd International Conference on Information Systems (ICIS), 1-8" → ICIS (avoid matching ISD/other "International Conference on Information Systems *")
   if (!core && v.startsWith("international conference on information systems") && (v === "international conference on information systems" || v.includes(" icis"))) {
     core = qIndex.core.get("international conference on information systems");
   }
-  if (!core && v.startsWith("americas") && v.includes("conference on information systems")) {
+  if (!core && v.startsWith("americas") && v.includes("conference on information systems") && !companionTrack) {
     core = qIndex.core.get("americas conference on information systems");
   }
-  if (!core && v.startsWith("hawaii international conference on system sciences")) {
+  if (!core && v.startsWith("hawaii international conference on system sciences") && !companionTrack) {
     core = qIndex.core.get("hawaii international conference on system sciences");
   }
   if (!core) {
     core = fuzzy("core", qIndex.core);
   }
-  let ccf = qIndex.ccf?.get?.(v) || (qIndex.ccf ? fuzzy("ccf", qIndex.ccf) : null);
-  const exactQuartile = qIndex.quartiles.get(v);
+  let ccf = exact(qIndex.ccf) || (qIndex.ccf ? fuzzy("ccf", qIndex.ccf) : null);
+  const exactQuartile = exact(qIndex.quartiles);
   // Known journal (exact quartile match): don't show CORE/CCF. CORE/CCF are for conferences; a journal can falsely match when a conference name starts with the journal name (e.g. "Information Systems Research" matching "Information Systems Research Seminar in Scandinavia").
   if (exactQuartile) {
     core = null;
@@ -618,7 +680,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const looksLikeWorkshop = /\bworkshops?\b/.test(v);
   if (exactQuartile || !isConference) {
     const q = exactQuartile || (looksLikeWorkshop ? null : fuzzy("quartile", qIndex.quartiles));
-    if (q && VALID_QUARTILE.test(String(q))) badges.push({ kind: "quartile", text: String(q).toUpperCase(), metadata: { quartile: q, system: "SCImago Journal Rank (SJR)" } });
+    if (q && VALID_QUARTILE.test(String(q))) badges.push({ kind: "quartile", text: String(q).toUpperCase(), metadata: { quartile: q, system: "SCImago Journal Rank 2024, best quartile across the journal's subject categories" } });
   }
 
   // For sets (ft50, utd24), check exact match and prefix matches
@@ -628,9 +690,10 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // ("Information Systems", Elsevier, is not "Information Systems Research"), and a forward match needs a venue
   // specific enough to be a truncation, as in findBestMatchEntry ("management" alone is not "Management Science").
   const topListMatch = (set) => {
-    if (set.has(v)) return v;
+    if (headCut) return null;
+    if (!truncated && set.has(v)) return v;
     if (venueIsKnownTitle) return null;
-    if (v.length < MIN_KEY_LENGTH_FOR_PREFIX_MATCH && !v.includes(" ")) return null;
+    if (!v.includes(" ")) return null;
     for (const entry of set) if (entry.startsWith(v + " ")) return entry;
     return null;
   };
@@ -647,23 +710,23 @@ export function qualityBadgesForVenue(venue, qIndex) {
 
   const VALID_CORE = /^A\*?$|^[ABC]$/i;
   const VALID_CCF = /^[ABC]$/i;
-  if (core && VALID_CORE.test(String(core).trim())) badges.push({ kind: "core", text: `CORE ${String(core).trim().toUpperCase()}`, metadata: { rank: String(core).trim().toUpperCase(), system: "CORE/ICORE Conference Rankings" } });
+  if (core && VALID_CORE.test(String(core).trim())) badges.push({ kind: "core", text: `CORE ${String(core).trim().toUpperCase()}`, metadata: { rank: String(core).trim().toUpperCase(), system: "CORE Conference Rankings (ICORE2026; the older CORE portal rank where ICORE2026 has none)" } });
   if (ccf && VALID_CCF.test(String(ccf).trim())) badges.push({ kind: "ccf", text: `CCF ${String(ccf).trim().toUpperCase()}`, metadata: { rank: String(ccf).trim().toUpperCase(), system: "China Computer Federation Conference Rankings" } });
 
   // ERA's ~26,000 titles include many short generic ones ("Findings", "Analysis"); findBestMatchEntry's guards keep
   // "Findings of the Conference on Empirical Methods..." (ACL's Findings track) off the unrelated journal "Findings".
-  if (qIndex.era?.has?.(v) || (qIndex.eraMap && fuzzy("era", qIndex.eraMap))) {
+  if ((!truncated && qIndex.era?.has?.(v)) || (qIndex.eraMap && fuzzy("era", qIndex.eraMap))) {
     badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
   }
 
-  let norLevel = qIndex.norwegian?.get?.(v);
+  let norLevel = exact(qIndex.norwegian);
   if (norLevel == null && qIndex.norwegian) norLevel = fuzzy("norwegian", qIndex.norwegian);
   if (norLevel === "1" || norLevel === "2") badges.push({ kind: "norwegian", text: `Level ${norLevel}`, metadata: { level: norLevel, system: "Norwegian Register for Scientific Journals" } });
 
-  let h5Val = qIndex.h5?.get?.(v);
+  let h5Val = exact(qIndex.h5);
   if (h5Val == null && qIndex.h5) h5Val = fuzzy("h5", qIndex.h5);
   if (typeof h5Val === "number" && h5Val > 0) {
-    badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: "Google Scholar 5-year h-index" } });
+    badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: "Google Scholar Metrics 2025, 5-year h-index" } });
   }
 
   if (impactBadge) badges.push(impactBadge);

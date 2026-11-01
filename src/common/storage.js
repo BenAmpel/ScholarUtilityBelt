@@ -153,6 +153,7 @@ export const DEFAULT_SETTINGS = {
   qualityUtd24ListCustom: false,
   qualityAbdcRanksCustom: false,
   qualityVhbRanksCustom: false,
+  qualityFnegeRanksCustom: false,
   qualityCoreRanksCustom: false,
   qualityCcfRanksCustom: false,
   showSemanticExpansion: true,
