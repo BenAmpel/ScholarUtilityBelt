@@ -19,14 +19,14 @@ export const CHROME_ITEM_ID = "omcogfcgldfmihfogbffflbocdbjockn";
 export const AMO_SLUG = "google-scholar-utility-belt";
 export const DEFAULT_CREDENTIALS = path.join(os.homedir(), ".config", "scholar-belt", "store-credentials.json");
 const CHROME_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const CHROME_API = "https://chromewebstore.googleapis.com";
+const CHROME_API = "https://www.googleapis.com";
 const EDGE_API = "https://api.addons.microsoftedge.microsoft.com";
 const AMO_API = "https://addons.mozilla.org/api/v5";
 
 // Each store's credential fields: [key in the JSON file, env var].
 export const CREDENTIAL_FIELDS = {
   chrome: [["clientId", "SUB_CHROME_CLIENT_ID"], ["clientSecret", "SUB_CHROME_CLIENT_SECRET"],
-    ["refreshToken", "SUB_CHROME_REFRESH_TOKEN"], ["publisherId", "SUB_CHROME_PUBLISHER_ID"]],
+    ["refreshToken", "SUB_CHROME_REFRESH_TOKEN"]],
   edge: [["clientId", "SUB_EDGE_CLIENT_ID"], ["apiKey", "SUB_EDGE_API_KEY"], ["productId", "SUB_EDGE_PRODUCT_ID"]],
   firefox: [["jwtIssuer", "SUB_AMO_JWT_ISSUER"], ["jwtSecret", "SUB_AMO_JWT_SECRET"]],
 };
@@ -185,9 +185,10 @@ async function poll(fn, { sleep, interval, tries, what }) {
 }
 const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ---- Chrome Web Store API v2 ----
+// ---- Chrome Web Store API v1.1 ----
+// v1.1, not v2: on 2026-11-01 every v2 call for this item (with the dashboard's publisher id, "me" or "-") returned 403
+// while v1.1 with the same token read the item. v1.1 needs no publisher id.
 export function chromeClient(creds, { fetch = globalThis.fetch, sleep = defaultSleep, itemId = CHROME_ITEM_ID, interval = 5000, tries = 60 } = {}) {
-  const name = `publishers/${encodeURIComponent(creds.publisherId)}/items/${itemId}`;
   let token = null;
   const auth = async () => {
     if (token) return token;
@@ -199,30 +200,31 @@ export function chromeClient(creds, { fetch = globalThis.fetch, sleep = defaultS
     if (!token) throw new StoreError("Chrome OAuth token: no access_token in the response");
     return token;
   };
-  const headers = async (extra = {}) => ({ Authorization: `Bearer ${await auth()}`, ...extra });
+  const headers = async (extra = {}) => ({ Authorization: `Bearer ${await auth()}`, "x-goog-api-version": "2", ...extra });
+  const failed = (r) => `Chrome upload: ${r.uploadState} ${JSON.stringify(r.itemError || [])}`;
   return {
     async upload(buf) {
-      const res = await expectOk(await fetch(`${CHROME_API}/upload/v2/${name}:upload`, { method: "POST",
+      const res = await expectOk(await fetch(`${CHROME_API}/upload/chromewebstore/v1.1/items/${itemId}`, { method: "PUT",
         headers: await headers({ "Content-Type": "application/zip" }), body: buf }), "Chrome upload");
       const r = await res.json();
-      if (r.uploadState === "SUCCEEDED") return r;
-      // The enum page says IN_PROGRESS; the guide says UPLOAD_IN_PROGRESS. Accept both.
-      if (r.uploadState !== "IN_PROGRESS" && r.uploadState !== "UPLOAD_IN_PROGRESS")
-        throw new StoreError(`Chrome upload: state ${r.uploadState || "unknown"} ${JSON.stringify(r)}`);
+      if (r.uploadState === "SUCCESS") return r;
+      if (r.uploadState !== "IN_PROGRESS") throw new StoreError(failed(r));
       return poll(async () => {
-        const s = await (await expectOk(await fetch(`${CHROME_API}/v2/${name}:fetchStatus`, { headers: await headers() }), "Chrome status")).json();
-        const u = s.lastAsyncUploadState;
-        if (u === "SUCCEEDED") return { done: true, value: s };
-        if (u === "FAILED" || u === "NOT_FOUND") throw new StoreError(`Chrome upload: ${u}`);
+        const d = await (await expectOk(await fetch(`${CHROME_API}/chromewebstore/v1.1/items/${itemId}?projection=DRAFT`,
+          { headers: await headers() }), "Chrome status")).json();
+        if (d.uploadState === "SUCCESS") return { done: true, value: d };
+        if (d.uploadState === "FAILURE" || d.uploadState === "NOT_FOUND") throw new StoreError(failed(d));
         return { done: false };
       }, { sleep, interval, tries, what: "Chrome upload" });
     },
     async publish() {
-      // DEFAULT_PUBLISH submits for review and publishes once approved; skipReview stays false.
-      const res = await expectOk(await fetch(`${CHROME_API}/v2/${name}:publish`, { method: "POST",
-        headers: await headers({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ publishType: "DEFAULT_PUBLISH" }) }), "Chrome publish");
-      return res.json();
+      // Submits the draft for review; it is published once approved.
+      const res = await expectOk(await fetch(`${CHROME_API}/chromewebstore/v1.1/items/${itemId}/publish`, { method: "POST",
+        headers: await headers({ "Content-Length": "0" }) }), "Chrome publish");
+      const r = await res.json();
+      const ok = ["OK", "ITEM_PENDING_REVIEW"];
+      if (!(r.status || []).some((x) => ok.includes(x))) throw new StoreError(`Chrome publish: ${JSON.stringify(r)}`);
+      return r;
     },
   };
 }
@@ -338,7 +340,7 @@ export async function plan(opts, { root = ROOT, env = process.env, live = null, 
     } else if (!opts.offline) r.warnings.push("the listing showed no version");
     const missing = missingCredentials(creds, store);
     if (missing.length) r.problems.push(`credentials missing: ${missing.join(", ")} (see docs/store-publishing.md)`);
-    else if (store === "chrome") r.info.push(`publisher id ${creds.chrome.publisherId}, item ${CHROME_ITEM_ID}`);
+    else if (store === "chrome") r.info.push(`item ${CHROME_ITEM_ID}`);
     else if (store === "edge") r.info.push(`product id ${creds.edge.productId}`);
     const needed = store === "firefox" ? [["release notes", notes.release], ["approval notes", notes.approval]]
       : store === "edge" ? [["certification notes", notes.release]] : [];
@@ -394,11 +396,10 @@ export async function run(opts, { log = console.log, fetch = globalThis.fetch, s
       if (store === "chrome") {
         const c = chromeClient(report.creds.chrome, { fetch, sleep });
         const up = await c.upload(fs.readFileSync(pkg));
-        log(`chrome: uploaded ${up.crxVersion ? `version ${up.crxVersion}` : "the package"}`);
+        log(`chrome: uploaded the package (${up.uploadState})`);
         if (opts.submit) {
           const p = await c.publish();
-          const warns = (p.warningInfo?.warnings || []).map((w) => `\n  warning: ${w.reason} ${w.description || ""}`).join("");
-          log(`chrome: submitted, state ${p.state || "unknown"}${warns}`);
+          log(`chrome: submitted, status ${(p.status || []).join(", ")}${(p.statusDetail || []).map((d) => `\n  ${d}`).join("")}`);
         }
       } else if (store === "edge") {
         const c = edgeClient(report.creds.edge, { fetch, sleep });
