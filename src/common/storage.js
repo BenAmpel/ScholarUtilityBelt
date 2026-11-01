@@ -959,10 +959,40 @@ export async function getExternalSignalCache() {
   }
 }
 
+// The longest per-provider TTL in content.js (ROR, 180 days). Older entries are never read again, so they are dropped.
+const EXTERNAL_SIGNAL_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+
+/**
+ * Merge this tab's lookups into what is stored. Each Scholar tab keeps its own copy of the cache and used to write
+ * the whole copy back, so two open tabs overwrote each other's lookups and the APIs were asked again. For every DOI
+ * and provider the newer entry wins; entries past the longest TTL are dropped.
+ */
+export function mergeExternalSignalCaches(stored, local, now = Date.now()) {
+  const out = {};
+  for (const source of [stored, local]) {
+    if (!source || typeof source !== "object") continue;
+    for (const [key, providers] of Object.entries(source)) {
+      if (!providers || typeof providers !== "object") continue;
+      for (const [provider, entry] of Object.entries(providers)) {
+        const ts = Number(entry?.ts) || 0;
+        if (!ts || now - ts > EXTERNAL_SIGNAL_MAX_AGE_MS) continue;
+        const have = out[key]?.[provider];
+        if (have && (Number(have.ts) || 0) >= ts) continue;
+        (out[key] ||= {})[provider] = entry;
+      }
+    }
+  }
+  return out;
+}
+
 export async function setExternalSignalCache(cache) {
   try {
-    const pruned = pruneExternalSignalCache(cache || {});
-    await chrome.storage.local.set({ [EXTERNAL_SIGNAL_CACHE_KEY]: pruned });
+    return await withStorageLock(EXTERNAL_SIGNAL_CACHE_KEY, async () => {
+      const { [EXTERNAL_SIGNAL_CACHE_KEY]: stored } = await chrome.storage.local.get({ [EXTERNAL_SIGNAL_CACHE_KEY]: {} });
+      const merged = pruneExternalSignalCache(mergeExternalSignalCaches(stored, cache || {}));
+      await chrome.storage.local.set({ [EXTERNAL_SIGNAL_CACHE_KEY]: merged });
+      return merged;
+    });
   } catch (e) {
     if (isContextInvalidated(e)) return;
     throw e;
