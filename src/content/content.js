@@ -999,7 +999,13 @@
     externalSignalSaveTimer = setTimeout(() => {
       externalSignalSaveTimer = null;
       if (externalSignalCache) {
-        setExternalSignalCache(externalSignalCache).catch(() => {});
+        // The save merges with what other tabs stored; take in their lookups so this tab does not ask again.
+        setExternalSignalCache(externalSignalCache).then((merged) => {
+          if (!merged || !externalSignalCache) return;
+          for (const [key, providers] of Object.entries(merged)) {
+            if (!externalSignalCache[key]) externalSignalCache[key] = providers;
+          }
+        }).catch(() => {});
       }
     }, 8000); // the whole cache is rewritten each time, so batch lookups that finish close together
   }
