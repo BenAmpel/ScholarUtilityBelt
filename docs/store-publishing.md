@@ -72,22 +72,27 @@ any error text before printing. Never commit this file or paste its contents any
 
 ### Chrome Web Store (about 15 minutes)
 
-1. In the [Google Cloud console](https://console.cloud.google.com/), create a project (for example "SUB publishing").
+Done on 2026-11-01: the Google Cloud project is **SUB publishing** (`sub-publishing`, under ben.ampel@gmail.com). Its
+consent screen is In production, so the refresh token does not expire after 7 days. To create the credentials again,
+for example after revoking them:
+
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project, or reuse SUB publishing. The
+   console sometimes switches back to another project, so check the project name in the header before each step.
 2. Go to **APIs & Services > Library**, find **Chrome Web Store API** and click **Enable**.
-3. Set up the **OAuth consent screen** (Google Auth Platform): choose External, use your own email as the support and
-   developer contact, and add yourself as a test user. Then set the publishing status to **In production**. While the
-   app is in Testing, the refresh token expires after 7 days. An unverified app used only by you is fine; Google shows
-   a warning screen once.
-4. Go to **Credentials > Create credentials > OAuth client ID**. Choose type **Web application** and add the authorized
-   redirect URI `https://developers.google.com/oauthplayground`. Copy the client ID and client secret.
-5. Open the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground). Click the gear icon, tick **Use your
-   own OAuth credentials** and paste the client ID and secret. In Step 1, type the scope
-   `https://www.googleapis.com/auth/chromewebstore`, click **Authorize APIs** and sign in with the account that owns the
-   extension. That account needs 2-step verification. In Step 2, click **Exchange authorization code for tokens** and
-   copy the **refresh token**.
-6. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open **Account** (publisher settings)
-   and copy the **publisher ID**.
-7. Put the four values in the `chrome` block.
+3. In **Google Auth Platform**, create the consent screen: app name, your email as support contact, audience External,
+   developer contact email, and accept the User Data Policy. Under **Branding**, add a home page, privacy policy and
+   terms link on purplelink.llc and `purplelink.llc` as an authorized domain, then **Save**. Then go to **Audience** and
+   click **Publish app**: in Testing the refresh token expires after 7 days. An unverified app used only by you is
+   fine.
+4. Under **Clients**, click **Create client**, choose **Desktop app**, then **Download JSON**. The number at the start
+   of the client id must be the project number of the project from step 1.
+5. Run `node scripts/chrome_oauth_token.mjs ~/Downloads/client_secret_<...>.json`. It opens Google's consent page; sign
+   in with the account that owns the extension (it needs 2-step verification), continue past the "unverified app"
+   warning (Advanced) and click **Allow**. The script saves the client id, client secret and refresh token in the
+   `chrome` block and prints none of them. Delete the downloaded JSON afterwards.
+6. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open **Account** and copy the
+   **publisher ID** into the `chrome` block as `publisherId`. It is also the id in the dashboard's address
+   (`/webstore/devconsole/<publisher id>/...`).
 
 If you change the listing's visibility by hand in the dashboard, the API cannot publish until you have published once
 by hand with the new setting.
