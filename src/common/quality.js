@@ -371,7 +371,11 @@ export function compileQualityIndex(settings, extra = {}) {
     }
   }
 
-  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, norwegian, abs, h5 };
+  // ERA is a set of titles; the same Map shape lets it share findBestMatchEntry's near-match rules.
+  const eraMap = new Map();
+  for (const entry of era) eraMap.set(entry, "listed");
+
+  return { ft50, utd24, abdc, vhb, fnege, quartiles, core, ccf, jcr, impact, era, eraMap, norwegian, abs, h5 };
 }
 
 
@@ -390,20 +394,29 @@ function findBestMatch(normalizedVenue, map) {
  *    When several entries extend it and their values differ, the venue is ambiguous ("journal of neuroscience" ->
  *    "...nursing" 52 or "...psychology and economics" 31) and no badge beats a wrong one.
  *  - reverse: the venue extends a list entry (a venue line with extra words); the longest such entry wins.
+ * `known` (the SJR title index) holds full journal names. When the venue is one of them, an entry that is another of
+ * them is a different journal ("acta orthopaedica belgica" is not "acta orthopaedica"), so it is never a match;
+ * nor is a shorter entry inside it (reverse), since a complete title with more words is a different journal.
+ * A forward match needs a venue name specific enough to be a truncation: one generic word ("computer", or "ieee"
+ * from "Proceedings of the IEEE") would match whatever list entry starts with it.
  */
-function findBestMatchEntry(normalizedVenue, map) {
+function findBestMatchEntry(normalizedVenue, map, known = null) {
   if (map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
+  const venueIsKnownJournal = !!known?.has?.(normalizedVenue);
+  const venueIsSpecific = normalizedVenue.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || normalizedVenue.includes(" ");
   let forward = null;
   let forwardAgrees = true;
   let forwardCount = 0;
   let reverse = null;
   for (const [key, value] of map.entries()) {
+    if (venueIsKnownJournal && known.has(key)) continue;
     if (key.startsWith(normalizedVenue + " ")) {
+      if (!venueIsSpecific) continue;
       forwardCount += 1;
       if (!forward) forward = [key, value];
       else if (String(forward[1]) !== String(value)) forwardAgrees = false;
       else if (key.length < forward[0].length) forward = [key, value];
-    } else if (normalizedVenue.startsWith(key + " ")) {
+    } else if (!venueIsKnownJournal && normalizedVenue.startsWith(key + " ")) {
       // Require key to be multi-word or long enough so "ais" doesn't match "ais transactions on replication research" (journal)
       if ((key.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || key.includes(" ")) && (!reverse || key.length > reverse[0].length)) {
         reverse = [key, value];
@@ -502,8 +515,9 @@ export function qualityBadgesForVenue(venue, qIndex) {
   let impactBadge = null;
   // Badge kind -> the list entry a prefix (not exact) match landed on, shown on hover so a wrong match is visible.
   const nearMatch = {};
+  const venueIsKnownTitle = !!qIndex.quartiles?.has?.(v);
   const fuzzy = (kind, map) => {
-    const entry = findBestMatchEntry(v, map);
+    const entry = findBestMatchEntry(v, map, qIndex.quartiles);
     if (!entry) return null;
     if (entry[0] !== v) nearMatch[kind] = { key: entry[0], count: entry[2] || 1 };
     return entry[1];
@@ -608,42 +622,27 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   // For sets (ft50, utd24), check exact match and prefix matches
-  // Only allow: exact match, or entry starts with venue (for abbreviations like "MISQ" matching "MIS Quarterly")
-  // Do NOT allow venue starts with entry (prevents "Journal of Marketing Analytics" matching "Journal of Marketing")
-  if (qIndex.ft50.has(v)) {
+  // FT50 and UTD24: exact match, or a list entry that starts with the venue (a truncated Scholar venue line such as
+  // "Production and Operations" for "Production and Operations Management"). Never the reverse: "Journal of Marketing
+  // Analytics" is not "Journal of Marketing". A full SCImago title is a journal of its own, so it matches only exactly
+  // ("Information Systems", Elsevier, is not "Information Systems Research"), and a forward match needs a venue
+  // specific enough to be a truncation, as in findBestMatchEntry ("management" alone is not "Management Science").
+  const topListMatch = (set) => {
+    if (set.has(v)) return v;
+    if (venueIsKnownTitle) return null;
+    if (v.length < MIN_KEY_LENGTH_FOR_PREFIX_MATCH && !v.includes(" ")) return null;
+    for (const entry of set) if (entry.startsWith(v + " ")) return entry;
+    return null;
+  };
+  const ft50Entry = topListMatch(qIndex.ft50);
+  if (ft50Entry) {
+    if (ft50Entry !== v) nearMatch.ft50 = { key: ft50Entry, count: 1 };
     badges.push({ kind: "ft50", text: "FT50", metadata: { system: "Financial Times 50 Top Research Journals" } });
-  } else {
-    // Check if any entry in the set starts with the normalized venue (for abbreviations)
-    // Require minimum length to avoid false matches with very short venue names
-    const MIN_PREFIX_LEN = 5;
-    if (v.length >= MIN_PREFIX_LEN) {
-      for (const entry of qIndex.ft50) {
-        // Exact match OR entry is longer and starts with venue + space (abbreviation matching)
-        // Do NOT check v.startsWith(entry) - that would cause false positives
-        if (entry === v || (entry.length > v.length && entry.startsWith(v + " "))) {
-          badges.push({ kind: "ft50", text: "FT50", metadata: { system: "Financial Times 50 Top Research Journals" } });
-          break;
-        }
-      }
-    }
   }
-
-  if (qIndex.utd24.has(v)) {
+  const utd24Entry = topListMatch(qIndex.utd24);
+  if (utd24Entry) {
+    if (utd24Entry !== v) nearMatch.utd24 = { key: utd24Entry, count: 1 };
     badges.push({ kind: "utd24", text: "UTD24", metadata: { system: "UT Dallas Top 100 Business School Research Rankings" } });
-  } else {
-    // Check if any entry in the set starts with the normalized venue (for abbreviations)
-    // Require minimum length to avoid false matches with very short venue names
-    const MIN_PREFIX_LEN = 5;
-    if (v.length >= MIN_PREFIX_LEN) {
-      for (const entry of qIndex.utd24) {
-        // Exact match OR entry is longer and starts with venue + space (abbreviation matching)
-        // Do NOT check v.startsWith(entry) - that would cause false positives
-        if (entry === v || (entry.length > v.length && entry.startsWith(v + " "))) {
-          badges.push({ kind: "utd24", text: "UTD24", metadata: { system: "UT Dallas Top 100 Business School Research Rankings" } });
-          break;
-        }
-      }
-    }
   }
 
   const VALID_CORE = /^A\*?$|^[ABC]$/i;
@@ -651,22 +650,10 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (core && VALID_CORE.test(String(core).trim())) badges.push({ kind: "core", text: `CORE ${String(core).trim().toUpperCase()}`, metadata: { rank: String(core).trim().toUpperCase(), system: "CORE/ICORE Conference Rankings" } });
   if (ccf && VALID_CCF.test(String(ccf).trim())) badges.push({ kind: "ccf", text: `CCF ${String(ccf).trim().toUpperCase()}`, metadata: { rank: String(ccf).trim().toUpperCase(), system: "China Computer Federation Conference Rankings" } });
 
-  if (qIndex.era?.has?.(v)) {
+  // ERA's ~26,000 titles include many short generic ones ("Findings", "Analysis"); findBestMatchEntry's guards keep
+  // "Findings of the Conference on Empirical Methods..." (ACL's Findings track) off the unrelated journal "Findings".
+  if (qIndex.era?.has?.(v) || (qIndex.eraMap && fuzzy("era", qIndex.eraMap))) {
     badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
-  } else if (qIndex.era) {
-    // v.startsWith(entry + " ") is a prefix match against a ~26,000-entry list that includes
-    // many short, generic single-word titles ("Findings", "Analysis", "Test", "Order" — 1,000+
-    // entries under 12 chars with no space). Without a length/space guard, "Findings of the
-    // Conference on Empirical Methods in Natural Language Processing" (ACL's "Findings" track,
-    // not itself ERA-listed) false-matched the unrelated journal "Findings" this way. Same guard
-    // as findBestMatch's prefix matching above.
-    for (const entry of qIndex.era) {
-      const entryIsSpecificEnough = entry.length >= MIN_KEY_LENGTH_FOR_PREFIX_MATCH || entry.includes(" ");
-      if (entry === v || (entryIsSpecificEnough && (entry.startsWith(v + " ") || v.startsWith(entry + " ")))) {
-        badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
-        break;
-      }
-    }
   }
 
   let norLevel = qIndex.norwegian?.get?.(v);
@@ -682,7 +669,9 @@ export function qualityBadgesForVenue(venue, qIndex) {
   if (impactBadge) badges.push(impactBadge);
   for (const b of badges) {
     if (nearMatch[b.kind] && b.metadata) {
-      Object.assign(b.metadata, { nearMatch: nearMatch[b.kind].key, nearMatchCount: nearMatch[b.kind].count, venueRead: v });
+      // Vetted: the venue is a full SCImago title, so findBestMatchEntry has already ruled out every other known
+      // journal; what is left is the same title with a subtitle or acronym ("journal of social issues jsi").
+      Object.assign(b.metadata, { nearMatch: nearMatch[b.kind].key, nearMatchCount: nearMatch[b.kind].count, venueRead: v, nearMatchVetted: venueIsKnownTitle });
     }
   }
   return badges;
