@@ -8,6 +8,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { variantManifest } from "./variant-manifest.mjs";
+import { uncompressDataFiles } from "./variant-data.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const target = process.argv[2];
@@ -59,6 +60,8 @@ const walk = (d) => {
   }
 };
 walk(work);
+// Edge refuses packages that contain compressed files.
+if (target === "edge") console.log(`edge: stored uncompressed: ${uncompressDataFiles(work).join(", ") || "nothing"}`);
 
 // 2. Manifest.
 const m = variantManifest(JSON.parse(fs.readFileSync(path.join(work, "manifest.json"), "utf8")), target);
@@ -69,6 +72,7 @@ fs.writeFileSync(path.join(work, "manifest.json"), JSON.stringify(m, null, 2) + 
 const out = path.join(ROOT, "output", `ScholarUtilityBelt-${version}-${target}.zip`);
 fs.rmSync(out, { force: true });
 execFileSync("zip", ["-q", "-r", out, "."], { cwd: work });
+if (target === "edge" && /\.gz$/m.test(execFileSync("zipinfo", ["-1", out], { encoding: "utf8" }))) throw new Error("edge package still contains a .gz file");
 let left = "";
 try { left = execFileSync("grep", ["-rl", "chromewebstore.google.com", work], { encoding: "utf8" }).trim(); } catch (_) { /* none left */ }
 console.log(`${target}: ${changed} files rewritten; wrote ${path.relative(ROOT, out)}`);
