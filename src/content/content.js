@@ -54,6 +54,8 @@
   let customBadgeForVenue;
   let compileCustomVenueIndex;
   let pickOpenAlexWork;
+  let buildNameSearch;
+  let findNameIndices;
   let summarizeFwci;
   let getCachedElement;
   let getCachedElements;
@@ -127,7 +129,7 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner, openalexMatch] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner, openalexMatch, genealogySearch] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
@@ -138,9 +140,11 @@
       // Loaded now, not on demand: after an extension update new imports no longer work.
       importModuleWithRetry("dist/common/reload-banner.js"),
       importModuleWithRetry("dist/common/openalex-match.js"),
+      importModuleWithRetry("dist/common/genealogy-search.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
     ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
+    ({ buildNameSearch, findNameIndices } = genealogySearch);
     ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
     ({
       addHiddenAuthor,
@@ -11681,7 +11685,7 @@
       root.datasets[key] = {
         status: "idle",
         names: [],
-        nameIndex: null,
+        nameSearch: null,
         edgesLoaded: false,
         forward: null,
         reverse: null,
@@ -11720,26 +11724,10 @@
         const raw = await fetchGzipText(chrome.runtime.getURL(source.namesUrl));
         const parsed = JSON.parse(raw || "{}");
         const names = Array.isArray(parsed?.n) ? parsed.n : (parsed?.names || []);
-        const index = new Map();
-        for (let i = 0; i < names.length; i++) {
-          // Indexing 900,000 names in one go froze the page for about 3.5 seconds, long enough that the
-          // "Looking up this name" message never painted. Give the page a turn every 20,000 names.
-          if (i > 0 && i % 20000 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
-          const norm = normalizeAuthorName(names[i]);
-          if (!norm) continue;
-          if (index.has(norm)) {
-            const existing = index.get(norm);
-            if (Array.isArray(existing)) {
-              existing.push(i);
-            } else {
-              index.set(norm, [existing, i]);
-            }
-          } else {
-            index.set(norm, i);
-          }
-        }
+        // Normalizing all 900,000 names into an index took about 3.5 s; the search normalizes only the names
+        // that contain the author's surname (src/common/genealogy-search.js).
         data.names = names;
-        data.nameIndex = index;
+        data.nameSearch = buildNameSearch(names, normalizeAuthorName);
         data.status = "ready";
         return data;
       } catch (e) {
@@ -11771,18 +11759,18 @@
       ? authorVariations
       : (authorName ? generateAuthorNameVariations(authorName) : []);
     const normalized = variations.map((v) => normalizeAuthorName(v)).filter(Boolean);
-    const index = data?.nameIndex;
-    if (!index || !normalized.length) return null;
+    const search = data?.nameSearch;
+    if (!search || !normalized.length) return null;
     for (const key of normalized) {
-      if (!index.has(key)) continue;
-      const found = index.get(key);
-      if (Array.isArray(found)) {
+      const found = findNameIndices(search, key, normalizeAuthorName);
+      if (!found.length) continue;
+      if (found.length > 1) {
         const variationSet = new Set(variations.map((v) => normalizeFullNameForMatch(v)).filter(Boolean));
         const exactMatches = found.filter((idx) => variationSet.has(normalizeFullNameForMatch(data.names?.[idx] || "")));
         if (exactMatches.length === 1) return exactMatches[0];
         return null;
       }
-      return found;
+      return found[0];
     }
     return null;
   }

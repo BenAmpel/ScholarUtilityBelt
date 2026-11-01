@@ -192,6 +192,18 @@ try {
   check("profile visit (default) sends no extra Scholar requests", extraOnProfile === 0, `${extraOnProfile} extra: ${scholarHits.filter((h) => h.includes("cstart=")).join(", ")}`);
   const partial = await a.evaluate(() => !!document.querySelector(".su-author-partial-note") && !!document.querySelector("[data-load-all-publications]"));
   check("profile shows partial-stats note and Load all", partial);
+  // Look up lineage searches the bundled 900,000-name genealogy list. It used to index every name first (about
+  // 3.5 s, long enough that the "Looking up" status never painted); now it normalizes only names with the surname.
+  const lineageStart = Date.now();
+  await a.click("[data-lineage-lookup]").catch(() => {});
+  const sawLoading = await a.waitForSelector(".su-lineage-card [role=status]", { timeout: 2000 }).then(() => true, () => false);
+  const lineageText = await a.waitForFunction(() => {
+    const t = document.querySelector(".su-lineage-card")?.textContent || "";
+    return /No advisor–student record|View lineage/.test(t) ? t : null;
+  }, null, { timeout: 20000 }).then((h) => h.jsonValue(), () => "");
+  const lineageMs = Date.now() - lineageStart;
+  check("Look up lineage answers within 1.5 s and shows its status first", !!lineageText && lineageMs < 1500 && sawLoading,
+    `${(lineageMs / 1000).toFixed(1)} s, status shown: ${sawLoading}, "${String(lineageText).replace(/\s+/g, " ").trim().slice(0, 60)}"`);
   // During a Scholar cooldown, Load all asks Scholar for nothing.
   // Same value noteScholarBlock() writes: blocked now, wait 15 min.
   await sw.evaluate(() => chrome.storage.local.set({ scholarCooldownUntil: Date.now() + 15 * 60 * 1000 }));
