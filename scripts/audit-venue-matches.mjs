@@ -1,7 +1,7 @@
 // Venue match audit: every journal title in the bundled SCImago index is run through the badge matcher with the
 // bundled lists (ABDC, ABS, VHB, FNEGE, FT50, UTD24, CORE, CCF, Scholar h5, ERA, Norwegian, Journal Impact Factor). A close (prefix) match that lands on a *different* SCImago title gives a
 // journal another journal's rank, so any such match fails the run. Close matches to non-SCImago entries (bilingual
-// titles, "UK"/"ASCE" suffixes) are only counted. About 3 minutes; the impact-factor list (20,000 titles) is most of it.
+// titles, "UK"/"ASCE" suffixes) are only counted. About 10 s.
 //   node --import ./tests/register-loader.mjs scripts/audit-venue-matches.mjs [--list]
 import fs from "node:fs";
 import path from "node:path";
