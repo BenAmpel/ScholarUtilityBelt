@@ -623,8 +623,11 @@ const QUALITY_CUSTOM_FLAG_SOURCES = [
   { id: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
   { id: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2025.csv"] },
   { id: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
+  { id: "qualityFnegeRanks", customKey: "qualityFnegeRanksCustom", files: ["src/data/fnege2025.csv"] },
   { id: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
-    files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
+    // The older portal list first, ICORE2026 last: the index keeps the last rank for a name, and 50 acronyms
+    // (DAC, DSN, SC ...) are in both with different ranks; ICORE2026 is the current one.
+    files: ["src/data/core_portal_ranks.csv", "src/data/core_icore2026.csv"] },
   { id: "qualityCcfRanks", customKey: "qualityCcfRanksCustom", files: ["src/data/ccf_ranks.csv"] }
 ];
 
@@ -902,16 +905,18 @@ el("clearScimagoQuartiles")?.addEventListener("click", async () => {
 
 el("loadQualityDefaults")?.addEventListener("click", async () => {
   try {
-    const [ft50, utd24, abdc, vhb, fnege, core, corePortal] = await Promise.all([
+    const [ft50, utd24, abdc, vhb, fnege, core, corePortal, ccf] = await Promise.all([
       fetchExtText("src/data/ft50.txt"),
       fetchExtText("src/data/utd24.txt"),
       fetchExtText("src/data/abdc2025.csv"),
       fetchExtText("src/data/vhb2024.csv"),
       fetchExtText("src/data/fnege2025.csv"),
       fetchExtText("src/data/core_icore2026.csv"),
-      fetchExtText("src/data/core_portal_ranks.csv")
+      fetchExtText("src/data/core_portal_ranks.csv"),
+      fetchExtText("src/data/ccf_ranks.csv")
     ]);
-    const coreMerged = [core.trim(), (corePortal || "").trim()].filter(Boolean).join("\n");
+    // Same order as sw.js QUALITY_DATASETS: ICORE2026 last, so its rank wins where both lists have a name.
+    const coreMerged = [(corePortal || "").trim(), core.trim()].filter(Boolean).join("\n");
 
     // Only fill empty fields to avoid clobbering custom edits.
     if (!el("qualityFt50List").value.trim()) el("qualityFt50List").value = ft50.trim() + "\n";
@@ -920,6 +925,7 @@ el("loadQualityDefaults")?.addEventListener("click", async () => {
     if (!el("qualityVhbRanks").value.trim()) el("qualityVhbRanks").value = vhb.trim() + "\n";
     if (!el("qualityFnegeRanks").value.trim()) el("qualityFnegeRanks").value = fnege.trim() + "\n";
     if (!el("qualityCoreRanks").value.trim()) el("qualityCoreRanks").value = coreMerged + "\n";
+    if (!el("qualityCcfRanks").value.trim()) el("qualityCcfRanks").value = ccf.trim() + "\n";
 
     if (!el("showQualityBadges").checked) el("showQualityBadges").checked = true;
 
@@ -937,6 +943,7 @@ el("clearQualityLists")?.addEventListener("click", async () => {
   el("qualityFnegeRanks").value = "";
   el("qualityQuartiles").value = "";
   el("qualityCoreRanks").value = "";
+  el("qualityCcfRanks").value = "";
   setQualityStatus("Cleared (not saved yet).");
 });
 

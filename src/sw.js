@@ -516,8 +516,12 @@ const QUALITY_DATASETS = [
   { key: "qualityUtd24List", customKey: "qualityUtd24ListCustom", files: ["src/data/utd24.txt"] },
   { key: "qualityAbdcRanks", customKey: "qualityAbdcRanksCustom", files: ["src/data/abdc2025.csv"] },
   { key: "qualityVhbRanks", customKey: "qualityVhbRanksCustom", files: ["src/data/vhb2024.csv"] },
+  // FNEGE was seeded only when Options was first opened, and never refreshed after that.
+  { key: "qualityFnegeRanks", customKey: "qualityFnegeRanksCustom", files: ["src/data/fnege2025.csv"] },
   { key: "qualityCoreRanks", customKey: "qualityCoreRanksCustom",
-    files: ["src/data/core_icore2026.csv", "src/data/core_portal_ranks.csv"] },
+    // The older portal list first, ICORE2026 last: the index keeps the last rank for a name, and 50 acronyms
+    // (DAC, DSN, SC ...) are in both with different ranks; ICORE2026 is the current one.
+    files: ["src/data/core_portal_ranks.csv", "src/data/core_icore2026.csv"] },
   { key: "qualityCcfRanks", customKey: "qualityCcfRanksCustom", files: ["src/data/ccf_ranks.csv"] }
 ];
 

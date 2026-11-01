@@ -275,3 +275,69 @@ describe("FT50 and UTD24 go through the same known-title and specificity rules",
     assert.deepEqual(kinds("Management Science"), ["ft50", "utd24"]);
   });
 });
+
+describe("venue lines that are not the list entry they start with", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue, extractVenueFromAuthorsVenue, customBadgeForVenue } = await import("../src/common/quality.js");
+  const kinds = (venue, idx) => qualityBadgesForVenue(venue, idx).map((b) => b.text);
+  const core = compileQualityIndex({
+    qualityCoreRanks: "International Conference on Computer Vision|ICCV,A*\nICC,B\nACM Conference on Computer and Communications Security|CCS,A*\nHawaii International Conference on System Sciences|HICSS,A\nInternational Conference on Information Systems|ICIS,A*\nICIS,C\nDSN,C\nDSN,A",
+  });
+  it("keeps the V of ICCV and ECCV when it strips volume numbers", () => {
+    assert.equal(extractVenueFromAuthorsVenue("J Smith - ICCV 2021"), "ICCV 2021");
+    assert.equal(extractVenueFromAuthorsVenue("J Smith - Journal of X V. 41, 2021"), "Journal of X");
+    assert.deepEqual(kinds("ICCV 2021", core), ["CORE A*"]);
+  });
+  it("a workshop, companion or doctoral consortium does not take the main conference's rank", () => {
+    assert.deepEqual(kinds("ACM Conference on Computer and Communications Security Workshops", core), []);
+    assert.deepEqual(kinds("Hawaii International Conference on System Sciences: Doctoral Consortium", core), []);
+    assert.deepEqual(kinds("ICIS 2019 Workshop on Foo", core), []);
+  });
+  it("bare ICIS is the A* conference, not the other ICIS", () => {
+    assert.deepEqual(kinds("ICIS", core), ["CORE A*"]);
+  });
+  it("the later CORE row wins for an acronym in both lists (ICORE2026 is loaded last)", () => {
+    assert.deepEqual(kinds("DSN", core), ["CORE A"]);
+  });
+  it("a longer title does not borrow a shorter journal's badges", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Management Science,A*" });
+    assert.deepEqual(kinds("Management Science and Engineering", idx), []);
+    assert.deepEqual(kinds("Academy of Management Review, Special Issue", compileQualityIndex({ qualityAbdcRanks: "Academy of Management Review,A*" })), ["ABDC A*"]);
+  });
+  it("a cut-off venue is not the short journal with that name, and an ambiguous cut gets nothing", () => {
+    const quartilesIndex = { "information systems": "Q1", "information systems research": "Q1", "information systems journal": "Q1",
+      "production and operations management": "Q1" };
+    const idx = compileQualityIndex({ qualityFt50List: "Information Systems Research\nProduction and Operations Management" }, { quartilesIndex });
+    assert.deepEqual(kinds("Information Systems …", idx), []);
+    assert.deepEqual(kinds("… Science", idx), []);
+    assert.deepEqual(kinds("Production and Operations …", idx), ["Q1", "FT50"]);
+    assert.deepEqual(kinds("Information Systems", idx), ["Q1"]);
+  });
+  it("one word is not the cut-off start of a longer title (Sustainability)", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Sustainability Accounting, Management and Policy Journal,A" });
+    assert.deepEqual(kinds("Sustainability", idx), []);
+  });
+  it("MDPI's Applied Sciences does not take the smaller journal's quartile", () => {
+    const idx = compileQualityIndex({}, { quartilesIndex: { "applied sciences": "Q4", "applied sciences switzerland": "Q2" } });
+    assert.deepEqual(kinds("Applied Sciences", idx), []);
+  });
+  it("a custom list entry is not a longer venue that starts with it, and a near match says so", () => {
+    const custom = { name: "Mine", map: new Map([["journal of marketing", "A*"], ["production and operations management", "Top"]]) };
+    assert.equal(customBadgeForVenue("Journal of Marketing Research", custom), null);
+    assert.equal(customBadgeForVenue("Journal of Marketing", custom).text, "A*");
+    assert.equal(customBadgeForVenue("Production and Operations", custom).metadata.nearMatch, "production and operations management");
+  });
+});
+
+describe("bundled VHB list", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const { readFileSync } = await import("node:fs");
+  const idx = compileQualityIndex({ qualityVhbRanks: readFileSync(new URL("../src/data/vhb2024.csv", import.meta.url), "utf8") });
+  const vhb = (venue) => qualityBadgesForVenue(venue, idx).find((b) => b.kind === "vhb")?.text;
+  it("American Economic Review is A+ (an AER: Insights row used to overwrite it with A)", () => {
+    assert.equal(vhb("American Economic Review"), "VHB A+");
+    assert.equal(vhb("American Economic Review: Insights"), "VHB A");
+  });
+  it("bare Corporate Governance is two journals with different ratings: no badge", () => {
+    assert.equal(vhb("Corporate Governance"), undefined);
+  });
+});

@@ -27,7 +27,7 @@ const idx = q.compileQualityIndex({
   qualityAbdcRanks: D("abdc2025.csv"), qualityVhbRanks: D("vhb2024.csv"), qualityFnegeRanks: D("fnege2025.csv"),
   qualityFt50List: D("ft50.txt"), qualityUtd24List: D("utd24.txt"), qualityCcfRanks: D("ccf_ranks.csv"),
   // sw.js loads both CORE files into one setting.
-  qualityCoreRanks: D("core_icore2026.csv") + "\n" + D("core_portal_ranks.csv"),
+  qualityCoreRanks: D("core_portal_ranks.csv") + "\n" + D("core_icore2026.csv"),
 }, { h5Index, absIndex, quartilesIndex: sjr, eraSet, norwegianMap, impactIndex });
 const titles = new Set(Object.keys(sjr));
 const wrong = [];
