@@ -1,7 +1,7 @@
 // Venue match audit: every journal title in the bundled SCImago index is run through the badge matcher with the
-// bundled lists (ABDC, ABS, Scholar h5). A close (prefix) match that lands on a *different* SCImago title gives a
+// bundled lists (ABDC, ABS, Scholar h5, ERA, Norwegian, Journal Impact Factor). A close (prefix) match that lands on a *different* SCImago title gives a
 // journal another journal's rank, so any such match fails the run. Close matches to non-SCImago entries (bilingual
-// titles, "UK"/"ASCE" suffixes) are only counted. About 25 s.
+// titles, "UK"/"ASCE" suffixes) are only counted. About 3 minutes; the impact-factor list (20,000 titles) is most of it.
 //   node --import ./tests/register-loader.mjs scripts/audit-venue-matches.mjs [--list]
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +18,12 @@ const absIndex = new Map(D("abs2024.csv").split(/\r?\n/).map((l) => {
 }).filter(([n, r]) => n && r));
 const eraSet = new Set(D("era2023.txt").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(q.normalizeVenueName).filter(Boolean));
 const norwegianMap = new Map(Object.entries(JSON.parse(D("norwegian_compact.json"))).filter(([, lv]) => lv === "1" || lv === "2"));
-const idx = q.compileQualityIndex({ qualityAbdcRanks: D("abdc2025.csv") }, { h5Index, absIndex, quartilesIndex: sjr, eraSet, norwegianMap });
+// Parsed as data-loader.js loadImpactIndex does: the value is after the last comma, names may be quoted.
+const impactIndex = new Map(D("journal_impact_2024.csv").split(/\r?\n/).slice(1).map((l) => {
+  const i = l.lastIndexOf(",");
+  return [l.slice(0, i).trim().replace(/^"|"$/g, ""), l.slice(i + 1).trim()];
+}).filter(([n, v]) => n && v));
+const idx = q.compileQualityIndex({ qualityAbdcRanks: D("abdc2025.csv") }, { h5Index, absIndex, quartilesIndex: sjr, eraSet, norwegianMap, impactIndex });
 const titles = new Set(Object.keys(sjr));
 const wrong = [];
 const close = {};
