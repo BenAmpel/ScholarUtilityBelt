@@ -147,6 +147,13 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.3 (paste into the dashboard's "What's new")
+
+Faster Look up lineage on author profiles: the advisor-student match now answers in a fraction of a second instead
+of 2 to 3 seconds, with the same matches as before.
+
+For Chrome, where 1.1.2 was still in review: add the 1.1.2 line below.
+
 ## Release notes for 1.1.2 (paste into the dashboard's "What's new")
 
 Faster journal badges: each venue on a results page is looked up about 12 times faster, with the same badges as before.
