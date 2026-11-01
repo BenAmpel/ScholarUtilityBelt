@@ -197,6 +197,7 @@
         "dist/common/entitlement.js",
         "dist/common/evidence-matrix.js",
         "dist/common/export-model.js",
+        "dist/common/openalex-match.js",
         "dist/common/pro-prompt.js",
         "dist/common/quality.js",
         "dist/common/reading-order.js",
