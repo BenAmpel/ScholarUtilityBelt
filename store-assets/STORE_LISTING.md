@@ -147,6 +147,12 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.1 (paste into the dashboard's "What's new")
+
+Fixes. Journals whose name begins like another journal's (Acta Informatica Medica and Acta Informatica, Information Systems and Information Systems Research) no longer show that other journal's impact factor, rank, h5 or FT50 badge. The Updated badge now marks the corrected or retracted paper, not the correction notice. FWCI is OpenAlex's own figure for each work, so it is no longer capped at 2.0. A paper without a DOI is matched to an OpenAlex work only when the titles match, not on year and author alone. Exports and downloads (CSV, BibTeX, RIS, the citation graph image, library exports) no longer get cancelled in Firefox.
+
+For Firefox and Edge, which did not get 1.1.0, paste the 1.1.0 notes below first and then these.
+
 ## Release notes for 1.1.0 (paste into the dashboard's "What's new")
 
 Fewer requests to Google Scholar: opening an author profile no longer presses "Show more" by itself (stats cover the papers on screen, and "Load all for full stats" loads the rest), and the Emerging score no longer reads neighbouring Scholar pages in the background. Compare authors needs 5 requests instead of 25, and every feature that asks Scholar for more pages stops and waits 15 minutes after a "not a robot" check. Two switches in Options bring the old automatic loading back.
