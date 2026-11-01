@@ -580,7 +580,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   // Per-row parse cache to avoid repeated DOM parsing.
   const rowParseCache = new WeakMap();
@@ -1077,7 +1077,7 @@
     const entry = doc.querySelector("entry");
     if (!entry) return null;
     const idText = entry.querySelector("id")?.textContent || "";
-    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\\d+)?/i);
+    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\d+)?/i);
     const version = idMatch?.[2] || "";
     const published = entry.querySelector("published")?.textContent || "";
     const updated = entry.querySelector("updated")?.textContent || "";
@@ -1216,14 +1216,14 @@
   function normalizeOpenAlexId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/W\\d+/i);
+    const match = raw.match(/W\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
   function normalizeOpenAlexAuthorId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/A\\d+/i);
+    const match = raw.match(/A\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
@@ -1284,8 +1284,9 @@
   function normalizeTitleForMatch(title) {
     return String(title || "")
       .toLowerCase()
-      .replace(/[^a-z0-9\\s]/g, " ")
-      .replace(/\\s+/g, " ")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
   function looksLikeDoi(raw) {
@@ -1699,9 +1700,9 @@
   }
   function extractArxivIdFromUrl(url) {
     const u = String(url || "");
-    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\\d+)?/i);
+    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\d+)?/i);
     if (m) return m[1];
-    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\\d+)?/i);
+    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\d+)?/i);
     if (m2) return m2[1];
     return null;
   }
@@ -1944,7 +1945,7 @@
       const lower = tok.toLowerCase();
       if (lower.length < 2) continue;
       if (TOPIC_TOKEN_STOPWORDS.has(lower)) continue;
-      if (/^\\d+$/.test(lower)) continue;
+      if (/^\d+$/.test(lower)) continue;
       const existing = map.get(lower);
       if (existing) {
         existing.count++;
@@ -3083,11 +3084,17 @@
     }
   }
   /** Escape BibTeX special characters (braces, backslash). */
+  // Same rules as escapeBibText in src/common/bibtex.js (this classic script cannot import it): Scholar text is
+  // plain, so backslashes are dropped, unbalanced braces removed, and the characters LaTeX treats specially escaped.
   function escapeBibTeX(s) {
-    return String(s || "")
-      .replace(/\\/g, "\\\\")
-      .replace(/[{}]/g, (c) => (c === "{" ? "\\{" : "\\}"))
-      .trim();
+    let t = String(s || "").replace(/\s+/g, " ").trim();
+    let depth = 0;
+    for (const ch of t) {
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth < 0) break;
+    }
+    if (depth !== 0) t = t.replace(/[{}]/g, "");
+    return t.replace(/\\/g, "").replace(/([&%#_$])/g, "\\$1");
   }
   /** Build a minimal BibTeX entry from paper when Scholar export is unavailable. */
   function buildMinimalBibTeX(paper) {
@@ -3184,6 +3191,13 @@
     if (el.__suFloatingTooltip) el.__suFloatingTooltip.classList.add("su-cite-tooltip");
   }
   /** Fetch a URL via the background script (works for scholar.googleusercontent.com .bib URLs). */
+  // Copy Bib tries up to four requests in turn (Crossref, then Scholar's BibTeX link, cite page and file). Without a
+  // limit one stalled server leaves the button on "…" for minutes; 8 s each, as the service worker's fetches do.
+  function fetchBibStep(url, options = {}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    return fetch(url, { ...options, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+  }
   async function fetchBibViaBackground(url) {
     try {
       const res = await chrome.runtime.sendMessage({ action: "fetchBib", url });
@@ -3232,7 +3246,7 @@
     if (doi) {
       try {
         const enc = encodeURIComponent(doi);
-        const r = await fetch(`https://api.crossref.org/works/${enc}/transform/application/x-bibtex`, {
+        const r = await fetchBibStep(`https://api.crossref.org/works/${enc}/transform/application/x-bibtex`, {
           headers: { Accept: "application/x-bibtex" }
         });
         if (r.ok) {
@@ -3261,7 +3275,7 @@
         const body = await fetchBibViaBackground(absUrl);
         if (body) return body;
         try {
-          const r = await fetch(absUrl);
+          const r = await fetchBibStep(absUrl);
           if (r.ok) {
             const body2 = await r.text();
             if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
@@ -3275,7 +3289,7 @@
     if (clusterId) {
       const citeUrl = `https://scholar.google.com/scholar?q=info:${clusterId}:scholar.google.com/&output=cite`;
       try {
-        const r = await fetch(citeUrl);
+        const r = await fetchBibStep(citeUrl);
         if (!r.ok) throw new Error("Cite page failed");
         const html = await r.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
@@ -3287,7 +3301,7 @@
           const body = await fetchBibViaBackground(bibUrl);
           if (body) return body;
           try {
-            const bibRes = await fetch(bibUrl);
+            const bibRes = await fetchBibStep(bibUrl);
             if (bibRes.ok) {
               const body2 = await bibRes.text();
               if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
@@ -5198,7 +5212,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
     openAllBtn.addEventListener("click", () => {
       if (queue.length === 0) return;
@@ -5795,6 +5809,163 @@
     }
     const removeBtn = bar.querySelector('button[data-act="remove"]');
     if (removeBtn) removeBtn.style.display = isSaved ? "" : "none";
+  }
+  // ---- "View article" page (/citations?view_op=view_citation) ----------------------------------------------
+  // Badges on the venue, full-metadata Save / BibTeX / RIS, numbers from the citation chart, the DOI and retraction
+  // check, and where the profile's owner sits among the authors. All free, all read from the open page: no request.
+  let articlePageMod = null;
+  function readArticlePage() {
+    const table = document.getElementById("gsc_oci_table");
+    const titleEl = document.getElementById("gsc_oci_title");
+    if (!table || !titleEl) return null;
+    const titleLink = titleEl.querySelector("a.gsc_oci_title_link") || titleEl.querySelector("a");
+    const rows = Array.from(table.children).filter((el) => el.classList.contains("gs_scl")).map((row) => {
+      const valueEl = row.querySelector(".gsc_oci_value");
+      const cited = valueEl?.querySelector('a[href*="cites="]');
+      const hasGraph = !!valueEl?.querySelector("#gsc_oci_graph_bars, #gsc_oci_graph");
+      return {
+        label: text(row.querySelector(".gsc_oci_field")),
+        value: (valueEl?.textContent || "").trim(),
+        isDescription: valueEl?.id === "gsc_oci_descr" || !!valueEl?.querySelector("#gsc_oci_descr"),
+        isCitations: hasGraph || (!!cited && !valueEl.querySelector(".gsc_oci_merged_snippet")),
+        citedByText: cited ? text(cited) : "",
+        citedByHref: cited?.getAttribute("href") || "",
+        el: row,
+        valueEl,
+      };
+    });
+    const bars = Array.from(document.querySelectorAll("#gsc_oci_graph_bars a.gsc_oci_g_a")).map((a) => {
+      let year = null;
+      try { year = new URL(a.getAttribute("href") || "", location.origin).searchParams.get("as_ylo"); } catch (_) {}
+      return { year, count: text(a.querySelector(".gsc_oci_g_al")) };
+    });
+    const ownerName = Array.from(document.querySelectorAll('#gsc_sb_ui a[href*="user="]')).map((a) => text(a)).find(Boolean) || "";
+    const pdfLink = document.querySelector("#gsc_oci_title_gg a[href]");
+    return {
+      title: text(titleEl),
+      url: titleLink ? tryGetHref(titleLink) || "" : "",
+      pdfUrl: pdfLink ? tryGetHref(pdfLink) || "" : "",
+      ownerName,
+      rows,
+      bars,
+    };
+  }
+  async function renderArticlePage(state) {
+    const raw = readArticlePage();
+    if (!raw) return;
+    if (!articlePageMod) articlePageMod = await importModuleWithRetry("dist/common/article-page.js");
+    const A = articlePageMod;
+    const article = A.articleFromPage(raw);
+    if (!article) return;
+    document.querySelectorAll("[data-su-article]").forEach((el) => el.remove());
+    const rowFor = (pred) => raw.rows.find(pred);
+    const mark = (el) => { el.setAttribute("data-su-article", "1"); return el; };
+    const doi = findResultDoi(
+      [raw.url, raw.pdfUrl, ...Array.from(document.querySelectorAll("#gsc_oci_table a[href]")).map((a) => a.getAttribute("href") || "")],
+      ""
+    );
+    const key = article.clusterId ? `cid:${article.clusterId}` : computeKey({ url: article.url, title: article.title, authors: article.authors.join(", "), year: article.year });
+
+    // 1. Journal badges on the venue line: the same renderer, data and settings as results and profiles.
+    const venueRow = rowFor((r) => r.valueEl && tidyText(r.value) === article.venue && article.venue);
+    if (venueRow && state.settings.showQualityBadges) {
+      const anchor = mark(document.createElement("span"));
+      anchor.className = "su-article-venue-anchor";
+      venueRow.valueEl.appendChild(anchor);
+      renderQuality(venueRow.valueEl, { venue: article.venue, _authorsVenueEl: anchor }, state, false);
+      venueRow.valueEl.querySelectorAll(".su-quality").forEach(mark);
+    }
+
+    // 2 and 4. Save, Copy BibTeX, Copy RIS, Copy DOI, and the retraction check, under the title.
+    const bar = mark(document.createElement("div"));
+    bar.className = "su-article-actions";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Scholar Utility Belt actions for this article");
+    const saved = !!state.saved[key];
+    const saveBtn = createButton(saved ? "Saved" : "Save to library", { act: "article-save" });
+    saveBtn.title = saved ? "This paper is in your library." : "Save this paper to your library with its full author list, volume, pages and abstract.";
+    if (saved) saveBtn.disabled = true;
+    const bibBtn = createButton("Copy BibTeX", { act: "article-bib" });
+    bibBtn.title = "Copy BibTeX with every author, volume, issue, pages and publisher shown on this page.";
+    const risBtn = createButton("Copy RIS", { act: "article-ris" });
+    risBtn.title = "Copy RIS (EndNote, Zotero, Mendeley) with the same fields.";
+    bar.append(saveBtn, bibBtn, risBtn);
+    if (doi) {
+      const doiBtn = createButton("DOI", { act: "copydoi" });
+      doiBtn.dataset.doi = doi;
+      doiBtn.title = `Copy the DOI ${doi}`;
+      doiBtn.setAttribute("aria-label", `Copy DOI ${doi}`);
+      bar.append(doiBtn);
+    }
+    if (doi && state.settings.showRetractionWatch && state.retractionBloom && bloomHasDoi(doi, state.retractionBloom)) {
+      const flag = document.createElement("span");
+      flag.className = "su-badge su-retraction-neutral";
+      flag.textContent = "Potential update/retraction";
+      flag.title = "This DOI is on the bundled list built from the Retraction Watch database. Check the publisher's page.";
+      bar.append(flag);
+    }
+    const status = document.createElement("span");
+    status.className = "su-article-status";
+    status.setAttribute("role", "status");
+    bar.append(status);
+    const say = (msg) => { status.textContent = msg; setTimeout(() => { if (status.textContent === msg) status.textContent = ""; }, 2500); };
+    bar.addEventListener("click", async (e) => {
+      const btn = e.target?.closest?.("button[data-act]");
+      if (!btn) return;
+      const act = btn.dataset.act;
+      try {
+        if (act === "article-save") {
+          await upsertPaper({
+            key, title: article.title, url: article.url, authorsVenue: A.authorsVenueLine(article), venue: article.venue,
+            year: article.year, snippet: article.abstract, abstract: article.abstract, doi: doi || "", pdfUrl: article.pdfUrl,
+            volume: article.volume, issue: article.issue, pages: article.pages, publisher: article.publisher,
+            clusterId: article.clusterId, citedByUrl: rowFor((r) => r.isCitations)?.citedByHref || "",
+            sourcePageUrl: location.href, savedAt: new Date().toISOString(),
+          });
+          await refreshState(state);
+          btn.textContent = "Saved";
+          btn.disabled = true;
+          say("Saved to your library.");
+        } else if (act === "article-bib") {
+          await navigator.clipboard.writeText(A.articleBibTeX(article, doi || ""));
+          say("BibTeX copied.");
+        } else if (act === "article-ris") {
+          await navigator.clipboard.writeText(A.articleRis(article, doi || ""));
+          say("RIS copied.");
+        } else if (act === "copydoi") {
+          await navigator.clipboard.writeText(btn.dataset.doi || "");
+          say("DOI copied.");
+        }
+      } catch (_) {
+        say("That did not work. Try again.");
+      }
+    });
+    const titleWrap = document.getElementById("gsc_oci_title_wrapper") || document.getElementById("gsc_oci_title");
+    titleWrap.insertAdjacentElement("afterend", bar);
+
+    // 3. Plain numbers from Scholar's own chart.
+    const citesRow = rowFor((r) => r.isCitations);
+    const lines = A.citationStatsLines(A.citationStats(article));
+    if (citesRow?.valueEl && lines.length) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-cites";
+      p.textContent = `${lines.join(" · ")}.`;
+      p.title = "From the citation chart on this page. The current year is partial, so it is left out of the peak and the trend.";
+      citesRow.valueEl.appendChild(p);
+    }
+
+    // 5. Where the profile's owner sits among the authors.
+    const authorsRow = raw.rows[0];
+    const pos = A.authorPosition(article.authors, article.ownerName);
+    if (authorsRow?.valueEl && pos) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-author-pos";
+      p.textContent = A.authorPositionText(pos, article.ownerName, article.authorsTruncated);
+      authorsRow.valueEl.appendChild(p);
+    }
+  }
+  function tidyText(s) {
+    return String(s || "").replace(/\s+/g, " ").trim();
   }
   function scanResults() {
     // Check if we're on an author profile page
@@ -10659,7 +10830,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function exportGraph(kind) {
     const graph = window.suGraphState;
@@ -10669,16 +10840,16 @@
     if (kind === "csv") {
       const rows = [["Title", "Year", "Citations", "DOI", "URL"]];
       nodes.forEach((n) => rows.push([n.title || "", n.year || "", n.citedByCount || 0, n.doi || "", n.url || ""]));
-      const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\\n");
+      const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
       downloadBlob(`${authorName}-graph.csv`, "text/csv;charset=utf-8", csv);
       return;
     }
     if (kind === "bib") {
       const entries = nodes.map((n) => {
-        const key = `${authorName}${n.year || ""}${hashString(n.title || "")}`.slice(0, 30);
-        const authors = Array.isArray(n.authors) ? n.authors.join(" and ") : "";
-        return `@article{${key},\\n  title={${n.title || ""}},\\n  author={${authors}},\\n  year={${n.year || ""}},\\n  doi={${n.doi || ""}},\\n  url={${n.url || ""}}\\n}`;
-      }).join("\\n\\n");
+        const key = `${authorName}${n.year || ""}${hashString(n.title || "")}`.replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 30);
+        const authors = Array.isArray(n.authors) ? n.authors.map(escapeBibTeX).join(" and ") : "";
+        return `@article{${key},\n  title={${escapeBibTeX(n.title)}},\n  author={${authors}},\n  year={${n.year || ""}},\n  doi={${n.doi || ""}},\n  url={${n.url || ""}}\n}`;
+      }).join("\n\n");
       downloadBlob(`${authorName}-graph.bib`, "text/plain;charset=utf-8", entries);
       return;
     }
@@ -10687,15 +10858,15 @@
         const authors = Array.isArray(n.authors) ? n.authors : [];
         const lines = [
           "TY  - JOUR",
-          `TI  - ${n.title || ""}`,
-          ...authors.map((a) => `AU  - ${a}`),
+          `TI  - ${String(n.title || "").replace(/\s+/g, " ").trim()}`,
+          ...authors.map((a) => `AU  - ${String(a).replace(/\s+/g, " ").trim()}`),
           `PY  - ${n.year || ""}`,
           n.doi ? `DO  - ${n.doi}` : "",
           n.url ? `UR  - ${n.url}` : "",
           "ER  -"
         ].filter(Boolean);
-        return lines.join("\\n");
-      }).join("\\n\\n");
+        return lines.join("\n");
+      }).join("\n\n");
       downloadBlob(`${authorName}-graph.ris`, "application/x-research-info-systems;charset=utf-8", entries);
       return;
     }
@@ -10722,7 +10893,7 @@
           document.body.appendChild(a);
           a.click();
           a.remove();
-          URL.revokeObjectURL(url);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
       };
       img.src = `data:image/svg+xml;base64,${svg64}`;
@@ -14886,6 +15057,11 @@
       forceFull = false;
       pendingDirtyRows.clear();
       try {
+        // A "View article" page has no result rows: it gets its own features and nothing else.
+        if (document.getElementById("gsc_oci_table")) {
+          await renderArticlePage(state).catch((e) => console.warn("[SU] article page", e));
+          return;
+        }
         let { results, isAuthorProfile } = scanResults();
         if (!isAuthorProfile && window.suSearchSortByCitations && window.suSearchSortByCitations !== "default") {
           applyCitationSort();

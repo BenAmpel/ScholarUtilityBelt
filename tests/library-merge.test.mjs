@@ -391,3 +391,11 @@ describe("describeImportSummary", () => {
     );
   });
 });
+
+describe("normalizeTitleForMatch: accents", async () => {
+  const { normalizeTitleForMatch } = await import("../src/common/library-merge.js");
+  it("matches a title with and without its accents", () => {
+    assert.equal(normalizeTitleForMatch("Pokémon: a study"), "pokemon a study");
+    assert.equal(normalizeTitleForMatch("Gómez–Peña effects"), "gomez pena effects");
+  });
+});

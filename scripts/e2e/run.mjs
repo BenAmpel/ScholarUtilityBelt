@@ -36,10 +36,18 @@ await ctx.route("**/*", (route) => {
         : FX("scholar-results.html");
       return route.fulfill({ status: 200, contentType: "text/html", body });
     }
+    if (u.pathname === "/citations" && u.searchParams.get("view_op") === "view_citation") {
+      // A real "View article" page. retracted=1 points its title at the DOI of a paper The Lancet retracted.
+      let body = FX("scholar-article.html");
+      if (u.searchParams.get("retracted") === "1") body = body.replace("https://ieeexplore.ieee.org/abstract/document/9121981/", "https://doi.org/10.1016/S0140-6736(97)11096-0");
+      return route.fulfill({ status: 200, contentType: "text/html", body });
+    }
     if (u.pathname === "/citations" && u.searchParams.get("user") === "FIXTURE" && !u.searchParams.has("cstart")) return route.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-profile.html") });
     return route.fulfill({ status: 204, body: "" });
   }
   if (u.protocol === "chrome-extension:" || u.protocol === "data:") return route.continue();
+  // Crossref never answers: Copy Bib must give up on it and finish, not sit on "…".
+  if (u.hostname === "api.crossref.org" && u.pathname.endsWith("/transform/application/x-bibtex")) return;
   return route.abort();
 });
 const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 20000 });
@@ -91,6 +99,17 @@ try {
   check("first badge within 5 s on a warm page load", warmBadgeMs < 5000, `${warmBadgeMs} ms`);
   const extraOnResults = scholarHits.filter((h) => !h.startsWith("/scholar?hl=en&q=")).length;
   check("results page sends no extra Scholar requests", extraOnResults === 0, `${extraOnResults} extra: ${scholarHits.slice(1).join(", ")}`);
+  // A user click may ask Scholar for the cite page, so this runs after the no-extra-requests check above.
+  const bibBtn = p.locator('.gs_r:has(button[data-act="copydoi"]) button[data-act="copybib"]').first();
+  const bibT0 = Date.now();
+  await bibBtn.click().catch(() => {});
+  await p.waitForFunction(() => {
+    const btn = document.querySelector('.gs_r button[data-act="copydoi"]')?.closest(".gs_r")?.querySelector('button[data-act="copybib"]');
+    return btn && btn.textContent !== "…";
+  }, null, { timeout: 25000 }).catch(() => {});
+  const bibLabel = ((await bibBtn.textContent().catch(() => "")) || "").trim();
+  const bibMs = Date.now() - bibT0;
+  check("Copy Bib finishes when Crossref never answers", bibLabel !== "…" && bibMs < 20000, `"${bibLabel}" after ${(bibMs / 1000).toFixed(1)} s`);
   await p.close();
 
   // 1b. Your own journal list and the Quick read filter.
@@ -214,6 +233,40 @@ try {
   const deVelocity = await de.locator(".su-velocity").count();
   check("German interface: citation velocity matches the English page", deVelocity > 0 && deVelocity === enVelocity, `${deVelocity} German, ${enVelocity} English`);
   await de.close();
+  // 3c. "View article" page: venue badges, actions, chart numbers, author position, all without a Scholar request.
+  scholarHits.length = 0;
+  const art = await ctx.newPage();
+  await art.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://scholar.google.com" }).catch(() => {});
+  await art.goto("https://scholar.google.com/citations?view_op=view_citation&hl=en&user=eEcALuEAAAAJ&citation_for_view=eEcALuEAAAAJ:0EnyYjriUFMC");
+  await art.waitForSelector(".su-article-actions", { timeout: 15000 }).catch(() => {});
+  await art.waitForTimeout(1500);
+  const artInfo = await art.evaluate(() => ({
+    venueBadges: document.querySelectorAll("#gsc_oci_table .su-quality .su-badge").length,
+    buttons: [...document.querySelectorAll(".su-article-actions button")].map((b) => b.textContent),
+    cites: document.querySelector(".su-article-cites")?.textContent || "",
+    pos: document.querySelector(".su-article-author-pos")?.textContent || "",
+    profileStats: !!document.querySelector(".su-author-stats, #su-author-stats"),
+  }));
+  check("article page: journal badges on the venue line", artInfo.venueBadges > 0, `${artInfo.venueBadges} badges`);
+  check("article page: Save, Copy BibTeX and Copy RIS; no DOI button when the page shows no DOI", JSON.stringify(artInfo.buttons) === JSON.stringify(["Save to library", "Copy BibTeX", "Copy RIS"]), JSON.stringify(artInfo.buttons));
+  check("article page: numbers from the citation chart", /52 citations a year on average/.test(artInfo.cites) && /peak 73 in 2025/.test(artInfo.cites), artInfo.cites);
+  check("article page: where the profile's owner sits among the authors", artInfo.pos === "Sagar Samtani is author 2 of 4.", artInfo.pos);
+  await art.locator(".su-article-actions button", { hasText: "Copy BibTeX" }).click();
+  await art.waitForTimeout(300);
+  const artBib = await art.evaluate(() => navigator.clipboard.readText().catch(() => ""));
+  check("article page: BibTeX carries every author, volume, number and pages", /author=\{Yunji Liang and Sagar Samtani and Bin Guo and Zhiwen Yu\}/.test(artBib) && /volume=\{7\}/.test(artBib) && /number=\{9\}/.test(artBib) && /pages=\{9128--9143\}/.test(artBib), artBib.split("\n")[0]);
+  await art.locator(".su-article-actions button", { hasText: "Save to library" }).click();
+  await art.waitForTimeout(800);
+  const savedArt = await sw.evaluate(async () => (await chrome.storage.local.get("savedPapers")).savedPapers?.["cid:2392274550987972984"] || null);
+  check("article page: Save stores the full record under the paper's cluster key", savedArt?.volume === "7" && savedArt?.pages === "9128-9143" && /Bin Guo/.test(savedArt?.authorsVenue || ""), savedArt ? savedArt.authorsVenue : "not saved");
+  check("article page: no Scholar request beyond the page itself", scholarHits.length === 1, `${scholarHits.length} requests`);
+  await art.close();
+  const artR = await ctx.newPage();
+  await artR.goto("https://scholar.google.com/citations?view_op=view_citation&hl=en&user=eEcALuEAAAAJ&citation_for_view=eEcALuEAAAAJ:0EnyYjriUFMC&retracted=1");
+  await artR.waitForSelector(".su-article-actions", { timeout: 15000 }).catch(() => {});
+  const artR2 = await artR.evaluate(() => ({ doi: document.querySelector('.su-article-actions button[data-act="copydoi"]')?.dataset.doi || "", flag: !!document.querySelector(".su-article-actions .su-retraction-neutral") }));
+  check("article page: DOI from the title link, checked against the bundled retraction list", artR2.doi === "10.1016/S0140-6736(97)11096-0" && artR2.flag, JSON.stringify(artR2));
+  await artR.close();
   // 3b. Options: the two Scholar-request switches save and survive a reload.
   await sw.evaluate(async () => { const { settings } = await chrome.storage.local.get("settings"); await chrome.storage.local.set({ settings: { ...(settings || {}), autoLoadAuthorPapers: false, emergingSampleScholarPages: false } }); });
   const o = await ctx.newPage();

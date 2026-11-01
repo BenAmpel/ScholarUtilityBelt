@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { variantManifest } from "./variant-manifest.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const target = process.argv[2];
@@ -60,26 +61,8 @@ const walk = (d) => {
 walk(work);
 
 // 2. Manifest.
-const m = JSON.parse(fs.readFileSync(path.join(work, "manifest.json"), "utf8"));
-if (target === "firefox") {
-  // Firefox runs MV3 backgrounds as event pages (background.scripts), not service workers. These are the files
-  // sw.js loads with importScripts in Chrome, in the same order, then sw.js itself.
-  m.background = { scripts: [
-    "dist/common/extpay.js", "dist/common/entitlement.sw.js", "dist/common/url-policy.sw.js",
-    "dist/common/apppass.sw.js", "dist/common/install-pages.sw.js", "dist/common/ask-sw.js", "src/sw.js",
-  ] };
-  for (const f of m.background.scripts) if (!fs.existsSync(path.join(work, f))) throw new Error(`background file missing: ${f}`);
-  // The downloads API is only used to suggest a file name, behind a typeof check; exports use plain link downloads.
-  m.permissions = (m.permissions || []).filter((p) => p !== "downloads");
-  m.browser_specific_settings = { gecko: {
-    id: "scholar-utility-belt@purplelink.llc",
-    strict_min_version: "140.0",
-    // Declared for Firefox's install prompt. The default detailed view sends each result's DOI or title to public
-    // scholarly services (OpenAlex, Crossref and others), which is website content; watch lists send the search
-    // text you add to OpenAlex. Nothing goes to the developer. Review before submitting.
-    data_collection_permissions: { required: ["websiteContent"], optional: ["searchTerms"] },
-  } };
-}
+const m = variantManifest(JSON.parse(fs.readFileSync(path.join(work, "manifest.json"), "utf8")), target);
+if (m.background?.scripts) for (const f of m.background.scripts) if (!fs.existsSync(path.join(work, f))) throw new Error(`background file missing: ${f}`);
 fs.writeFileSync(path.join(work, "manifest.json"), JSON.stringify(m, null, 2) + "\n");
 
 // 3. Zip.

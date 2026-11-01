@@ -90,3 +90,15 @@ describe("buildBibTeXEntry", () => {
     assert.match(out, /year=\{2024\}/);
   });
 });
+
+describe("escapeBibText: characters that stop a LaTeX build", async () => {
+  const { escapeBibText, buildBibTeXEntry } = await import("../src/common/bibtex.js");
+  it("escapes & % # _ $ in titles and venues", () => {
+    assert.equal(escapeBibText("R&D: 50% of #1 p_values cost $5"), "R\\&D: 50\\% of \\#1 p\\_values cost \\$5");
+  });
+  it("writes one field per line", () => {
+    const bib = buildBibTeXEntry({ key: "k", title: "A_B", authors: ["J Smith"], year: 2020, venue: "Journal of Finance & Economics" });
+    assert.match(bib, /^@article\{k,\n  title=\{A\\_B\},\n/);
+    assert.match(bib, /journal=\{Journal of Finance \\& Economics\}/);
+  });
+});

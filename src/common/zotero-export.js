@@ -61,6 +61,12 @@ export function buildRisEntry(r, opts = {}) {
   r.authors.forEach((a) => add("AU", risAuthor(a)));
   add("PY", r.year);
   add("T2", r.venue);
+  add("VL", r.volume);
+  add("IS", r.issue);
+  const [sp, ep] = String(r.pages || "").split(/\s*[-–—]+\s*/);
+  add("SP", sp);
+  add("EP", ep);
+  add("PB", r.publisher);
   add("DO", r.doi);
   add("UR", r.url);
   add("AB", r.abstract);
