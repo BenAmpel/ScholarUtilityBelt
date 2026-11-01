@@ -53,6 +53,8 @@
   let qualityBadgesForVenue;
   let customBadgeForVenue;
   let compileCustomVenueIndex;
+  let pickOpenAlexWork;
+  let summarizeFwci;
   let getCachedElement;
   let getCachedElements;
   let loadEraAndNorwegian;
@@ -125,7 +127,7 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner, openalexMatch] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
@@ -135,8 +137,10 @@
       importModuleWithRetry("dist/common/custom-venues.js"),
       // Loaded now, not on demand: after an extension update new imports no longer work.
       importModuleWithRetry("dist/common/reload-banner.js"),
+      importModuleWithRetry("dist/common/openalex-match.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
+    ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
     ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
     ({
       addHiddenAuthor,
@@ -861,12 +865,15 @@
   // answers keep the long TTL. Before, any failure was cached as "no data" for the full TTL, so one
   // 429 or a dropped connection hid a paper's open-access, funder and DataCite badges for months.
   const EXTERNAL_SIGNAL_ERROR_TTL_MS = 10 * 60 * 1000;
+  // Cached answers older than this shape are fetched again. Crossref 2: hasUpdate reads updated-by, not update-to.
+  const EXTERNAL_SIGNAL_MIN_VERSION = { crossref: 2 };
   let externalFetchFailures = 0;
   function noteExternalFetchFailure(error) {
     if (/\bHTTP (404|410)\b/.test(String(error || ""))) return; // a definite "not found"
     externalFetchFailures += 1;
   }
-  const OPENALEX_CACHE_VERSION = 2;
+  // 3: works carry OpenAlex's fwci, and title matches cached under the old loose rule are dropped.
+  const OPENALEX_CACHE_VERSION = 3;
   const OPENALEX_RATE_LIMIT_TTL_MS = 15 * 60 * 1000;
   let externalSignalCache = null;
   let externalSignalSaveTimer = null;
@@ -981,6 +988,8 @@
     const entry = externalSignalCache[key]?.[provider];
     if (!entry || typeof entry !== "object") return null;
     const ttl = entry.err ? EXTERNAL_SIGNAL_ERROR_TTL_MS : (EXTERNAL_SIGNAL_TTLS[provider] || EXTERNAL_SIGNAL_TTLS.crossref);
+    const minVersion = EXTERNAL_SIGNAL_MIN_VERSION[provider];
+    if (minVersion && entry.data && (Number(entry.data.v) || 1) < minVersion) return null;
     const ts = Number(entry.ts) || 0;
     if (ts && Date.now() - ts > ttl) return null;
     return entry;
@@ -1019,14 +1028,16 @@
     const hasLicense = Array.isArray(msg.license) && msg.license.length > 0;
     const hasFullText = Array.isArray(msg.link) && msg.link.length > 0;
     const hasFunder = Array.isArray(msg.funder) && msg.funder.length > 0;
-    const hasUpdate = Array.isArray(msg["update-to"]) && msg["update-to"].length > 0;
+    // updated-by is on the paper that a correction, retraction or other notice updates; update-to is on the
+    // notice itself. Reading update-to marked the notices as "Updated" and never the corrected papers.
+    const hasUpdate = Array.isArray(msg["updated-by"]) && msg["updated-by"].length > 0;
     const funderNames = Array.isArray(msg.funder)
       ? msg.funder.map((f) => f?.name || "").filter(Boolean)
       : [];
     const awardNumbers = Array.isArray(msg.funder)
       ? msg.funder.flatMap((f) => Array.isArray(f?.award) ? f.award : []).map((a) => String(a || "")).filter(Boolean)
       : [];
-    return { hasLicense, hasFullText, hasFunder, hasUpdate, funderNames, awardNumbers };
+    return { v: 2, hasLicense, hasFullText, hasFunder, hasUpdate, funderNames, awardNumbers };
   }
   async function fetchOpenCitationsSignal(doi) {
     const url = `https://opencitations.net/index/coci/api/v1/citations/${encodeURIComponent(doi)}`;
@@ -1275,6 +1286,7 @@
       hostVenueId: work?.host_venue?.id || work?.primary_location?.source?.id || work?.locations?.[0]?.source?.id || "",
       countsByYear: Array.isArray(work?.counts_by_year) ? work.counts_by_year : [],
       citedByPercentileYear: work?.cited_by_percentile_year?.min ?? null,
+      fwci: Number.isFinite(work?.fwci) ? work.fwci : null,
       oaStatus: String(work?.open_access?.oa_status || "").toLowerCase() || null,
       authors,
       grants,
@@ -1301,19 +1313,6 @@
     for (const t of aTokens) if (bTokens.has(t)) inter += 1;
     const union = new Set([...aTokens, ...bTokens]).size;
     return union ? inter / union : 0;
-  }
-  function scoreOpenAlexCandidate(work, title, year, authorName) {
-    if (!work) return 0;
-    let score = titleSimilarity(title, work.display_name || work.title || "");
-    const wYear = Number(work.publication_year) || null;
-    if (year && wYear && Math.abs(wYear - year) <= 1) score += 0.15;
-    if (authorName && Array.isArray(work.authorships)) {
-      const found = work.authorships.some((a) =>
-        String(a?.author?.display_name || "").toLowerCase().includes(authorName.toLowerCase())
-      );
-      if (found) score += 0.15;
-    }
-    return score;
   }
   function decodeOpenAlexAbstract(index) {
     if (!index || typeof index !== "object") return null;
@@ -1351,17 +1350,9 @@
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
     const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
-    if (!results.length) return null;
-    let best = results[0];
-    let bestScore = scoreOpenAlexCandidate(best, q, year, authorName);
-    for (const cand of results.slice(1)) {
-      const score = scoreOpenAlexCandidate(cand, q, year, authorName);
-      if (score > bestScore) {
-        bestScore = score;
-        best = cand;
-      }
-    }
-    if (bestScore < 0.2) return null;
+    // Only a work whose title matches counts; year and author break ties (src/common/openalex-match.js).
+    const best = pickOpenAlexWork(results, q, year, authorName);
+    if (!best) return null;
     return decodeOpenAlexAbstract(best.abstract_inverted_index);
   }
   async function fetchOpenAlexWorkById(id) {
@@ -1423,17 +1414,9 @@
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
     const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
-    if (!results.length) return null;
-    let best = results[0];
-    let bestScore = scoreOpenAlexCandidate(best, q, year, authorName);
-    for (const cand of results.slice(1)) {
-      const score = scoreOpenAlexCandidate(cand, q, year, authorName);
-      if (score > bestScore) {
-        bestScore = score;
-        best = cand;
-      }
-    }
-    if (bestScore < 0.2) return null;
+    // Only a work whose title matches counts; year and author break ties (src/common/openalex-match.js).
+    const best = pickOpenAlexWork(results, q, year, authorName);
+    if (!best) return null;
     return compactOpenAlexWork(best);
   }
   async function fetchOpenAlexWorkForPaper(paper, authorName) {
@@ -7160,7 +7143,7 @@
       return ((below + 0.5 * equal) / dist.totalPapers) * 100;
     }
     const ranked = [];
-    const fwciPercentiles = [];
+    const fwciWorks = [];
     const oaCounts = {};
     let oaTotal = 0;
     let apiCalls = 0;
@@ -7175,11 +7158,8 @@
         apiCalls++;
       } catch { continue; }
       if (!oaWork) continue;
-      // FWCI: use OpenAlex's built-in cited_by_percentile_year if available
-      const oaPercentile = oaWork.citedByPercentileYear;
-      if (oaPercentile != null && Number.isFinite(oaPercentile)) {
-        fwciPercentiles.push(oaPercentile);
-      }
+      // FWCI from OpenAlex's per-work fwci; the citation percentile feeds the top-10% share.
+      fwciWorks.push({ fwci: oaWork.fwci, percentile: oaWork.citedByPercentileYear });
       // Open Access rollup
       if (oaWork.oaStatus) {
         oaCounts[oaWork.oaStatus] = (oaCounts[oaWork.oaStatus] || 0) + 1;
@@ -7220,24 +7200,11 @@
       stats.pIndex = null;
       stats.owpiIndex = null;
     }
-    // FWCI = mean(percentile) / 50. 1.0 = world average.
-    if (fwciPercentiles.length >= 3) {
-      const fSum = fwciPercentiles.reduce((a, b) => a + b, 0);
-      stats.fwci = Math.round((fSum / fwciPercentiles.length / 50) * 100) / 100;
-      stats.fwciArticles = fwciPercentiles.length;
-      // Median FWCI: robust to a single blockbuster paper
-      const sortedP = fwciPercentiles.slice().sort((a, b) => a - b);
-      const mid = Math.floor(sortedP.length / 2);
-      const medP = sortedP.length % 2 ? sortedP[mid] : (sortedP[mid - 1] + sortedP[mid]) / 2;
-      stats.fwciMedian = Math.round((medP / 50) * 100) / 100;
-      // Top-10% share: fraction of papers in the top decile of their field-year
-      const top10 = fwciPercentiles.filter((p) => p >= 90).length;
-      stats.top10Share = Math.round((top10 / fwciPercentiles.length) * 100);
-    } else {
-      stats.fwci = null;
-      stats.fwciMedian = null;
-      stats.top10Share = null;
-    }
+    const fwciSummary = summarizeFwci(fwciWorks);
+    stats.fwci = fwciSummary.fwci;
+    stats.fwciMedian = fwciSummary.fwciMedian;
+    stats.fwciArticles = fwciSummary.fwciArticles;
+    stats.top10Share = fwciSummary.top10Share;
     // Open Access breakdown (gold / green / hybrid / bronze / closed)
     if (oaTotal >= 3) {
       const open = (oaCounts.gold || 0) + (oaCounts.green || 0) + (oaCounts.hybrid || 0) + (oaCounts.bronze || 0) + (oaCounts.diamond || 0);
@@ -7576,7 +7543,7 @@
         good: "OWPI &gt; PI = stronger when leading. OWPI &lt; PI = impact driven by collaborations."
       },
       fwci: {
-        formula: "FWCI = mean(percentile<sub>year</sub>) / 50. Via OpenAlex cited_by_percentile_year.",
+        formula: "FWCI = mean over papers of citations / expected citations for the same field, type and year. Per-paper values from OpenAlex (fwci).",
         description: "Field-Weighted Citation Impact. 1.0 = world average for same field and year. Comparable across disciplines.",
         good: "FWCI &gt; 1.0 = above world average; &gt; 2.0 = strong; &gt; 3.0 = exceptional. Median shown alongside is robust to one blockbuster paper."
       },

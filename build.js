@@ -87,6 +87,11 @@ const TARGETS = [
     args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
   },
   {
+    // Imported by content.js: OpenAlex title matching and the FWCI summary.
+    label: 'common/openalex-match.js',
+    args: ['src/common/openalex-match.js', '--bundle=false', '--minify', '--outfile=dist/common/openalex-match.js', '--log-level=warning'],
+  },
+  {
     // "View article" pages: loaded only there.
     label: 'common/article-page.js',
     args: ['src/common/article-page.js', '--bundle=false', '--minify', '--outfile=dist/common/article-page.js', '--log-level=warning'],
