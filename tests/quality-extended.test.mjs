@@ -254,3 +254,24 @@ describe("ERA goes through the shared near-match rules", async () => {
     assert.equal(b.metadata.nearMatchVetted, true);
   });
 });
+
+describe("FT50 and UTD24 go through the same known-title and specificity rules", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const list = "Information Systems Research\nManagement Science\nProduction and Operations Management";
+  const idx = compileQualityIndex({ qualityFt50List: list, qualityUtd24List: list }, { quartilesIndex: { "information systems": "Q1" } });
+  const kinds = (venue) => qualityBadgesForVenue(venue, idx).map((b) => b.kind).filter((k) => k === "ft50" || k === "utd24");
+  it("the journal Information Systems (Elsevier) is not Information Systems Research", () => {
+    assert.deepEqual(kinds("Information Systems"), []);
+  });
+  it("a one-word venue does not prefix-match (Management is not Management Science)", () => {
+    assert.deepEqual(kinds("Management"), []);
+  });
+  it("a truncated Scholar venue still matches, with the entry shown on hover", () => {
+    const b = qualityBadgesForVenue("Production and Operations", idx).find((x) => x.kind === "ft50");
+    assert.equal(b?.metadata.nearMatch, "production and operations management");
+    assert.deepEqual(kinds("Production and Operations"), ["ft50", "utd24"]);
+  });
+  it("an exact title still matches", () => {
+    assert.deepEqual(kinds("Management Science"), ["ft50", "utd24"]);
+  });
+});

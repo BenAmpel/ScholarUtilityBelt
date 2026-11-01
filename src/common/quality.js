@@ -622,42 +622,27 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   // For sets (ft50, utd24), check exact match and prefix matches
-  // Only allow: exact match, or entry starts with venue (for abbreviations like "MISQ" matching "MIS Quarterly")
-  // Do NOT allow venue starts with entry (prevents "Journal of Marketing Analytics" matching "Journal of Marketing")
-  if (qIndex.ft50.has(v)) {
+  // FT50 and UTD24: exact match, or a list entry that starts with the venue (a truncated Scholar venue line such as
+  // "Production and Operations" for "Production and Operations Management"). Never the reverse: "Journal of Marketing
+  // Analytics" is not "Journal of Marketing". A full SCImago title is a journal of its own, so it matches only exactly
+  // ("Information Systems", Elsevier, is not "Information Systems Research"), and a forward match needs a venue
+  // specific enough to be a truncation, as in findBestMatchEntry ("management" alone is not "Management Science").
+  const topListMatch = (set) => {
+    if (set.has(v)) return v;
+    if (venueIsKnownTitle) return null;
+    if (v.length < MIN_KEY_LENGTH_FOR_PREFIX_MATCH && !v.includes(" ")) return null;
+    for (const entry of set) if (entry.startsWith(v + " ")) return entry;
+    return null;
+  };
+  const ft50Entry = topListMatch(qIndex.ft50);
+  if (ft50Entry) {
+    if (ft50Entry !== v) nearMatch.ft50 = { key: ft50Entry, count: 1 };
     badges.push({ kind: "ft50", text: "FT50", metadata: { system: "Financial Times 50 Top Research Journals" } });
-  } else {
-    // Check if any entry in the set starts with the normalized venue (for abbreviations)
-    // Require minimum length to avoid false matches with very short venue names
-    const MIN_PREFIX_LEN = 5;
-    if (v.length >= MIN_PREFIX_LEN) {
-      for (const entry of qIndex.ft50) {
-        // Exact match OR entry is longer and starts with venue + space (abbreviation matching)
-        // Do NOT check v.startsWith(entry) - that would cause false positives
-        if (entry === v || (entry.length > v.length && entry.startsWith(v + " "))) {
-          badges.push({ kind: "ft50", text: "FT50", metadata: { system: "Financial Times 50 Top Research Journals" } });
-          break;
-        }
-      }
-    }
   }
-
-  if (qIndex.utd24.has(v)) {
+  const utd24Entry = topListMatch(qIndex.utd24);
+  if (utd24Entry) {
+    if (utd24Entry !== v) nearMatch.utd24 = { key: utd24Entry, count: 1 };
     badges.push({ kind: "utd24", text: "UTD24", metadata: { system: "UT Dallas Top 100 Business School Research Rankings" } });
-  } else {
-    // Check if any entry in the set starts with the normalized venue (for abbreviations)
-    // Require minimum length to avoid false matches with very short venue names
-    const MIN_PREFIX_LEN = 5;
-    if (v.length >= MIN_PREFIX_LEN) {
-      for (const entry of qIndex.utd24) {
-        // Exact match OR entry is longer and starts with venue + space (abbreviation matching)
-        // Do NOT check v.startsWith(entry) - that would cause false positives
-        if (entry === v || (entry.length > v.length && entry.startsWith(v + " "))) {
-          badges.push({ kind: "utd24", text: "UTD24", metadata: { system: "UT Dallas Top 100 Business School Research Rankings" } });
-          break;
-        }
-      }
-    }
   }
 
   const VALID_CORE = /^A\*?$|^[ABC]$/i;
