@@ -341,3 +341,21 @@ describe("bundled VHB list", async () => {
     assert.equal(vhb("Corporate Governance"), undefined);
   });
 });
+
+describe("first-word index for near matches", async () => {
+  const { customBadgeForVenue } = await import("../src/common/quality.js");
+  it("sees entries added to a list after its first lookup", () => {
+    const map = new Map([["journal of finance", "A"]]);
+    const custom = { name: "Mine", map };
+    assert.equal(customBadgeForVenue("Production and Operations", custom), null);
+    map.set("production and operations management", "Top");
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "Top");
+  });
+  it("reads the current value, not one cached in the index", () => {
+    const map = new Map([["production and operations management", "B"]]);
+    const custom = { name: "Mine", map };
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "B");
+    map.set("production and operations management", "A");
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "A");
+  });
+});

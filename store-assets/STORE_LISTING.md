@@ -147,6 +147,10 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.2 (paste into the dashboard's "What's new")
+
+Faster journal badges: each venue on a results page is looked up about 12 times faster, with the same badges as before.
+
 ## Release notes for 1.1.1 (paste into the dashboard's "What's new")
 
 Fixes. Journals whose name begins like another journal's (Acta Informatica Medica and Acta Informatica, Information Systems and Information Systems Research) no longer show that other journal's impact factor, rank, h5 or FT50 badge. Workshops, cut-off venue names, longer titles and ICCV no longer take another venue's rank. The Updated badge now marks the corrected or retracted paper, not the correction notice. FWCI is OpenAlex's own figure for each work, so it is no longer capped at 2.0. A paper without a DOI is matched to an OpenAlex work only when the titles match, not on year and author alone. Exports and downloads (CSV, BibTeX, RIS, the citation graph image, library exports) no longer get cancelled in Firefox.

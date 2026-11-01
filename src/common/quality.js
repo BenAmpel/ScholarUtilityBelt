@@ -428,6 +428,32 @@ function reverseLeftoverOk(leftover) {
   return words.length === 1 && words[0].length <= 8 && !["and", "of", "on", "for", "in", "the"].includes(words[0]);
 }
 
+// A forward match (the entry starts with the venue) and a reverse match (the venue starts with the entry) both need the
+// same first word, so a lookup only has to scan the entries that share the venue's first word instead of the whole list
+// (20,000-30,000 names for SJR, ERA, Norwegian and the impact factors). Built once per map on first use; buckets keep the
+// map's order, so ties resolve exactly as a full scan would. Values are read from the map, and a map whose size changed
+// is indexed again.
+const FIRST_WORD_INDEX = new WeakMap();
+function firstWord(s) {
+  const i = s.indexOf(" ");
+  return i < 0 ? s : s.slice(0, i);
+}
+function keysSharingFirstWord(map, venue) {
+  let index = FIRST_WORD_INDEX.get(map);
+  if (!index || index.size !== map.size) {
+    const buckets = new Map();
+    for (const key of map.keys()) {
+      const w = firstWord(key);
+      const bucket = buckets.get(w);
+      if (bucket) bucket.push(key);
+      else buckets.set(w, [key]);
+    }
+    index = { size: map.size, buckets };
+    FIRST_WORD_INDEX.set(map, index);
+  }
+  return index.buckets.get(firstWord(venue)) || [];
+}
+
 function findBestMatchEntry(normalizedVenue, map, known = null, { truncated = false, noReverse = false } = {}) {
   // A venue Scholar cut short ("Information Systems …") is not that exact title; only longer entries can be it.
   if (!truncated && map.has(normalizedVenue)) return [normalizedVenue, map.get(normalizedVenue)];
@@ -439,7 +465,9 @@ function findBestMatchEntry(normalizedVenue, map, known = null, { truncated = fa
   let forwardAgrees = true;
   let forwardCount = 0;
   let reverse = null;
-  for (const [key, value] of map.entries()) {
+  for (const key of keysSharingFirstWord(map, normalizedVenue)) {
+    if (!map.has(key)) continue;
+    const value = map.get(key);
     if (venueIsKnownJournal && known.has(key)) continue;
     if (key.startsWith(normalizedVenue + " ")) {
       if (!venueIsSpecific) continue;
@@ -473,7 +501,7 @@ function isTruncatedVenue(venue) {
 function cutNameIsAmbiguous(v, known) {
   if (!known?.keys) return false;
   let n = 0;
-  for (const key of known.keys()) if (key === v || key.startsWith(v + " ")) if (++n > 1) return true;
+  for (const key of keysSharingFirstWord(known, v)) if (key === v || key.startsWith(v + " ")) if (++n > 1) return true;
   return false;
 }
 
