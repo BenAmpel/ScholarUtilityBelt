@@ -269,6 +269,7 @@ Automated checks:
 - `npm run a11y`: axe-core WCAG 2.1 AA checks of the extension's UI, light and dark.
 - `npm run focus`: tabs through the extension's controls on the results and profile fixtures and fails if one takes keyboard focus with no visible change.
 - `npm run store-status`: the public version, users and ratings of each store listing.
+- `npm run publish-stores`: dry run of the store upload (files, versions, sha256s, credentials). `--upload chrome,edge,firefox` uploads and `--submit` also submits for review; setup in [docs/store-publishing.md](docs/store-publishing.md).
 
 Representative validation tasks include:
 
