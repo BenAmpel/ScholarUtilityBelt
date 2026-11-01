@@ -1,6 +1,6 @@
 {
   "_comment": "Permissions of the last version published to the Chrome Web Store. Chrome disables an extension on update when its permission warnings grow (0.6.0 lost about half of its enabled users this way, 2026-09-24). tests/permission-growth.test.mjs fails when manifest.json asks for anything not listed here. Update this file only when a release that adds a permission is a deliberate decision, and prefer optional_host_permissions requested at the moment of use.",
-  "publishedVersion": "1.0.2",
+  "publishedVersion": "1.1.0",
   "permissions": [
     "downloads",
     "storage",

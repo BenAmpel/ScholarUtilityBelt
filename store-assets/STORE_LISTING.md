@@ -147,6 +147,21 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.1 (paste into the dashboard's "What's new")
+
+Fixes to numbers and badges. Journals no longer show another journal's rank, impact factor, h5 or FT50 badge because
+their names start the same way (Acta Informatica Medica and Acta Informatica, Information Systems and Information
+Systems Research): about 4,000 such badges across the bundled lists. Workshops, companion volumes and doctoral
+consortia no longer take the main conference's CORE or CCF rank, ICCV and ECCV get their own rank again, a venue name
+Scholar cuts short with "…" no longer matches a different short journal, and American Economic Review shows VHB A+.
+FWCI on author profiles is now OpenAlex's field-weighted citation impact (it was a percentile score capped at 2.0),
+papers without a DOI are matched to OpenAlex only when the title matches, and the "Updated" badge marks papers that
+have a correction or retraction notice (it used to mark the notices). Downloads in Firefox are no longer cancelled,
+and two open Scholar tabs no longer erase each other's saved lookups.
+
+For Firefox (AMO), whose last version is 1.0.2: paste the 1.1.0 notes below (without the PDF file-name sentence),
+then this paragraph.
+
 ## Release notes for 1.1.0 (paste into the dashboard's "What's new")
 
 Fewer requests to Google Scholar: opening an author profile no longer presses "Show more" by itself (stats cover the papers on screen, and "Load all for full stats" loads the rest), and the Emerging score no longer reads neighbouring Scholar pages in the background. Compare authors needs 5 requests instead of 25, and every feature that asks Scholar for more pages stops and waits 15 minutes after a "not a robot" check. Two switches in Options bring the old automatic loading back.
