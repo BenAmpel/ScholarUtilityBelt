@@ -8,7 +8,7 @@ credentials you create once in each developer console. Nothing in CI calls it.
 
 | Store | `--upload` | `--upload ... --submit` |
 |---|---|---|
-| Chrome | Uploads `output/ScholarUtilityBelt-<v>.zip` as the item's draft (API v2) | Then calls `publish`, which sends the draft to review. It goes live once approved. |
+| Chrome | Uploads `output/ScholarUtilityBelt-<v>.zip` as the item's draft (API v1.1) | Then calls `publish`, which sends the draft to review. It goes live once approved. |
 | Edge | Uploads `output/ScholarUtilityBelt-<v>-edge.zip` to the draft submission and waits until Partner Center has processed it | Then publishes the submission, with `output/firefox-store/release-notes.txt` as the certification notes |
 | Firefox | Uploads `output/ScholarUtilityBelt-<v>-firefox.zip` to the listed channel and waits for AMO's validator. AMO keeps nothing for review at this step. | Then creates the listed version with `output/firefox-store/ScholarUtilityBelt-<v>-source.zip` as the source code. Creating it submits it for review. It then sets the release notes (`release-notes.txt`) and the notes to reviewer (`SOURCE-NOTES.txt`). |
 
@@ -55,14 +55,14 @@ mkdir -p ~/.config/scholar-belt && touch ~/.config/scholar-belt/store-credential
 
 ```json
 {
-  "chrome":  { "clientId": "…", "clientSecret": "…", "refreshToken": "…", "publisherId": "…" },
+  "chrome":  { "clientId": "…", "clientSecret": "…", "refreshToken": "…" },
   "edge":    { "clientId": "…", "apiKey": "…", "productId": "…" },
   "firefox": { "jwtIssuer": "user:…", "jwtSecret": "…" }
 }
 ```
 
 You only need the blocks for the stores you use. Each field can also come from an environment variable, which overrides
-the file: `SUB_CHROME_CLIENT_ID`, `SUB_CHROME_CLIENT_SECRET`, `SUB_CHROME_REFRESH_TOKEN`, `SUB_CHROME_PUBLISHER_ID`,
+the file: `SUB_CHROME_CLIENT_ID`, `SUB_CHROME_CLIENT_SECRET`, `SUB_CHROME_REFRESH_TOKEN`,
 `SUB_EDGE_CLIENT_ID`, `SUB_EDGE_API_KEY`, `SUB_EDGE_PRODUCT_ID`, `SUB_AMO_JWT_ISSUER`, `SUB_AMO_JWT_SECRET`.
 
 The script sends credentials only in request headers or the OAuth form body, never in a URL. It removes them from
@@ -90,9 +90,8 @@ for example after revoking them:
    in with the account that owns the extension (it needs 2-step verification), continue past the "unverified app"
    warning (Advanced) and click **Allow**. The script saves the client id, client secret and refresh token in the
    `chrome` block and prints none of them. Delete the downloaded JSON afterwards.
-6. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole), open **Account** and copy the
-   **publisher ID** into the `chrome` block as `publisherId`. It is also the id in the dashboard's address
-   (`/webstore/devconsole/<publisher id>/...`).
+The script uses the Chrome Web Store API v1.1, which needs no publisher ID. On 2026-11-01 every v2 call for this item
+returned 403 (with the dashboard's publisher ID, `me` or `-`) while v1.1 with the same token worked.
 
 If you change the listing's visibility by hand in the dashboard, the API cannot publish until you have published once
 by hand with the new setting.

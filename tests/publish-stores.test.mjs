@@ -170,34 +170,38 @@ const noSecretInUrls = (calls) => {
 };
 
 describe("chromeClient", () => {
-  it("refreshes the token in a form body, uploads, polls, then publishes with review", async () => {
+  it("refreshes the token in a form body, uploads with PUT (v1.1), polls the draft, then publishes", async () => {
     let polls = 0;
+    const item = "omcogfcgldfmihfogbffflbocdbjockn";
     const f = mockFetch([
       ["POST", "https://oauth2.googleapis.com/token", () => json({ access_token: "ya29.tok" })],
-      ["POST", "https://chromewebstore.googleapis.com/upload/v2/publishers/pub-1/items/omcogfcgldfmihfogbffflbocdbjockn:upload",
-        () => json({ uploadState: "IN_PROGRESS" })],
-      ["GET", /:fetchStatus$/, () => json({ lastAsyncUploadState: ++polls < 2 ? "IN_PROGRESS" : "SUCCEEDED" })],
-      ["POST", /items\/omcogfcgldfmihfogbffflbocdbjockn:publish$/, () => json({ state: "PENDING_REVIEW" })],
+      ["PUT", `https://www.googleapis.com/upload/chromewebstore/v1.1/items/${item}`, () => json({ uploadState: "IN_PROGRESS" })],
+      ["GET", `https://www.googleapis.com/chromewebstore/v1.1/items/${item}?projection=DRAFT`,
+        () => json({ uploadState: ++polls < 2 ? "IN_PROGRESS" : "SUCCESS" })],
+      ["POST", `https://www.googleapis.com/chromewebstore/v1.1/items/${item}/publish`, () => json({ status: ["ITEM_PENDING_REVIEW"] })],
     ]);
     const c = chromeClient(SECRETS.chrome, { fetch: f, sleep: noSleep });
     await c.upload(Buffer.from("zip"));
     const p = await c.publish();
-    assert.equal(p.state, "PENDING_REVIEW");
-    const [tok, up, , , pub] = f.calls;
+    assert.deepEqual(p.status, ["ITEM_PENDING_REVIEW"]);
+    const [tok, up] = f.calls;
     assert.equal(tok.body.get("refresh_token"), SECRETS.chrome.refreshToken);
     assert.equal(tok.body.get("grant_type"), "refresh_token");
     assert.equal(up.headers.Authorization, "Bearer ya29.tok");
+    assert.equal(up.headers["x-goog-api-version"], "2");
     assert.equal(up.headers["Content-Type"], "application/zip");
-    assert.deepEqual(JSON.parse(pub.body), { publishType: "DEFAULT_PUBLISH" });
     assert.equal(f.calls.filter((x) => x.url.includes("oauth2")).length, 1, "token is fetched once");
     noSecretInUrls(f.calls);
   });
-  it("fails on a FAILED upload and on an HTTP error", async () => {
+  it("fails on a FAILURE upload, a publish that is not accepted, and an HTTP error", async () => {
     const f = mockFetch([
       ["POST", /oauth2/, () => json({ access_token: "ya29.tok" })],
-      ["POST", /:upload$/, () => json({ uploadState: "FAILED" })],
+      ["PUT", /\/upload\/chromewebstore\//, () => json({ uploadState: "FAILURE", itemError: [{ error_detail: "bad manifest" }] })],
+      ["POST", /\/publish$/, () => json({ status: ["NOT_AUTHORIZED"] })],
     ]);
-    await assert.rejects(chromeClient(SECRETS.chrome, { fetch: f, sleep: noSleep }).upload(Buffer.from("z")), /state FAILED/);
+    const c = chromeClient(SECRETS.chrome, { fetch: f, sleep: noSleep });
+    await assert.rejects(c.upload(Buffer.from("z")), /FAILURE .*bad manifest/);
+    await assert.rejects(c.publish(), /NOT_AUTHORIZED/);
     const g = mockFetch([["POST", /oauth2/, () => new Response("invalid_grant", { status: 400 })]]);
     await assert.rejects(chromeClient(SECRETS.chrome, { fetch: g, sleep: noSleep }).upload(Buffer.from("z")), /HTTP 400 invalid_grant/);
   });
@@ -314,7 +318,7 @@ describe("plan and run", () => {
     try {
       const f = mockFetch([
         ["POST", /oauth2/, () => json({ access_token: "ya29.tok" })],
-        ["POST", /chromewebstore.*:upload$/, () => json({ uploadState: "SUCCEEDED", crxVersion: "1.2.0" })],
+        ["PUT", /\/upload\/chromewebstore\//, () => json({ uploadState: "SUCCESS" })],
         ["POST", /draft\/package$/, () => new Response("rejected key edge-api-key-secret", { status: 401 })],
         ["POST", /addons\/upload\/$/, () => json({ uuid: "u" })],
         ["GET", /addons\/upload\/u\/$/, () => json({ uuid: "u", processed: true, valid: true })],
@@ -323,11 +327,11 @@ describe("plan and run", () => {
       const code = await run({ ...parseArgs(["--upload", "all"]), credentials: credFile(fx.root) },
         { root: fx.root, env: {}, live: {}, readManifest: fx.readManifest, fetch: f, sleep: noSleep, log: (s) => lines.push(s) });
       assert.equal(code, 1, "the Edge failure sets the exit code");
-      assert.equal(f.calls.filter((c) => /:publish|\/submissions$|\/versions\//.test(c.url)).length, 0);
+      assert.equal(f.calls.filter((c) => /\/publish$|\/submissions$|\/versions\//.test(c.url)).length, 0);
       const out = lines.join("\n");
       assert.match(out, /edge: FAILED .*HTTP 401 rejected key \[redacted\]/);
       assert.ok(!out.includes("edge-api-key-secret"));
-      assert.match(out, /chrome: uploaded version 1\.2\.0/);
+      assert.match(out, /chrome: uploaded the package \(SUCCESS\)/);
       assert.match(out, /firefox: package validated/);
     } finally { fx.cleanup(); }
   });
