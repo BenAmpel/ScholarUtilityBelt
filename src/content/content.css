@@ -434,14 +434,23 @@ body[data-su-theme="dark"] .su-author-badge-grid {
 }
 /* Find within results: dropdown over the page */
 .su-within-results-filter {
+  position: relative;
+  z-index: 10001;
+  width: fit-content;
+  max-width: 100%;
+  margin: 2px 0 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* Fallback for a page without Scholar's result column: the old floating bar. */
+.su-within-results-filter.su-within-results-filter-floating {
   position: fixed;
   top: 72px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10001;
-  font-size: 12px;
-  display: inline-flex;
-  flex-direction: column;
+  margin: 0;
   align-items: center;
 }
 .su-within-results-filter .su-filter-trigger-row {
@@ -469,8 +478,7 @@ body[data-su-theme="dark"] .su-author-badge-grid {
   display: none;
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
   margin-top: 4px;
   min-width: 420px;
   max-width: 90vw;
@@ -480,6 +488,10 @@ body[data-su-theme="dark"] .su-author-badge-grid {
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 10002;
+}
+.su-within-results-filter-floating .su-within-results-filter-body {
+  left: 50%;
+  transform: translateX(-50%);
 }
 .su-within-results-filter.su-filter-open .su-within-results-filter-body {
   display: block;
@@ -4100,6 +4112,7 @@ body[data-su-theme="dark"] .su-reading-guide-toggle.su-reading-guide-on {
 body[data-su-theme="dark"] .su-graph-card-meta { color: #bdc1c6; }
 .su-graph-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .su-lineage-card-body { display: flex; flex-direction: column; gap: 6px; }
+.su-lineage-card-body > button { align-self: flex-start; }
 .su-lineage-card-name { font-size: 13px; font-weight: 600; color: #111827; }
 .su-lineage-card-meta { font-size: 12px; color: #6b7280; }
 /* ── Academic Lineage Overlay (Redesigned) ──

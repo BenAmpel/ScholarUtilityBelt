@@ -147,6 +147,12 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.4 (paste into the dashboard's "What's new")
+
+Tidier page layout: the OpenAlex API key tip is now a small card in the corner instead of a banner that pushed Google
+Scholar's page aside, the Filter bar sits above the results instead of floating over them, and the Look up lineage
+button on author profiles is a normal size.
+
 ## Release notes for 1.1.3 (paste into the dashboard's "What's new")
 
 Faster Look up lineage on author profiles: the advisor-student match now answers in a fraction of a second instead

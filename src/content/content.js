@@ -8870,7 +8870,7 @@
         ? `<button type="button" class="su-compare-authors-btn" data-narrative-toggle="1">${narrativeOpen ? "Hide narrative" : "Narrative"}</button>`
         : "";
       statsContainer.innerHTML = `
-        ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers. If it doesn’t respond, try clicking again.</div>' : ''}
+        ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers.</div>' : ''}
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
         <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${tenureBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
@@ -13484,13 +13484,14 @@
       }
       btn.disabled = false;
     }
-    // .su-within-results-filter is position: fixed (see content.css), so it's
-    // out of normal document flow — a DOM-sibling "afterend" insertion lands
-    // wherever that bar happens to sit in the DOM tree, not visually below
-    // it. Anchor the panel with its own fixed position instead.
-    const fixedBar = document.querySelector(".su-within-results-filter");
+    // The filter bar normally sits in the page above the result list: put the panel right under it. Only the
+    // floating fallback bar (no result column) is out of document flow, so anchor the panel with a fixed position there.
+    const inPageBar = document.querySelector(".su-within-results-filter:not(.su-within-results-filter-floating)");
+    const fixedBar = document.querySelector(".su-within-results-filter-floating");
     const flowBar = document.getElementById("gs_res_ccl");
-    if (fixedBar) {
+    if (inPageBar) {
+      inPageBar.insertAdjacentElement("afterend", panel);
+    } else if (fixedBar) {
       const rect = fixedBar.getBoundingClientRect();
       panel.style.position = "fixed";
       panel.style.top = `${Math.round(rect.bottom + 8)}px`;
@@ -14749,7 +14750,15 @@
       } catch (_) {}
       updateToggleLabel();
     };
-    document.body.appendChild(bar);
+    // Sit in the page, directly above the result list, so the bar never floats over results while scrolling.
+    // Only a layout without Scholar's result column falls back to the old fixed position.
+    const resultList = document.getElementById("gs_res_ccl_mid");
+    if (resultList?.parentElement) {
+      resultList.parentElement.insertBefore(bar, resultList);
+    } else {
+      bar.classList.add("su-within-results-filter-floating");
+      document.body.appendChild(bar);
+    }
   }
   const FILTER_STORAGE_KEY = "su-filter-client";
   function loadClientFilterFromStorage() {
