@@ -1188,34 +1188,43 @@ html[data-su-theme="dark"] body[data-su-theme="dark"] .su-locked-feature .su-loc
   color: #202124 !important;
 }
 .su-apikey-banner {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 99990;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 10px 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(234, 179, 8, 0.35);
-  background: rgba(234, 179, 8, 0.08);
-  font-size: 12.5px;
+  gap: 8px;
+  max-width: min(340px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  font-size: 12px;
   line-height: 1.4;
 }
 .su-apikey-banner-text {
   flex: 1;
-  color: #7c5e00;
+  color: #3c4043;
 }
 .su-apikey-banner-text a {
-  color: inherit;
+  color: #1a0dab;
   text-decoration: underline;
 }
 .su-apikey-banner-open {
   font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 5px;
-  border: 1px solid rgba(234, 179, 8, 0.5);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #dadce0;
   background: transparent;
-  color: #7c5e00;
+  color: #1a73e8;
   cursor: pointer;
   white-space: nowrap;
+}
+.su-apikey-banner-open:hover {
+  background: rgba(26, 115, 232, 0.06);
 }
 .su-apikey-banner-dismiss {
   border: none;
@@ -1223,17 +1232,52 @@ html[data-su-theme="dark"] body[data-su-theme="dark"] .su-locked-feature .su-loc
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  color: #7c5e00;
-  padding: 0 2px;
+  color: #5f6368;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.su-apikey-banner-open:focus-visible,
+.su-apikey-banner-dismiss:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .su-apikey-banner {
+    animation: su-apikey-banner-in 180ms ease-out;
+  }
+}
+@keyframes su-apikey-banner-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 body[data-su-theme="dark"] .su-apikey-banner {
-  border-color: rgba(234, 179, 8, 0.25);
-  background: rgba(234, 179, 8, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #2d2e30;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 body[data-su-theme="dark"] .su-apikey-banner-text,
-body[data-su-theme="dark"] .su-apikey-banner-open,
 body[data-su-theme="dark"] .su-apikey-banner-dismiss {
-  color: #eab308;
+  color: #e8eaed;
+}
+body[data-su-theme="dark"] .su-apikey-banner-text a {
+  color: #8ab4f8;
+}
+/* Beat the theme's blanket dark-button rule (which uses !important) so the card keeps its own look. */
+body[data-su-theme="dark"] .su-apikey-banner button.su-apikey-banner-open {
+  background: transparent !important;
+  border-color: #5f6368 !important;
+  color: #8ab4f8 !important;
+}
+body[data-su-theme="dark"] .su-apikey-banner button.su-apikey-banner-dismiss {
+  background: transparent !important;
+  border: none !important;
+  color: #e8eaed !important;
+}
+body[data-su-theme="dark"] .su-apikey-banner button:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+@media print {
+  .su-apikey-banner { display: none; }
 }
 .su-retraction-tooltip {
   display: none;

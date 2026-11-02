@@ -13741,8 +13741,8 @@
     banner.id = "su-apikey-banner";
     banner.className = "su-apikey-banner";
     banner.innerHTML = [
-      '<span class="su-apikey-banner-text">Add a free <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">OpenAlex API key</a> in Options for reliable citation metrics, trends, and related-works results (recommended since Feb 2026).</span>',
-      '<button type="button" class="su-apikey-banner-open" data-apikey-open-options="1">Open Options</button>',
+      '<span class="su-apikey-banner-text">Add a free <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">OpenAlex API key</a> for reliable citation metrics.</span>',
+      '<button type="button" class="su-apikey-banner-open" data-apikey-open-options="1">Add key</button>',
       '<button type="button" class="su-apikey-banner-dismiss" aria-label="Dismiss">&times;</button>'
     ].join("");
     banner.querySelector(".su-apikey-banner-dismiss").addEventListener("click", async () => {
@@ -13754,12 +13754,10 @@
       chrome.runtime.sendMessage({ action: "openOptionsPage" });
       banner.remove();
     });
-    const container = document.querySelector("#gs_res_ccl_mid, #gs_res_ccl, #gs_bdy");
-    if (container) {
-      container.insertBefore(banner, container.firstChild);
-    } else {
-      document.body.insertBefore(banner, document.body.firstChild);
-    }
+    // A floating card, not an inline row, so it never pushes Scholar's own layout around.
+    banner.setAttribute("role", "region");
+    banner.setAttribute("aria-label", "Scholar Utility Belt tip");
+    document.body.appendChild(banner);
   }
   function applyCitationSort() {
     const mode = window.suSearchSortByCitations;
