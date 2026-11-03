@@ -3240,7 +3240,8 @@
    * Get BibTeX for a result: try Crossref by DOI (full metadata), then Scholar link/cite page,
    * else minimal entry. Uses background script for .bib URLs; Crossref works on author pages when DOI is present.
    */
-  async function getBibTeXForPaper(paper, container) {
+  // Returns { bib, source, doi }: source is "crossref", "scholar" or "minimal" (built from the result row).
+  async function findBibTeXForPaper(paper, container) {
     const resolveUrl = (href, base) => {
       if (!href) return null;
       try {
@@ -3263,7 +3264,7 @@
         });
         if (r.ok) {
           const body = await r.text();
-          if (body && /@\s*\w+\s*\{/.test(body)) return body.trim();
+          if (body && /@\s*\w+\s*\{/.test(body)) return { bib: body.trim(), source: "crossref", doi };
         }
       } catch {
         // fall through
@@ -3285,12 +3286,12 @@
       if (href) {
         const absUrl = resolveUrl(href);
         const body = await fetchBibViaBackground(absUrl);
-        if (body) return body;
+        if (body) return { bib: body, source: "scholar", doi };
         try {
           const r = await fetchBibStep(absUrl);
           if (r.ok) {
             const body2 = await r.text();
-            if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
+            if (/@\s*\w+\s*\{/.test(body2)) return { bib: body2.trim(), source: "scholar", doi };
           }
         } catch {
           // fall through
@@ -3311,12 +3312,12 @@
         if (bibHref) {
           const bibUrl = resolveUrl(bibHref, citeUrl);
           const body = await fetchBibViaBackground(bibUrl);
-          if (body) return body;
+          if (body) return { bib: body, source: "scholar", doi };
           try {
             const bibRes = await fetchBibStep(bibUrl);
             if (bibRes.ok) {
               const body2 = await bibRes.text();
-              if (/@\s*\w+\s*\{/.test(body2)) return body2.trim();
+              if (/@\s*\w+\s*\{/.test(body2)) return { bib: body2.trim(), source: "scholar", doi };
             }
           } catch {
             // fall through
@@ -3326,29 +3327,82 @@
         if (textarea) {
           const raw = (textarea.value || textarea.textContent || "").trim();
           const entry = extractOneBibTeXEntry(raw);
-          if (entry) return entry;
+          if (entry) return { bib: entry, source: "scholar", doi };
         }
         const pre = doc.querySelector("pre");
         if (pre) {
           const raw = (pre.textContent || "").trim();
           const entry = extractOneBibTeXEntry(raw);
-          if (entry) return entry;
+          if (entry) return { bib: entry, source: "scholar", doi };
         }
         const bodyHtml = doc.body?.innerHTML || "";
         const bodyText = doc.body?.innerText || "";
         for (const raw of [bodyHtml, bodyText]) {
           const entry = extractOneBibTeXEntry(raw);
-          if (entry) return entry;
+          if (entry) return { bib: entry, source: "scholar", doi };
         }
         // 3) Try direct .bib URL from cluster ID (Scholar sometimes injects the link via JS)
         const directBibUrl = `https://scholar.googleusercontent.com/scholar.bib?q=info:${clusterId}:scholar.google.com/&output=citation`;
         const body = await fetchBibViaBackground(directBibUrl);
-        if (body) return body;
+        if (body) return { bib: body, source: "scholar", doi };
       } catch {
         // fall through to fallback
       }
     }
-    return buildMinimalBibTeX(paper);
+    return { bib: buildMinimalBibTeX(paper), source: "minimal", doi };
+  }
+  function clearBibAuthorNotice(host) {
+    host?.querySelector?.(":scope > .su-bib-author-notice")?.remove();
+  }
+  /** Crossref's author list for a DOI (same request as the Crossref signal), or null. */
+  async function fetchCrossrefAuthors(doi) {
+    const url = `https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=scholar-extension@local`;
+    const data = await fetchExternalJson(url, { timeoutMs: 8000 });
+    const authors = data?.message?.author;
+    return Array.isArray(authors) ? authors : null;
+  }
+  async function checkBibAuthorsWithCrossref(bib, doi, host) {
+    if (!host) return;
+    const authors = await fetchCrossrefAuthors(doi);
+    if (!authors || !authors.length) return;
+    const mod = await importModuleWithRetry("dist/common/bibtex.js");
+    const check = mod.checkBibAuthorsAgainstCrossref(bib, authors);
+    if (!check.flagged) return;
+    clearBibAuthorNotice(host);
+    const notice = document.createElement("div");
+    notice.className = "su-bib-author-notice";
+    notice.setAttribute("role", "status");
+    const msg = document.createElement("span");
+    msg.className = "su-bib-author-notice-text";
+    msg.textContent = "Scholar may be missing an author.";
+    const detail = [];
+    if (check.missing > 0) detail.push(`Crossref lists ${check.crossrefCount} authors, the BibTeX has ${check.bibCount}.`);
+    if (check.truncated.length) detail.push(`Shortened name: ${check.truncated.join(", ")}.`);
+    msg.title = detail.join(" ");
+    const fix = document.createElement("button");
+    fix.type = "button";
+    fix.className = "su-bib-author-notice-btn";
+    fix.textContent = "Fix authors";
+    fix.title = "Replace the author field with Crossref's list and copy the BibTeX again";
+    fix.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(mod.fixBibAuthors(bib, authors));
+        msg.textContent = "Authors fixed from Crossref. BibTeX copied.";
+        msg.title = "";
+        fix.remove();
+      } catch {
+        msg.textContent = "Could not copy. Try again.";
+      }
+    });
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "su-bib-author-notice-close";
+    close.textContent = "\u00d7";
+    close.setAttribute("aria-label", "Dismiss");
+    close.addEventListener("click", (ev) => { ev.stopPropagation(); notice.remove(); });
+    notice.append(msg, fix, close);
+    host.appendChild(notice);
   }
   function computeKey({ clusterId, url, title, authors, year }) {
     if (clusterId) return `cid:${clusterId}`;
@@ -5743,9 +5797,15 @@
           try {
             btn.textContent = "…";
             btn.disabled = true;
-            const bib = await getBibTeXForPaper(p, container);
-            await navigator.clipboard.writeText(bib);
+            const found = await findBibTeXForPaper(p, container);
+            await navigator.clipboard.writeText(found.bib);
             btn.textContent = "Copied!";
+            // Scholar's entry (or one built from the row) can drop an author or cut a surname to one letter.
+            // With a DOI, ask Crossref for the author list now, on this click only, and offer a fix.
+            clearBibAuthorNotice(fl);
+            if (found.source !== "crossref" && found.doi) {
+              checkBibAuthorsWithCrossref(found.bib, found.doi, fl).catch(() => {});
+            }
           } catch {
             btn.textContent = "Failed";
           }
