@@ -14,11 +14,12 @@ describe("Scholar request pacing", () => {
   it("Compare authors stops on a CAPTCHA or rate limit and starts the cooldown", () => {
     const fetchPage = src.slice(src.indexOf("const fetchPage = async (cstart)"), src.indexOf("const html0 = await fetchPage(0)"));
     assert.match(fetchPage, /classifyScholarResponse\(/);
-    assert.match(fetchPage, /await noteScholarBlock\(\)/);
+    assert.match(fetchPage, /await noteScholarBlock\(blocked\)/);
   });
   it("Load more pages and Compare authors both wait out the shared cooldown", () => {
-    assert.equal((src.match(/await scholarCooldownLeftMs\(\)/g) || []).length, 3);
-    assert.match(src, /if \(out\.blocked\) \{ blockedBy = out\.blocked; await noteScholarBlock\(\); break; \}/);
+    // Three buttons check it, plus the cooldown notice's own refresh.
+    assert.equal((src.match(/await scholarCooldownLeftMs\(\)/g) || []).length, 4);
+    assert.match(src, /if \(out\.blocked\) \{\s*blockedBy = out\.blocked;[\s\S]{0,200}?await noteScholarBlock\(out\.blocked\);\s*break;\s*\}/);
     assert.match(src, /const SCHOLAR_COOLDOWN_MS = 15 \* 60 \* 1000;/);
   });
   it("the classifier recognises the answers that should stop a loop", () => {

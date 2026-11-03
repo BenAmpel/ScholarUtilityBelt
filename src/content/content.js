@@ -85,6 +85,10 @@
   let isQuickReadLink = (a) => !!(a && a.classList && a.classList.contains("gs_or_aia"));
   let classifyScholarResponse = () => null;
   let scholarCooldownLeft = ({ until, now }) => Math.max(0, Number(until || 0) - Number(now || 0));
+  // Cooldown notice helpers (scholar-links.js, reload-banner.js); null until the modules load, then the notice shows.
+  let scholarCooldownNotice = null;
+  let clearScholarCooldown = null;
+  let cooldownNoticeUi = null;
   let findResultDoi = () => null;
   // Until scholar-links.js loads, row links are read the old English-only way.
   let scholarRowLinkKind = () => null;
@@ -147,7 +151,8 @@
     ({ compileCustomVenueIndex } = customVenues);
     ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
     ({ buildNameSearch, findNameIndices } = genealogySearch);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount, scholarCooldownNotice, clearScholarCooldown } = scholarLinks);
+    cooldownNoticeUi = reloadBanner;
     ({
       addHiddenAuthor,
       addHiddenPaper,
@@ -7869,6 +7874,7 @@
           if (waitMs > 0) {
             loadAllBtn.textContent = `Scholar blocked a request recently. Try again in ${Math.ceil(waitMs / 60000)} min.`;
             setTimeout(() => { loadAllBtn.textContent = "Load all for full stats"; }, 6000);
+            pauseForScholarCooldown(() => { if (loadAllBtn.isConnected) loadAllBtn.click(); });
             return;
           }
           if (window.suState) window.suState.authorAutoLoadDisabled = false;
@@ -10992,6 +10998,7 @@
         const waitMs = await scholarCooldownLeftMs();
         if (waitMs > 0) {
           setCompareResultMessage(resultEl, `Google Scholar blocked a request a few minutes ago. Try again in ${Math.ceil(waitMs / 60000)} min.`, "su-compare-error");
+          pauseForScholarCooldown(() => { overlay.querySelector("#su-compare-do")?.click(); });
           return;
         }
         setCompareResultMessage(resultEl, "Loading Author B...");
@@ -11017,7 +11024,9 @@
                   ? "Google Scholar is asking for a \"not a robot\" check. Open Scholar in a tab, complete it, then try again."
                   : "Google Scholar is limiting requests right now. Wait a few minutes, then try again.");
                 e.scholarBlocked = blocked;
-                await noteScholarBlock();
+                scholarRetryAction = () => { overlay.querySelector("#su-compare-do")?.click(); };
+                cooldownNoticeHidden = false;
+                await noteScholarBlock(blocked);
                 throw e;
               }
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -13605,11 +13614,62 @@
   // After Scholar answers one of our requests with a CAPTCHA or 429, every extension feature that asks Scholar for
   // more pages waits SCHOLAR_COOLDOWN_MS before asking again, in every tab, so one block is not made worse by the next
   // button press. Only that one timestamp is stored, in chrome.storage.local.
+  // What started it ("captcha" or "rate_limit") is kept next to it, for the notice's wording.
   const SCHOLAR_COOLDOWN_KEY = "scholarCooldownUntil";
+  const SCHOLAR_COOLDOWN_KIND_KEY = "scholarCooldownKind";
   const SCHOLAR_COOLDOWN_MS = 15 * 60 * 1000;
-  async function noteScholarBlock() {
-    try { await chrome.storage.local.set({ [SCHOLAR_COOLDOWN_KEY]: Date.now() + SCHOLAR_COOLDOWN_MS }); } catch (_) { /* no cooldown is better than a broken button */ }
+  async function noteScholarBlock(kind) {
+    try {
+      await chrome.storage.local.set({ [SCHOLAR_COOLDOWN_KEY]: Date.now() + SCHOLAR_COOLDOWN_MS, [SCHOLAR_COOLDOWN_KIND_KEY]: kind === "rate_limit" ? "rate_limit" : "captcha" });
+    } catch (_) { /* no cooldown is better than a broken button */ }
+    refreshScholarCooldownNotice();
   }
+  // The work a cooldown stopped on this page (a button press), re-run once by the notice's Retry button.
+  let scholarRetryAction = null;
+  function pauseForScholarCooldown(retry) {
+    scholarRetryAction = retry;
+    cooldownNoticeHidden = false;
+    refreshScholarCooldownNotice();
+  }
+  let cooldownNoticeTimer = null;
+  let cooldownNoticeHidden = false;
+  // Shows, updates or removes the cooldown notice to match storage. Rechecked every 30 s while it shows, and
+  // when another tab changes the cooldown.
+  async function refreshScholarCooldownNotice() {
+    if (!cooldownNoticeUi || !scholarCooldownNotice) return;
+    try {
+      const leftMs = await scholarCooldownLeftMs();
+      let kind = null;
+      if (leftMs > 0) {
+        try { kind = (await chrome.storage.local.get(SCHOLAR_COOLDOWN_KIND_KEY))?.[SCHOLAR_COOLDOWN_KIND_KEY] || null; } catch (_) { kind = null; }
+      }
+      const notice = scholarCooldownNotice({ leftMs, kind, pageUrl: location.href });
+      if (!notice) {
+        cooldownNoticeUi.hideScholarCooldownNotice(document);
+        if (cooldownNoticeTimer) { clearInterval(cooldownNoticeTimer); cooldownNoticeTimer = null; }
+        cooldownNoticeHidden = false;
+        return;
+      }
+      if (cooldownNoticeHidden) return;
+      cooldownNoticeUi.showScholarCooldownNotice(document, notice, {
+        onRetry: retryAfterScholarCooldown,
+        onHide: () => { cooldownNoticeHidden = true; },
+      });
+      if (!cooldownNoticeTimer) cooldownNoticeTimer = setInterval(() => { refreshScholarCooldownNotice(); }, 30000);
+    } catch (_) { /* the notice is a convenience; the buttons still say why they wait */ }
+  }
+  async function retryAfterScholarCooldown() {
+    try { await clearScholarCooldown(chrome.storage.local); } catch (_) { /* storage gone (extension reloaded) */ }
+    if (cooldownNoticeTimer) { clearInterval(cooldownNoticeTimer); cooldownNoticeTimer = null; }
+    const again = scholarRetryAction;
+    scholarRetryAction = null;
+    if (typeof again === "function") setTimeout(() => { try { again(); } catch (_) { /* the button is gone */ } }, 0);
+  }
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes && Object.prototype.hasOwnProperty.call(changes, SCHOLAR_COOLDOWN_KEY)) refreshScholarCooldownNotice();
+    });
+  } catch (_) { /* no live updates across tabs */ }
   async function scholarCooldownLeftMs() {
     try {
       const got = await chrome.storage.local.get(SCHOLAR_COOLDOWN_KEY);
@@ -13619,7 +13679,7 @@
       const pageIsNormal = !!document.querySelector("#gs_res_ccl_mid, #gsc_rsb_cit, #gsc_a_b")
         && !classifyScholarResponse({ url: location.href, html: document.body?.innerHTML?.slice(0, 200000) || "" });
       const left = scholarCooldownLeft({ until, now: Date.now(), cooldownMs: SCHOLAR_COOLDOWN_MS, pageLoadedAt: performance.timeOrigin, pageIsNormal });
-      if (!left && until > Date.now()) await chrome.storage.local.remove(SCHOLAR_COOLDOWN_KEY);
+      if (!left && until > Date.now()) await chrome.storage.local.remove([SCHOLAR_COOLDOWN_KEY, SCHOLAR_COOLDOWN_KIND_KEY]);
       return left;
     } catch (_) { return 0; }
   }
@@ -14154,6 +14214,7 @@
       if (waitMs > 0) {
         loadMoreBtn.textContent = `Scholar blocked a request recently. Try again in ${Math.ceil(waitMs / 60000)} min.`;
         setTimeout(() => { loadMoreBtn.textContent = "Load more pages"; }, 6000);
+        pauseForScholarCooldown(() => { if (loadMoreBtn.isConnected) loadMoreBtn.click(); });
         return;
       }
       const maxPages = 5;
@@ -14169,7 +14230,13 @@
         const out = await fetchNextPageAndStitch(state);
         totalAdded += out.added;
         lastVisible = out.visible;
-        if (out.blocked) { blockedBy = out.blocked; await noteScholarBlock(); break; }
+        if (out.blocked) {
+          blockedBy = out.blocked;
+          scholarRetryAction = () => { if (loadMoreBtn.isConnected) loadMoreBtn.click(); };
+          cooldownNoticeHidden = false;
+          await noteScholarBlock(out.blocked);
+          break;
+        }
         if (!out.hasMore || out.added === 0) break;
         await new Promise((r) => setTimeout(r, delayMs));
       }
@@ -16102,6 +16169,7 @@
     Promise.resolve()
       .then(() => ensureModulesLoaded())
       .then(() => run())
+      .then(() => { refreshScholarCooldownNotice(); })
       .then(() => scheduleWatchListCheck())
       .catch((e) => {
         console.warn(`[SU] bootstrap attempt ${attempt} failed (${reason})`, e);

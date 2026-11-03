@@ -5561,6 +5561,47 @@ body[data-su-theme="dark"] .su-pro-prompt-btn:hover { background: #3c4043; }
 body[data-su-theme="dark"] .su-reload-banner { background: #3a2a07; border-color: #b45309; color: #fde68a; }
 body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-color: #b45309; color: #fde68a; }
 
+/* Scholar cooldown notice (after a robot check or rate limit): names what is paused, links to Scholar, Retry.
+   Bottom right so it never covers the reload banner (bottom center). Theme tokens cover light and dark. */
+.su-cooldown-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147481999;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--su-gray-300);
+  border-left: 4px solid var(--su-accent);
+  border-radius: 12px;
+  background: var(--su-surface);
+  color: var(--su-gray-900);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+}
+.su-cooldown-notice p { margin: 0 0 6px; }
+.su-cooldown-notice-title { font-weight: 600; }
+.su-cooldown-notice-time,
+.su-cooldown-notice-label { color: var(--su-gray-700); }
+.su-cooldown-notice-list { margin: 0 0 10px; padding-left: 18px; color: var(--su-gray-700); }
+.su-cooldown-notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.su-cooldown-notice-link { color: var(--su-accent); text-decoration: underline; }
+.su-cooldown-notice-link:hover { color: var(--su-accent-hover); }
+.su-cooldown-notice-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--su-chip-border);
+  border-radius: 999px;
+  background: var(--su-chip-bg);
+  color: var(--su-chip-text);
+  font: inherit;
+  cursor: pointer;
+}
+.su-cooldown-notice-btn:hover { background: var(--su-chip-bg-hover); }
+.su-cooldown-notice-btn:disabled { opacity: 0.6; cursor: default; }
+.su-cooldown-notice-link:focus-visible,
+.su-cooldown-notice-btn:focus-visible { outline: var(--su-focus-ring); outline-offset: 2px; }
+
 /* Badge from a close (prefix) list match rather than an exact venue match: a dashed edge marks it, and the
    tooltip names the list entry so a wrong match can be spotted. */
 .su-badge.su-badge-near-match { outline: 1px dashed currentColor; outline-offset: 1px; }
