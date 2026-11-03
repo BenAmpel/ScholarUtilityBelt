@@ -163,3 +163,41 @@ export function citedByCount(text) {
   const n = parseInt(m[0].replace(/\D/g, ""), 10);
   return Number.isFinite(n) ? n : null;
 }
+
+export const OA_FOUND_TEXT = "Free legal copy";
+export const OA_NONE_TEXT = "No free copy found (checked Unpaywall)";
+/**
+ * The open-access badge for a result, from its cached Unpaywall entry ({ ts, data, err? }).
+ * Three states, kept apart so a failed lookup is never shown as "no free copy":
+ *   found      Unpaywall lists a free legal copy: "Free legal copy", linked to it when there is a URL.
+ *   none       Unpaywall answered and lists no free copy: "No free copy found (checked Unpaywall)".
+ *              This includes data: null without err, which content.js stores only for a 404/410
+ *              (Unpaywall has no record of the DOI); every other failure is stored with err set.
+ *   unchecked  no DOI, not looked up yet, or the lookup failed (err set): no badge (null).
+ */
+export function unpaywallBadge(entry) {
+  if (!entry || typeof entry !== "object" || entry.err) return null;
+  const d = entry.data;
+  if (d !== null && typeof d !== "object") return null;
+  if (d && d.isOa === true) {
+    const status = d.oaStatus ? ` (${String(d.oaStatus).toUpperCase()})` : "";
+    const host = d.hostType ? ` · ${d.hostType}` : "";
+    return {
+      state: "found",
+      text: OA_FOUND_TEXT,
+      cls: "su-external-oa",
+      title: `Open access${status}${host}, found by Unpaywall`,
+      href: safeHref(d.bestOaUrlPdf) || safeHref(d.bestOaUrl) || "",
+    };
+  }
+  if (d === null || d.isOa === false) {
+    return {
+      state: "none",
+      text: OA_NONE_TEXT,
+      cls: "su-external-oa-none",
+      title: "Unpaywall lists no free legal copy of this DOI",
+      href: "",
+    };
+  }
+  return null;
+}
