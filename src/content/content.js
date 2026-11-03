@@ -14,6 +14,8 @@
   let csvToTags;
   let getAuthorHIndexSnapshots;
   let getCitationSnapshots;
+  let getCustomVenueList;
+  let setCustomVenueList;
   let getExternalSignalCache;
   let getHiddenAuthors;
   let getHiddenPapers;
@@ -55,6 +57,10 @@
   let renderBadgeExplanation;
   let renderWrongMatchLink;
   let compileCustomVenueIndex;
+  let addVenueToStoredList;
+  let buildAddToListControl;
+  let customListLabels;
+  let shouldOfferAddToList;
   let pickOpenAlexWork;
   let buildNameSearch;
   let findNameIndices;
@@ -148,7 +154,7 @@
       importModuleWithRetry("dist/common/openalex-match.js"),
       importModuleWithRetry("dist/common/genealogy-search.js"),
     ]);
-    ({ compileCustomVenueIndex } = customVenues);
+    ({ compileCustomVenueIndex, addVenueToStoredList, buildAddToListControl, customListLabels, shouldOfferAddToList } = customVenues);
     ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
     ({ buildNameSearch, findNameIndices } = genealogySearch);
     ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount, scholarCooldownNotice, clearScholarCooldown } = scholarLinks);
@@ -163,6 +169,7 @@
       csvToTags,
       getAuthorHIndexSnapshots,
       getCitationSnapshots,
+      getCustomVenueList,
       getExternalSignalCache,
       getHiddenAuthors,
       getHiddenPapers,
@@ -182,6 +189,7 @@
       setLocalCohortCache,
       setSettings,
       setCitationSnapshot,
+      setCustomVenueList,
       setTrajectoryVenueExpectedCache,
       setPageVisitCacheEntry,
       getStorageMapEntry,
@@ -4143,6 +4151,15 @@
       : rawBadges;
     const citeUrl = !isAuthorProfile && paper ? getCiteUrlForResult(container, paper) : null;
     const showLookupButton = state.settings.showQualityBadges && !badges.length && citeUrl;
+    // A venue that matched no list at all gets a quiet "Add to list" chip; saving it redraws via storage.onChanged.
+    const addToList = !retracted && shouldOfferAddToList({ venue: venueKey, rawBadges, settings: state.settings, isAuthorProfile })
+      ? buildAddToListControl(document, {
+        venue: venueKey,
+        listName: state.customVenue?.name || "",
+        labels: state.customVenue?.labels || [],
+        onAdd: (label) => addVenueToStoredList({ getList: getCustomVenueList, setList: setCustomVenueList }, venueKey, label)
+      })
+      : null;
     if (retracted) {
       const root = document.createElement("div");
       root.className = "su-quality";
@@ -4192,7 +4209,7 @@
       }
       return true;
     }
-    if (!badges.length && !showLookupButton) {
+    if (!badges.length && !showLookupButton && !addToList) {
       return false;
     }
     // Create new badge container
@@ -4338,6 +4355,7 @@
       });
       root.appendChild(lookupBtn);
     }
+    if (addToList) root.appendChild(addToList);
     // For author profile pages, insert after the .gsc_a_c element
     // For search results, insert after .gs_a or fallback element
     if (isAuthorProfile) {
@@ -5345,7 +5363,7 @@
     // The user's own venue list (options page). Kept apart from the quality index so changing it never rebuilds that cache.
     const customList = storageData.customVenueList;
     state.customVenue = customList && Array.isArray(customList.entries) && customList.entries.length
-      ? { name: customList.name || "My list", map: compileCustomVenueIndex(customList.entries) }
+      ? { name: customList.name || "My list", map: compileCustomVenueIndex(customList.entries), labels: customListLabels(customList) }
       : null;
     const quartiles = {
       index: storageData.qualityQuartilesIndex || {},
