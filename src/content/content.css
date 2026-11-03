@@ -1456,6 +1456,36 @@ body[data-su-theme="dark"] .su-apikey-banner button:hover {
   opacity: 0.7;
   cursor: wait;
 }
+/* "Add to list" on a result whose venue matched no list: muted until hovered or focused. */
+.su-add-to-list { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; }
+.su-add-to-list[hidden], .su-add-to-list [hidden] { display: none; }
+.su-badge.su-add-to-list-btn {
+  background: transparent;
+  border-style: dashed;
+  border-color: rgba(95,99,104,0.55);
+  color: #5f6368;
+  font-weight: 500;
+  cursor: pointer;
+}
+.su-badge.su-add-to-list-btn:hover,
+.su-badge.su-add-to-list-btn:focus-visible { background: #faf5ff; border-color: rgba(126,34,206,0.45); color: #581c87; }
+.su-add-to-list-form { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 11px; color: #3c4043; }
+.su-add-to-list-label { display: inline-flex; align-items: center; gap: 4px; }
+.su-add-to-list-input { width: 7em; font: inherit; padding: 1px 4px; border: 1px solid rgba(0,0,0,0.3); border-radius: 4px; }
+.su-add-to-list-save,
+.su-add-to-list-cancel { font: inherit; padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.25); background: #f8fafc; color: #0f172a; cursor: pointer; }
+.su-add-to-list-save { border-color: rgba(126,34,206,0.45); color: #581c87; }
+.su-add-to-list-save:disabled { opacity: 0.7; cursor: wait; }
+.su-add-to-list-status { color: #5f6368; }
+body[data-su-theme="dark"] .su-badge.su-add-to-list-btn { background: transparent; border-color: #80868b; color: #bdc1c6; }
+body[data-su-theme="dark"] .su-badge.su-add-to-list-btn:hover,
+body[data-su-theme="dark"] .su-badge.su-add-to-list-btn:focus-visible { background: #2d2a3d; border-color: #a78bfa; color: #e9d5ff; }
+body[data-su-theme="dark"] .su-add-to-list-form,
+body[data-su-theme="dark"] .su-add-to-list-status { color: #bdc1c6; }
+body[data-su-theme="dark"] .su-add-to-list-input { background: #202124; color: #e8eaed; border-color: #5f6368; }
+body[data-su-theme="dark"] .su-add-to-list-save,
+body[data-su-theme="dark"] .su-add-to-list-cancel { background: #35363a; color: #e8eaed; border-color: #5f6368; }
+body[data-su-theme="dark"] .su-add-to-list-save { color: #e9d5ff; border-color: #a78bfa; }
 .su-badge.su-custom { background: #faf5ff; border-color: rgba(126,34,206,0.32); color: #581c87; }
 .su-badge.su-abdc { background: #ecfeff; border-color: rgba(14,116,144,0.28); }
 .su-badge.su-vhb { background: #f0f9ff; border-color: rgba(7,89,133,0.28); }
