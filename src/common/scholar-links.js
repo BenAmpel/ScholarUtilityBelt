@@ -54,6 +54,59 @@ export function scholarCooldownLeft({ until, now, cooldownMs, pageLoadedAt, page
   return left;
 }
 
+/** chrome.storage.local keys for the cooldown: when it ends, and what started it ("captcha" or "rate_limit"). */
+export const SCHOLAR_COOLDOWN_KEY = "scholarCooldownUntil";
+export const SCHOLAR_COOLDOWN_KIND_KEY = "scholarCooldownKind";
+
+/** The buttons that check the cooldown and refuse to ask Scholar for more pages while it runs. */
+export const SCHOLAR_PAUSED_FEATURES = Object.freeze([
+  "Load more pages (search results)",
+  "Load all for full stats (author profiles)",
+  "Compare authors (author profiles)",
+]);
+
+/** "12 min left", "Less than a minute left", or "" when the cooldown is over. Minutes round up. */
+export function formatCooldownLeft(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  if (n < 60000) return "Less than a minute left";
+  return `${Math.ceil(n / 60000)} min left`;
+}
+
+/**
+ * What the cooldown notice on the Scholar page says, or null when it should not show (no time left).
+ * The link opens the current Scholar page (or Scholar's home page) in a new tab, where Google shows its own
+ * check; the extension never tries to answer it.
+ */
+export function scholarCooldownNotice({ leftMs, kind, pageUrl } = {}) {
+  const timeLeft = formatCooldownLeft(leftMs);
+  if (!timeLeft) return null;
+  let solveUrl = "https://scholar.google.com/";
+  try {
+    const u = new URL(String(pageUrl || ""));
+    const h = u.hostname.toLowerCase();
+    if (u.protocol === "https:" && (h === "scholar.google.com" || h.startsWith("scholar.google."))) solveUrl = u.href;
+  } catch (_) { /* keep Scholar's home page */ }
+  const rateLimited = kind === "rate_limit";
+  return {
+    kind: rateLimited ? "rate_limit" : "captcha",
+    title: rateLimited ? "Scholar is limiting requests" : "Scholar asked for a robot check",
+    hint: rateLimited
+      ? "Wait for the cooldown to end, or press Retry to try now."
+      : "Complete the check in Scholar, then press Retry.",
+    linkText: rateLimited ? "Open Scholar in a new tab" : "Complete the check in Scholar",
+    solveUrl,
+    timeLeft,
+    features: [...SCHOLAR_PAUSED_FEATURES],
+  };
+}
+
+/** Ends the cooldown now (the Retry button): removes both keys from the given chrome.storage area. */
+export async function clearScholarCooldown(area) {
+  if (!area || typeof area.remove !== "function") return;
+  await area.remove([SCHOLAR_COOLDOWN_KEY, SCHOLAR_COOLDOWN_KIND_KEY]);
+}
+
 const DOI_IN_TEXT = /10\.\d{4,9}\/[^\s"'<>]+/i;
 const DOI_URL_TAILS = /\/(full|abstract|pdf|epdf|pdfdirect|meta|summary|html|fulltext|references|citedby|figures|suppl(?:ementary)?)(\/.*)?$/i;
 /** A DOI cleaned of URL encoding, query strings, publisher page suffixes and trailing punctuation, or null. */
