@@ -98,6 +98,8 @@
   let findResultDoi = () => null;
   // Until scholar-links.js loads, row links are read the old English-only way.
   let scholarRowLinkKind = () => null;
+  // Open-access badge (scholar-links.js); no badge until the module loads.
+  let unpaywallBadge = () => null;
   let citedByCount = (t) => { const m = String(t || "").match(/Cited by\s+([\d,]+)/i); return m ? parseInt(m[1].replace(/,/g, ""), 10) : null; };
   let safeHref = (u) => (/^https?:\/\//i.test(String(u ?? "").trim()) ? String(u).trim() : "");
   let firstFileColumnLink = (anchors) => Array.from(anchors || []).find((a) => !isQuickReadLink(a)) || null;
@@ -157,7 +159,7 @@
     ({ compileCustomVenueIndex, addVenueToStoredList, buildAddToListControl, customListLabels, shouldOfferAddToList } = customVenues);
     ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
     ({ buildNameSearch, findNameIndices } = genealogySearch);
-    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount, scholarCooldownNotice, clearScholarCooldown } = scholarLinks);
+    ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount, scholarCooldownNotice, clearScholarCooldown, unpaywallBadge } = scholarLinks);
     cooldownNoticeUi = reloadBanner;
     ({
       addHiddenAuthor,
@@ -5063,11 +5065,9 @@
     const ncbi = ncbiEntry?.data || {};
     const s2 = s2Entry?.data || {};
     const badges = [];
-    if (unpay.isOa) {
-      const status = unpay.oaStatus ? ` (${String(unpay.oaStatus).toUpperCase()})` : "";
-      const host = unpay.hostType ? ` · ${unpay.hostType}` : "";
-      badges.push({ text: "OA", cls: "su-external-oa", title: `Open access${status}${host}` });
-    }
+    // Free legal copy / no free copy found; nothing while unchecked or after a failed lookup.
+    const oaBadge = unpaywallBadge(unpayEntry);
+    if (oaBadge) badges.push(oaBadge);
     if (crossref.hasFullText) badges.push({ text: "Full text", cls: "su-external-fulltext", title: "Full-text link detected (Crossref)" });
     if (crossref.hasFunder) badges.push({ text: "Funded", cls: "su-external-funded", title: "Funder metadata present (Crossref)" });
     if (crossref.hasUpdate) badges.push({ text: "Updated", cls: "su-external-updated", title: "Corrections/updates detected (Crossref)" });
@@ -5103,7 +5103,12 @@
     const root = document.createElement("div");
     root.className = "su-external";
     for (const b of badges) {
-      const span = document.createElement("span");
+      const span = document.createElement(b.href ? "a" : "span");
+      if (b.href) {
+        span.href = b.href;
+        span.target = "_blank";
+        span.rel = "noopener noreferrer";
+      }
       span.className = `su-badge su-external-badge ${b.cls}`;
       span.textContent = b.text;
       if (b.title) {
