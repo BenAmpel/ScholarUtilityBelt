@@ -53,6 +53,7 @@
   let qualityBadgesForVenue;
   let customBadgeForVenue;
   let renderBadgeExplanation;
+  let renderWrongMatchLink;
   let compileCustomVenueIndex;
   let pickOpenAlexWork;
   let buildNameSearch;
@@ -199,7 +200,8 @@
       normalizeVhbRank,
       qualityBadgesForVenue,
       customBadgeForVenue,
-      renderBadgeExplanation
+      renderBadgeExplanation,
+      renderWrongMatchLink
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
     ({
@@ -3644,6 +3646,9 @@
       }
     });
   }
+  function extensionVersion() {
+    try { return chrome.runtime?.getManifest?.()?.version || ""; } catch { return ""; }
+  }
   function createBadgeTooltip(badge, sourceMeta) {
     if (!badge.metadata) return null;
     const tooltip = document.createElement("div");
@@ -3714,6 +3719,12 @@
     // Which list, which edition, the quartile's subject category, and Scholar's venue against the matched entry.
     const source = renderBadgeExplanation?.(document, badge, sourceMeta);
     if (source) tooltip.appendChild(source);
+    // "Wrong match?" opens a prefilled GitHub issue (venue strings, list, edition, rank, version only).
+    const report = source ? renderWrongMatchLink?.(document, badge, sourceMeta) : null;
+    if (report) {
+      tooltip.appendChild(report);
+      tooltip.classList.add("su-badge-tooltip-interactive");
+    }
     return tooltip;
   }
   function buildMarkdownFromRow(row, isAuthorProfile) {
@@ -4242,12 +4253,14 @@
         }
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {
-          const tooltip = createBadgeTooltip(b, { quartilesMeta: state.quartilesMeta, jcrMeta: state.jcrMeta });
+          const tooltip = createBadgeTooltip(b, { quartilesMeta: state.quartilesMeta, jcrMeta: state.jcrMeta, extensionVersion: extensionVersion() });
           if (tooltip) {
             span.appendChild(tooltip);
             span.style.position = "relative";
             span.style.cursor = "help";
+            let hideTimer = 0;
             span.addEventListener("mouseenter", (e) => {
+              clearTimeout(hideTimer);
               tooltip.style.display = "block";
               const rect = span.getBoundingClientRect();
               const tooltipRect = tooltip.getBoundingClientRect();
@@ -4281,7 +4294,9 @@
               });
             });
             span.addEventListener("mouseleave", () => {
-              tooltip.style.display = "none";
+              // A short delay lets the pointer cross the gap into the popover to reach its "Wrong match?" link.
+              clearTimeout(hideTimer);
+              hideTimer = setTimeout(() => { tooltip.style.display = "none"; }, 250);
             });
           }
         }

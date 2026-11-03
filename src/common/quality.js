@@ -865,3 +865,68 @@ export function renderBadgeExplanation(doc, badge, meta = {}) {
   }
   return dl;
 }
+
+// "Wrong match?" link in the badge popover: a prefilled new-issue page on the public repo. Only the venue strings, the
+// list, its edition, the rank shown and the extension version go in; never the page URL, the query, a paper title,
+// author names or anything that identifies the user. Each value is capped so the URL stays far below ~2000 characters.
+export const WRONG_MATCH_ISSUE_BASE = "https://github.com/BenAmpel/ScholarUtilityBelt/issues/new";
+// Caps are in URL-encoded characters (a non-ASCII letter takes 6 or more), so the whole URL stays under ~1500.
+export const WRONG_MATCH_URL_MAX = 1800;
+
+/** encodeURIComponent, plus the few characters it leaves alone (! ' ( ) *). */
+function encodeAll(s) {
+  return encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+/** Collapse whitespace and cut by code point until the encoded form fits `maxEncoded`. */
+function capField(value, maxEncoded) {
+  let chars = Array.from(String(value ?? "").replace(/\s+/g, " ").trim());
+  if (!chars.length) return "Not available";
+  if (encodeAll(chars.join("")).length <= maxEncoded) return chars.join("");
+  while (chars.length && encodeAll(`${chars.join("")}…`).length > maxEncoded) chars = chars.slice(0, -1);
+  return `${chars.join("")}…`;
+}
+
+/** Pure: the GitHub new-issue URL for reporting a badge that matched the wrong venue. */
+export function buildWrongMatchIssueUrl({ scholarVenue, matchedVenue, listName, edition, rank, extensionVersion } = {}) {
+  const title = `Wrong match: "${capField(scholarVenue, 120)}" on ${capField(listName, 120)}`;
+  const body = [
+    "A ranking badge seems to match the wrong venue.",
+    "",
+    `Scholar shows: ${capField(scholarVenue, 240)}`,
+    `Matched in the list: ${capField(matchedVenue, 240)}`,
+    `List: ${capField(listName, 120)}`,
+    `Edition: ${capField(edition, 120)}`,
+    `Rank shown: ${capField(rank, 60)}`,
+    `Extension version: ${capField(extensionVersion, 30)}`,
+    "",
+    "What is the correct venue or rank (optional)?",
+    "",
+  ].join("\n");
+  return `${WRONG_MATCH_ISSUE_BASE}?title=${encodeAll(title)}&body=${encodeAll(body)}`;
+}
+
+/** The popover's "Wrong match?" link, built with DOM APIs only. Null for badges that are not from a ranking list. */
+export function renderWrongMatchLink(doc, badge, meta = {}) {
+  const info = explainBadge(badge, meta);
+  if (!info || !doc?.createElement) return null;
+  const m = badge.metadata || {};
+  const href = buildWrongMatchIssueUrl({
+    scholarVenue: m.venueShown || m.venueRead || "",
+    matchedVenue: m.nearMatch || m.venueMatched || "",
+    // A user's own list name stays out of a public issue.
+    listName: badge.kind === "custom" ? "Your own list (name not sent)" : info.list,
+    edition: info.edition,
+    rank: badge.text || m.rank || m.quartile || "",
+    extensionVersion: meta.extensionVersion || "",
+  });
+  const wrap = doc.createElement("div");
+  wrap.className = "su-badge-report";
+  const a = doc.createElement("a");
+  a.setAttribute("href", href);
+  a.setAttribute("target", "_blank");
+  a.setAttribute("rel", "noopener noreferrer");
+  a.textContent = "Wrong match? Report it on GitHub";
+  wrap.appendChild(a);
+  return wrap;
+}
