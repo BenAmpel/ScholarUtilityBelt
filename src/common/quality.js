@@ -513,7 +513,8 @@ export function customBadgeForVenue(venue, custom) {
   // ("Journal of Marketing" on the list is not "Journal of Marketing Research"). A near match says so on hover.
   const entry = findBestMatchEntry(v, custom.map, null, { truncated: isTruncatedVenue(venue), noReverse: true });
   if (!entry) return null;
-  const metadata = { system: `Your list: ${custom.name || "My list"}` };
+  const metadata = { system: `Your list: ${custom.name || "My list"}`, listName: custom.name || "My list",
+    venueShown: String(venue || "").replace(/\s+/g, " ").trim(), venueMatched: entry[0] };
   if (entry[0] !== v) Object.assign(metadata, { nearMatch: entry[0], nearMatchCount: entry[2] || 1, venueRead: v });
   return { kind: "custom", text: String(entry[1]), metadata };
 }
@@ -677,19 +678,22 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // doctoral consortium are not the main proceedings either.
   const companionTrack = /\b(?:treos?|workshops?|doctoral|consortium)\b/.test(v);
   let core = null;
+  // The list entry an alias rule matched, so the popover can say which entry it was ("icis 2024" -> the ICIS entry).
+  let coreAliasKey = null;
+  const coreAlias = (key) => { const r = qIndex.core.get(key); if (r) coreAliasKey = key; return r; };
   if ((v.startsWith("icis ") || v === "icis") && !companionTrack) {
-    core = qIndex.core.get("international conference on information systems");
+    core = coreAlias("international conference on information systems");
   }
   if (!core) core = exact(qIndex.core);
   // "42nd International Conference on Information Systems (ICIS), 1-8" → ICIS (avoid matching ISD/other "International Conference on Information Systems *")
   if (!core && v.startsWith("international conference on information systems") && (v === "international conference on information systems" || v.includes(" icis"))) {
-    core = qIndex.core.get("international conference on information systems");
+    core = coreAlias("international conference on information systems");
   }
   if (!core && v.startsWith("americas") && v.includes("conference on information systems") && !companionTrack) {
-    core = qIndex.core.get("americas conference on information systems");
+    core = coreAlias("americas conference on information systems");
   }
   if (!core && v.startsWith("hawaii international conference on system sciences") && !companionTrack) {
-    core = qIndex.core.get("hawaii international conference on system sciences");
+    core = coreAlias("hawaii international conference on system sciences");
   }
   if (!core) {
     core = fuzzy("core", qIndex.core);
@@ -758,7 +762,13 @@ export function qualityBadgesForVenue(venue, qIndex) {
   }
 
   if (impactBadge) badges.push(impactBadge);
+  const venueShown = String(venue || "").replace(/\s+/g, " ").trim();
   for (const b of badges) {
+    // What Scholar showed and which list entry it matched, for the popover's "Scholar shows" / "Matched in the list".
+    if (b.metadata && BADGE_SOURCE_BY_KIND[b.kind]) {
+      b.metadata.venueShown = venueShown;
+      b.metadata.venueMatched = nearMatch[b.kind]?.key || (b.kind === "core" && coreAliasKey) || v;
+    }
     if (nearMatch[b.kind] && b.metadata) {
       // Vetted: the venue is a full SCImago title, so findBestMatchEntry has already ruled out every other known
       // journal; what is left is the same title with a subtitle or acronym ("journal of social issues jsi").
@@ -766,4 +776,92 @@ export function qualityBadgesForVenue(venue, qIndex) {
     }
   }
   return badges;
+}
+
+// One row per bundled list: the Options table "Where the built-in badges come from" and the badge popover both read
+// this, so the list name and edition a user sees in the two places cannot disagree. `edition` is the edition of the
+// bundled file; the SJR year is read from the file's own meta where it is known (options table, imported files).
+export const BADGE_SOURCES = [
+  { kind: "quartile", badge: "Q1–Q4", name: "SCImago Journal Rank", list: "SCImago Journal Rank (SJR)", edition: "2024", file: "scimago_2024_quartiles.json", url: "https://www.scimagojr.com/journalrank.php" },
+  { kind: "abdc", badge: "ABDC", name: "ABDC Journal Quality List 2025", list: "ABDC Journal Quality List", edition: "2025", file: "abdc2025.csv", key: "abdc2025" },
+  { kind: "abs", badge: "ABS", name: "Chartered ABS Academic Journal Guide 2024", list: "Chartered ABS Academic Journal Guide", edition: "2024", file: "abs2024.csv", key: "abs2024" },
+  { kind: "vhb", badge: "VHB", name: "VHB JOURQUAL 2024", list: "VHB JOURQUAL (VHB Rating)", edition: "2024", file: "vhb2024.csv", key: "vhb2024" },
+  { kind: "fnege", badge: "FNEGE", name: "FNEGE 2025, from the Harzing Journal Quality List (72nd edition)", list: "FNEGE journal ranking", edition: "2025, as given in the Harzing Journal Quality List, 72nd edition", file: "fnege2025.csv", key: "fnege2025" },
+  { kind: "ft50", badge: "FT50", name: "Financial Times 50 research journals", list: "Financial Times 50 research journals (FT50)", edition: "No edition year; the current FT list", file: "ft50.txt", key: "ft50" },
+  { kind: "utd24", badge: "UTD24", name: "UT Dallas 24 journals", list: "UT Dallas 24 journals (UTD24)", edition: "No edition year; the current UT Dallas list", file: "utd24.txt", key: "utd24" },
+  { kind: "core", badge: "CORE", name: "CORE/ICORE 2026 conference ranking", list: "CORE conference ranking", edition: "ICORE2026, or the older CORE portal rank where ICORE2026 has none", file: "core_icore2026.csv", key: "core_icore2026" },
+  { kind: "ccf", badge: "CCF", name: "China Computer Federation recommended venues", list: "China Computer Federation (CCF) recommended venues", edition: "No edition year in the bundled file", file: "ccf_ranks.csv" },
+  { kind: "era", badge: "ERA 2023", name: "Excellence in Research for Australia 2023 journal list", list: "Excellence in Research for Australia (ERA) journal list", edition: "2023", file: "era2023.txt" },
+  { kind: "norwegian", badge: "Level 1/2", name: "Norwegian Register for Scientific Journals", list: "Norwegian Register for Scientific Journals", edition: "No edition year in the bundled file", file: "norwegian_compact.json" },
+  { kind: "h5", badge: "h5", name: "Google Scholar Metrics 5-year h-index", list: "Google Scholar Metrics, 5-year h-index", edition: "2025", file: "venue_h5_index.json" },
+  { kind: "if", badge: "IF", name: "Journal Impact Factor 2024", list: "Journal Impact Factor", edition: "2024", file: "journal_impact_2024.csv" },
+  { kind: "jcr", list: "Clarivate Journal Citation Reports (JCR), your imported file" },
+  { kind: "custom", list: "Your list" },
+];
+const BADGE_SOURCE_BY_KIND = Object.fromEntries(BADGE_SOURCES.map((s) => [s.kind, s]));
+
+const QUARTILE_NOT_APPLICABLE = "Not applicable. This badge is a rank on the list, not a quartile.";
+
+/**
+ * The four facts a badge popover states: which list, which edition, the subject category behind a quartile, and the
+ * venue Scholar showed against the list entry it matched. `meta` holds the stored file meta for imported indexes
+ * ({ quartilesMeta, jcrMeta }), so an imported SJR or JCR file reports its own year. Returns null for badges that are
+ * not from a ranking list (pre-print server, ACL Findings).
+ */
+export function explainBadge(badge, meta = {}) {
+  const src = BADGE_SOURCE_BY_KIND[badge?.kind];
+  if (!src) return null;
+  const m = badge.metadata || {};
+  let list = src.list;
+  let edition = src.edition || "";
+  let category = QUARTILE_NOT_APPLICABLE;
+  if (badge.kind === "quartile") {
+    const qm = meta.quartilesMeta;
+    if (qm?.year) edition = String(qm.year);
+    category = "Not recorded. SJR ranks a journal in each of its subject categories; this badge is the best of those quartiles.";
+  } else if (badge.kind === "jcr") {
+    const jm = meta.jcrMeta;
+    edition = jm?.year ? String(jm.year) : "Not recorded in your imported file";
+    const cat = m.jcrData?.category;
+    category = cat ? String(cat) : "Not recorded in your imported file";
+  } else if (badge.kind === "custom") {
+    list = `Your list: ${m.listName || String(m.system || "").replace(/^Your list:\s*/, "") || "My list"}`;
+    edition = "Your own list, imported in Options";
+  }
+  const shown = m.venueShown || m.venueRead || "";
+  const matched = m.nearMatch || m.venueMatched || "";
+  const same = normalizeVenueName(shown) === normalizeVenueName(matched);
+  return {
+    list,
+    edition,
+    category,
+    venueShown: shown || "Not available",
+    venueMatched: matched ? (same ? `${matched} (exact match)` : matched) : "Not available",
+  };
+}
+
+export const BADGE_EXPLANATION_LABELS = [
+  ["list", "List"],
+  ["edition", "Edition"],
+  ["category", "Subject category"],
+  ["venueShown", "Scholar shows"],
+  ["venueMatched", "Matched in the list"],
+];
+
+/** The popover's source block as a <dl>, built with textContent only (venue strings come from the page). */
+export function renderBadgeExplanation(doc, badge, meta = {}) {
+  const info = explainBadge(badge, meta);
+  if (!info || !doc?.createElement) return null;
+  const dl = doc.createElement("dl");
+  dl.className = "su-badge-source";
+  for (const [field, label] of BADGE_EXPLANATION_LABELS) {
+    const dt = doc.createElement("dt");
+    dt.textContent = label;
+    const dd = doc.createElement("dd");
+    dd.textContent = info[field];
+    dd.setAttribute("data-field", field);
+    dl.appendChild(dt);
+    dl.appendChild(dd);
+  }
+  return dl;
 }

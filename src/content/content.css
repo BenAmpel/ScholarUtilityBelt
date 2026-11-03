@@ -5565,6 +5565,9 @@ body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-c
    tooltip names the list entry so a wrong match can be spotted. */
 .su-badge.su-badge-near-match { outline: 1px dashed currentColor; outline-offset: 1px; }
 .su-badge-tooltip .su-badge-near { display: inline-block; margin-top: 4px; max-width: 280px; white-space: normal; }
+.su-badge-tooltip .su-badge-source { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 6px 0 0; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); }
+.su-badge-tooltip .su-badge-source dt { margin: 0; color: #bdc1c6; }
+.su-badge-tooltip .su-badge-source dd { margin: 0; overflow-wrap: anywhere; }
 
 /* "View article" page (/citations?view_op=view_citation): actions under the title, notes in the field rows. */
 .su-article-actions {

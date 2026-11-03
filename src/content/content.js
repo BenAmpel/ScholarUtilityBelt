@@ -52,6 +52,7 @@
   let normalizeVhbRank;
   let qualityBadgesForVenue;
   let customBadgeForVenue;
+  let renderBadgeExplanation;
   let compileCustomVenueIndex;
   let pickOpenAlexWork;
   let buildNameSearch;
@@ -197,7 +198,8 @@
       normalizeVenueName,
       normalizeVhbRank,
       qualityBadgesForVenue,
-      customBadgeForVenue
+      customBadgeForVenue,
+      renderBadgeExplanation
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
     ({
@@ -3642,7 +3644,7 @@
       }
     });
   }
-  function createBadgeTooltip(badge) {
+  function createBadgeTooltip(badge, sourceMeta) {
     if (!badge.metadata) return null;
     const tooltip = document.createElement("div");
     tooltip.className = "su-badge-tooltip";
@@ -3709,6 +3711,9 @@
         : `<span class="su-badge-near">Close match, not exact. This result's venue reads "${read}"; the list entry is "${escapeHtml(meta.nearMatch)}". If those are different venues, ignore this badge.</span>`);
     }
     tooltip.innerHTML = parts.join("<br>");
+    // Which list, which edition, the quartile's subject category, and Scholar's venue against the matched entry.
+    const source = renderBadgeExplanation?.(document, badge, sourceMeta);
+    if (source) tooltip.appendChild(source);
     return tooltip;
   }
   function buildMarkdownFromRow(row, isAuthorProfile) {
@@ -4237,7 +4242,7 @@
         }
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {
-          const tooltip = createBadgeTooltip(b);
+          const tooltip = createBadgeTooltip(b, { quartilesMeta: state.quartilesMeta, jcrMeta: state.jcrMeta });
           if (tooltip) {
             span.appendChild(tooltip);
             span.style.position = "relative";
