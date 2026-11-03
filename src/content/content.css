@@ -5673,3 +5673,44 @@ body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-c
 #gsc_oci_table .su-quality {
   margin-top: 4px;
 }
+
+/* Copy Bib author check: shown under the result's buttons when Crossref lists more authors than the copied
+   BibTeX, or a full surname where the BibTeX has one letter. Theme tokens cover light and dark. */
+.su-bib-author-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--su-gray-300);
+  border-left: 4px solid var(--su-accent);
+  border-radius: 10px;
+  background: var(--su-surface);
+  color: var(--su-gray-900);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.su-bib-author-notice-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--su-chip-border);
+  border-radius: 999px;
+  background: var(--su-chip-bg);
+  color: var(--su-chip-text);
+  font: inherit;
+  cursor: pointer;
+}
+.su-bib-author-notice-btn:hover { background: var(--su-chip-bg-hover); }
+.su-bib-author-notice-close {
+  margin-left: auto;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--su-gray-700);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.su-bib-author-notice-btn:focus-visible,
+.su-bib-author-notice-close:focus-visible { outline: var(--su-focus-ring); outline-offset: 2px; }
