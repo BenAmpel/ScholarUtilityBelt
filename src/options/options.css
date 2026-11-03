@@ -13,8 +13,10 @@
   --input-color: #111827;
 }
 
+/* Dark: an explicit Dark choice, or Follow system (no data-su-theme="light") on a dark system.
+   options.js sets data-su-theme on <html> from the saved theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-su-theme="light"]) {
     --bg: #1c1c1e;
     --fg: #f2f2f7;
     --muted: #8e8e93;
@@ -28,6 +30,20 @@
     --input-bg: #1c1c1e;
     --input-color: #f2f2f7;
   }
+}
+:root[data-su-theme="dark"] {
+  --bg: #1c1c1e;
+  --fg: #f2f2f7;
+  --muted: #8e8e93;
+  --line: #38383a;
+  --accent: #4f9cf9;
+  --accent-hover: #3a7fd4;
+  --btn-bg: #2c2c2e;
+  --hover-bg: #1c2a4a;
+  --hover-border: #2d4a8a;
+  --surface: #2c2c2e;
+  --input-bg: #1c1c1e;
+  --input-color: #f2f2f7;
 }
 
 * { box-sizing: border-box; }
@@ -874,10 +890,12 @@ a:focus-visible {
 
 /* White on the dark theme's light-blue accent measured 2.81:1; dark text on it is about 7:1. */
 @media (prefers-color-scheme: dark) {
-  .actions button.primary { color: #0b1220; }
+  :root:not([data-su-theme="light"]) .actions button.primary { color: #0b1220; }
   /* Plain links otherwise keep the browser's default dark blue, 1.8:1 on this background. */
-  a:not([class]) { color: var(--accent); }
+  :root:not([data-su-theme="light"]) a:not([class]) { color: var(--accent); }
 }
+:root[data-su-theme="dark"] .actions button.primary { color: #0b1220; }
+:root[data-su-theme="dark"] a:not([class]) { color: var(--accent); }
 .badge-preview-mini { overflow-x: hidden; }
 
 /* Where the built-in badges come from */

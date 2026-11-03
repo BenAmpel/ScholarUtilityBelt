@@ -21,8 +21,9 @@
   --danger-border: rgba(251,113,133,0.38);
 }
 
+/* Light: an explicit Light choice, or Follow system on a light system (library.js sets data-su-theme). */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-su-theme="dark"]) {
     --bg: #f7f6f3;
     --panel: rgba(0,0,0,0.035);
     --panel2: rgba(0,0,0,0.055);
@@ -44,6 +45,28 @@
     --backdrop: rgba(0,0,0,0.48);
     --danger-border: rgba(220,38,38,0.28);
   }
+}
+:root[data-su-theme="light"] {
+  --bg: #f7f6f3;
+  --panel: rgba(0,0,0,0.035);
+  --panel2: rgba(0,0,0,0.055);
+  --fg: #1a1918;
+  --muted: rgba(26,25,24,0.66);
+  --line: rgba(0,0,0,0.1);
+  --accent: #2563eb;
+  --danger: #dc2626;
+  --modal-bg: #ffffff;
+  --input-bg: rgba(0,0,0,0.035);
+  --hover-border: rgba(37,99,235,0.38);
+  --chip-collection-bg: rgba(37,99,235,0.07);
+  --chip-collection-border: rgba(37,99,235,0.22);
+  --chip-tag-bg: rgba(124,58,237,0.07);
+  --chip-tag-border: rgba(124,58,237,0.2);
+  --filter-chip-bg: rgba(37,99,235,0.1);
+  --filter-chip-border: rgba(37,99,235,0.28);
+  --active-bg: rgba(37,99,235,0.08);
+  --backdrop: rgba(0,0,0,0.48);
+  --danger-border: rgba(220,38,38,0.28);
 }
 
 * { box-sizing: border-box; }

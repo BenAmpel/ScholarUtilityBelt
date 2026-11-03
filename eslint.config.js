@@ -97,6 +97,7 @@ module.exports = [
     // script loaded via <script>, importScripts(), or dynamic import().
     files: [
       "src/common/storage.js",
+      "src/common/theme.js",
       "src/common/quality.js",
       "src/common/scholar-links.js",
       "src/common/openalex-match.js",

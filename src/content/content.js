@@ -5412,7 +5412,10 @@
     applyTheme(settings.theme);
     applyBadgePalette(settings.badgePalette);
     const themeBtn = document.getElementById("su-theme-toggle");
-    if (themeBtn) themeBtn.textContent = (settings.theme === "dark" ? "Dark" : settings.theme === "light" ? "Light" : "Auto");
+    if (themeBtn) {
+      themeBtn.textContent = themeButtonLabel(settings.theme);
+      themeBtn.title = themeButtonTitle(settings.theme);
+    }
     state.keywordHighlights = csvToTags(settings.keywordHighlightsCsv);
     state.keywordHighlightRegexes = (state.keywordHighlights || []).map((kw) => {
       const escaped = String(kw || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -5422,8 +5425,21 @@
     state.renderEpoch = (state.renderEpoch || 0) + 1;
     state.venueQualityCache = new Map();
   }
+  // Theme choice: "auto" (Follow system), "light" or "dark". An explicit Light or Dark always wins over the
+  // system setting. Keep in step with resolveTheme in src/common/theme.js (content scripts cannot import it).
+  function themeButtonLabel(theme) {
+    return theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System";
+  }
+  function themeButtonTitle(theme) {
+    const now = theme === "dark" ? "Dark" : theme === "light" ? "Light" : "Follow system";
+    const next = theme === "light" ? "Dark" : theme === "dark" ? "Follow system" : "Light";
+    return `Theme: ${now}. Click to switch to ${next}.`;
+  }
   function applyTheme(theme) {
     const resolved = theme === "dark" ? "dark" : theme === "light" ? "light" : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // content-early.js paints the next page load from this cache before chrome.storage answers; it is only a
+    // first-paint hint, and the saved setting replaces it as soon as it is read.
+    try { window.localStorage.setItem("su-theme-choice", theme === "dark" || theme === "light" ? theme : "auto"); } catch (_) {}
     if (document.body) document.body.setAttribute("data-su-theme", resolved);
     if (document.documentElement) document.documentElement.setAttribute("data-su-theme", resolved);
     // content-early.js painted the background at document_start with !important; repaint it for a theme picked later,
@@ -15928,7 +15944,7 @@
     }
     // Floating toolbar: theme toggle above reading guide
     function themeLabel(t) {
-      return (t === "dark" ? "Dark" : t === "light" ? "Light" : "Auto");
+      return themeButtonLabel(t);
     }
     let toolbarEl = document.getElementById("su-theme-guide-toolbar");
     if (!toolbarEl) {
@@ -15943,17 +15959,21 @@
       themeToggleEl.id = "su-theme-toggle";
       themeToggleEl.className = "su-theme-toggle";
       themeToggleEl.type = "button";
-      themeToggleEl.title = "Cycle theme: Auto → Light → Dark";
+      themeToggleEl.title = themeButtonTitle(state.settings.theme);
       themeToggleEl.addEventListener("click", async () => {
         const next = { auto: "light", light: "dark", dark: "auto" }[state.settings.theme] || "auto";
-        await setSettings({ theme: next });
+        // Update the page before the write resolves, so a quick second click steps on from this choice
+        // instead of from the old one.
         state.settings.theme = next;
         applyTheme(next);
         themeToggleEl.textContent = themeLabel(next);
+        themeToggleEl.title = themeButtonTitle(next);
+        await setSettings({ theme: next });
       });
       toolbarEl.appendChild(themeToggleEl);
     }
     themeToggleEl.textContent = themeLabel(state.settings.theme);
+    themeToggleEl.title = themeButtonTitle(state.settings.theme);
     let settingsToggleEl = document.getElementById("su-settings-toggle");
     if (!settingsToggleEl) {
       settingsToggleEl = document.createElement("button");

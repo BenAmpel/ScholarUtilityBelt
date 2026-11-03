@@ -19,6 +19,7 @@ import { initAskPanel, isPicked, setPicked } from "./ask-panel.js";
 import { describeImportSummary, paperFingerprint } from "../common/library-merge.js";
 import { importLibraryPayload, parseLibraryFileText, undoLastImport } from "../common/library-import.js";
 import { getLibraryBackup } from "../common/storage.js";
+import { applyPageTheme, normalizeThemeChoice, watchPageTheme } from "../common/theme.js";
 import { initLibraryTools, showSimilar } from "./library-tools.js";
 import { parseAuthors as parseAuthorsShared, toRecord } from "../common/export-model.js";
 import { createExportUi, downloadText } from "./export-ui.js";
@@ -1102,8 +1103,21 @@ el("tagFilter").addEventListener("input", async () => {
 });
 el("sort").addEventListener("change", () => render());
 
+// The page follows the saved theme choice (Follow system, Light or Dark), not only the system setting.
+let libraryTheme = "auto";
+getSettings()
+  .then((s) => {
+    libraryTheme = normalizeThemeChoice(s.theme);
+    watchPageTheme(document, () => libraryTheme);
+  })
+  .catch(() => {});
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.settings?.newValue) {
+    libraryTheme = normalizeThemeChoice(changes.settings.newValue.theme);
+    applyPageTheme(document, libraryTheme);
+  }
   if (changes.savedPapers || changes.settings || changes.libraryState) {
     qualityState = null;
     libraryState = null;

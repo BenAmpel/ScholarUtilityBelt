@@ -2,6 +2,7 @@ import { getSavedPapers, getSettings, setSettings } from "../common/storage.js";
 import { importLibraryPayload, parseLibraryFileText } from "../common/library-import.js";
 import { describeImportSummary } from "../common/library-merge.js";
 import { initRatingPrompt } from "../common/rating-prompt.js";
+import { normalizeThemeChoice, watchPageTheme } from "../common/theme.js";
 
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: "application/json" });
@@ -73,6 +74,9 @@ const TOGGLE_IDS = [
 
 async function initToggles() {
   const settings = await getSettings();
+  // Follow the saved theme choice; Light or Dark wins over the system setting.
+  const themeChoice = normalizeThemeChoice(settings.theme);
+  watchPageTheme(document, () => themeChoice);
   for (const id of TOGGLE_IDS) {
     const el = document.getElementById(id);
     if (!el) continue;

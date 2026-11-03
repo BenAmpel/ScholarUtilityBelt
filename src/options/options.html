@@ -66,7 +66,7 @@
           </details>
           <details>
             <summary>How do I change the theme or the badge colors?</summary>
-            <p>Use the Appearance card below: Theme can follow your system or be set to Light or Dark, and the badge colors can be changed there too.</p>
+            <p>Use the Appearance card below: Theme can follow your system or be set to Light or Dark, and the badge colors can be changed there too. The theme is saved as soon as you pick it and applies to Scholar pages, this page and the popup.</p>
           </details>
           <details>
             <summary>How do I see or clear what is stored?</summary>
@@ -134,11 +134,12 @@
         <h2>Appearance</h2>
         <label class="field">
           <div class="label">Theme</div>
-          <select id="theme">
-            <option value="auto">Auto (follow system)</option>
+          <select id="theme" aria-describedby="themeHint">
+            <option value="auto">Follow system</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+          <p class="sub" id="themeHint">Saved as soon as you pick it. Light and Dark stay as chosen whatever your system setting is.</p>
         </label>
         <label class="field">
           <div class="label">Badge colors</div>

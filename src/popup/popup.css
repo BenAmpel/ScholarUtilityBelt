@@ -9,8 +9,9 @@
   --hover-border: #c7d2fe;
 }
 
+/* Dark: an explicit Dark choice, or Follow system on a dark system (popup.js sets data-su-theme). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-su-theme="light"]) {
     --bg: #1c1c1e;
     --fg: #f2f2f7;
     --muted: #8e8e93;
@@ -20,6 +21,16 @@
     --hover-bg: #1c2a4a;
     --hover-border: #2d4a8a;
   }
+}
+:root[data-su-theme="dark"] {
+  --bg: #1c1c1e;
+  --fg: #f2f2f7;
+  --muted: #8e8e93;
+  --line: #38383a;
+  --accent: #4f9cf9;
+  --btn-bg: #2c2c2e;
+  --hover-bg: #1c2a4a;
+  --hover-border: #2d4a8a;
 }
 
 * { box-sizing: border-box; }
