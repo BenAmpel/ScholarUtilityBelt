@@ -5568,6 +5568,11 @@ body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-c
 .su-badge-tooltip .su-badge-source { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 6px 0 0; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); }
 .su-badge-tooltip .su-badge-source dt { margin: 0; color: #bdc1c6; }
 .su-badge-tooltip .su-badge-source dd { margin: 0; overflow-wrap: anywhere; }
+.su-badge-tooltip.su-badge-tooltip-interactive { pointer-events: auto; cursor: auto; }
+.su-badge-tooltip .su-badge-report { margin-top: 6px; }
+.su-badge-tooltip .su-badge-report a { color: #8ab4f8; text-decoration: underline; pointer-events: auto; }
+.su-badge-tooltip .su-badge-report a:hover,
+.su-badge-tooltip .su-badge-report a:focus-visible { color: #aecbfa; }
 
 /* "View article" page (/citations?view_op=view_citation): actions under the title, notes in the field rows. */
 .su-article-actions {
