@@ -87,6 +87,31 @@ const TARGETS = [
     args: ['src/common/review-snapshots.js', '--bundle=false', '--minify', '--outfile=dist/common/review-snapshots.js', '--log-level=warning'],
   },
   {
+    // Imported by content.js: the genealogy name search behind Look up lineage.
+    label: 'common/genealogy-search.js',
+    args: ['src/common/genealogy-search.js', '--bundle=false', '--minify', '--outfile=dist/common/genealogy-search.js', '--log-level=warning'],
+  },
+  {
+    // Imported by content.js: OpenAlex title matching and the FWCI summary.
+    label: 'common/openalex-match.js',
+    args: ['src/common/openalex-match.js', '--bundle=false', '--minify', '--outfile=dist/common/openalex-match.js', '--log-level=warning'],
+  },
+  {
+    // "View article" pages: loaded only there.
+    label: 'common/article-page.js',
+    args: ['src/common/article-page.js', '--bundle=false', '--minify', '--outfile=dist/common/article-page.js', '--log-level=warning'],
+  },
+  {
+    // Imported by article-page.js (RIS).
+    label: 'common/zotero-export.js',
+    args: ['src/common/zotero-export.js', '--bundle=false', '--minify', '--outfile=dist/common/zotero-export.js', '--log-level=warning'],
+  },
+  {
+    // Imported by zotero-export.js.
+    label: 'common/export-model.js',
+    args: ['src/common/export-model.js', '--bundle=false', '--minify', '--outfile=dist/common/export-model.js', '--log-level=warning'],
+  },
+  {
     // Imported by the review workspace (BibTeX export of included papers).
     label: 'common/bibtex.js',
     args: ['src/common/bibtex.js', '--bundle=false', '--minify', '--outfile=dist/common/bibtex.js', '--log-level=warning'],

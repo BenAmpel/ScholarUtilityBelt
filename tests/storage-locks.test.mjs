@@ -105,3 +105,27 @@ describe("parallel writes keep every entry", () => {
     assert.deepEqual(keys, ids.map((i) => `new${i}`).sort());
   });
 });
+
+describe("external signal cache from two tabs", () => {
+  const now = Date.now();
+  it("keeps both tabs' lookups instead of the last writer's copy", async () => {
+    const tabA = { "10.1/a": { crossref: { ts: now - 1000, data: { v: 2 } } } };
+    const tabB = { "10.1/b": { openalex: { ts: now - 500, data: { id: "W1" } } } };
+    await Promise.all([s.setExternalSignalCache(tabA), s.setExternalSignalCache(tabB)]);
+    const stored = await s.getExternalSignalCache();
+    assert.deepEqual(Object.keys(stored).sort(), ["10.1/a", "10.1/b"]);
+  });
+  it("the newer entry wins for the same DOI and provider, and other providers are kept", () => {
+    const merged = s.mergeExternalSignalCaches(
+      { d: { crossref: { ts: now - 10, data: "new" }, unpaywall: { ts: now - 20, data: "u" } } },
+      { d: { crossref: { ts: now - 100, data: "old" } } },
+      now,
+    );
+    assert.equal(merged.d.crossref.data, "new");
+    assert.equal(merged.d.unpaywall.data, "u");
+  });
+  it("drops entries older than the longest TTL", () => {
+    const merged = s.mergeExternalSignalCaches({ d: { ror: { ts: now - 200 * 86400000, data: 1 } } }, {}, now);
+    assert.deepEqual(merged, {});
+  });
+});

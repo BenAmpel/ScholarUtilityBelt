@@ -53,6 +53,10 @@
   let qualityBadgesForVenue;
   let customBadgeForVenue;
   let compileCustomVenueIndex;
+  let pickOpenAlexWork;
+  let buildNameSearch;
+  let findNameIndices;
+  let summarizeFwci;
   let getCachedElement;
   let getCachedElements;
   let loadEraAndNorwegian;
@@ -125,7 +129,7 @@
   async function ensureModulesLoaded() {
     if (modulesLoaded) return;
     // Load all three modules in parallel instead of sequentially (Option C)
-    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner] = await Promise.all([
+    const [storage, quality, domCache, dataLoader, entitlement, scholarLinks, customVenues, reloadBanner, openalexMatch, genealogySearch] = await Promise.all([
       importModuleWithRetry("dist/common/storage.js"),
       importModuleWithRetry("dist/common/quality.js"),
       importModuleWithRetry("dist/content/dom-cache.js"),
@@ -135,8 +139,12 @@
       importModuleWithRetry("dist/common/custom-venues.js"),
       // Loaded now, not on demand: after an extension update new imports no longer work.
       importModuleWithRetry("dist/common/reload-banner.js"),
+      importModuleWithRetry("dist/common/openalex-match.js"),
+      importModuleWithRetry("dist/common/genealogy-search.js"),
     ]);
     ({ compileCustomVenueIndex } = customVenues);
+    ({ pickOpenAlexWork, summarizeFwci } = openalexMatch);
+    ({ buildNameSearch, findNameIndices } = genealogySearch);
     ({ isQuickReadLink, firstFileColumnLink, classifyScholarResponse, scholarCooldownLeft, findResultDoi, safeHref, scholarRowLinkKind, citedByCount } = scholarLinks);
     ({
       addHiddenAuthor,
@@ -580,7 +588,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   // Per-row parse cache to avoid repeated DOM parsing.
   const rowParseCache = new WeakMap();
@@ -861,12 +869,15 @@
   // answers keep the long TTL. Before, any failure was cached as "no data" for the full TTL, so one
   // 429 or a dropped connection hid a paper's open-access, funder and DataCite badges for months.
   const EXTERNAL_SIGNAL_ERROR_TTL_MS = 10 * 60 * 1000;
+  // Cached answers older than this shape are fetched again. Crossref 2: hasUpdate reads updated-by, not update-to.
+  const EXTERNAL_SIGNAL_MIN_VERSION = { crossref: 2 };
   let externalFetchFailures = 0;
   function noteExternalFetchFailure(error) {
     if (/\bHTTP (404|410)\b/.test(String(error || ""))) return; // a definite "not found"
     externalFetchFailures += 1;
   }
-  const OPENALEX_CACHE_VERSION = 2;
+  // 3: works carry OpenAlex's fwci, and title matches cached under the old loose rule are dropped.
+  const OPENALEX_CACHE_VERSION = 3;
   const OPENALEX_RATE_LIMIT_TTL_MS = 15 * 60 * 1000;
   let externalSignalCache = null;
   let externalSignalSaveTimer = null;
@@ -981,6 +992,8 @@
     const entry = externalSignalCache[key]?.[provider];
     if (!entry || typeof entry !== "object") return null;
     const ttl = entry.err ? EXTERNAL_SIGNAL_ERROR_TTL_MS : (EXTERNAL_SIGNAL_TTLS[provider] || EXTERNAL_SIGNAL_TTLS.crossref);
+    const minVersion = EXTERNAL_SIGNAL_MIN_VERSION[provider];
+    if (minVersion && entry.data && (Number(entry.data.v) || 1) < minVersion) return null;
     const ts = Number(entry.ts) || 0;
     if (ts && Date.now() - ts > ttl) return null;
     return entry;
@@ -990,7 +1003,13 @@
     externalSignalSaveTimer = setTimeout(() => {
       externalSignalSaveTimer = null;
       if (externalSignalCache) {
-        setExternalSignalCache(externalSignalCache).catch(() => {});
+        // The save merges with what other tabs stored; take in their lookups so this tab does not ask again.
+        setExternalSignalCache(externalSignalCache).then((merged) => {
+          if (!merged || !externalSignalCache) return;
+          for (const [key, providers] of Object.entries(merged)) {
+            if (!externalSignalCache[key]) externalSignalCache[key] = providers;
+          }
+        }).catch(() => {});
       }
     }, 8000); // the whole cache is rewritten each time, so batch lookups that finish close together
   }
@@ -1019,14 +1038,16 @@
     const hasLicense = Array.isArray(msg.license) && msg.license.length > 0;
     const hasFullText = Array.isArray(msg.link) && msg.link.length > 0;
     const hasFunder = Array.isArray(msg.funder) && msg.funder.length > 0;
-    const hasUpdate = Array.isArray(msg["update-to"]) && msg["update-to"].length > 0;
+    // updated-by is on the paper that a correction, retraction or other notice updates; update-to is on the
+    // notice itself. Reading update-to marked the notices as "Updated" and never the corrected papers.
+    const hasUpdate = Array.isArray(msg["updated-by"]) && msg["updated-by"].length > 0;
     const funderNames = Array.isArray(msg.funder)
       ? msg.funder.map((f) => f?.name || "").filter(Boolean)
       : [];
     const awardNumbers = Array.isArray(msg.funder)
       ? msg.funder.flatMap((f) => Array.isArray(f?.award) ? f.award : []).map((a) => String(a || "")).filter(Boolean)
       : [];
-    return { hasLicense, hasFullText, hasFunder, hasUpdate, funderNames, awardNumbers };
+    return { v: 2, hasLicense, hasFullText, hasFunder, hasUpdate, funderNames, awardNumbers };
   }
   async function fetchOpenCitationsSignal(doi) {
     const url = `https://opencitations.net/index/coci/api/v1/citations/${encodeURIComponent(doi)}`;
@@ -1077,7 +1098,7 @@
     const entry = doc.querySelector("entry");
     if (!entry) return null;
     const idText = entry.querySelector("id")?.textContent || "";
-    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\\d+)?/i);
+    const idMatch = idText.match(/arxiv\.org\/abs\/([^v]+)(v\d+)?/i);
     const version = idMatch?.[2] || "";
     const published = entry.querySelector("published")?.textContent || "";
     const updated = entry.querySelector("updated")?.textContent || "";
@@ -1216,14 +1237,14 @@
   function normalizeOpenAlexId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/W\\d+/i);
+    const match = raw.match(/W\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
   function normalizeOpenAlexAuthorId(id) {
     if (!id) return null;
     const raw = String(id).trim();
-    const match = raw.match(/A\\d+/i);
+    const match = raw.match(/A\d+/i);
     if (match) return match[0].toUpperCase();
     return raw;
   }
@@ -1275,6 +1296,7 @@
       hostVenueId: work?.host_venue?.id || work?.primary_location?.source?.id || work?.locations?.[0]?.source?.id || "",
       countsByYear: Array.isArray(work?.counts_by_year) ? work.counts_by_year : [],
       citedByPercentileYear: work?.cited_by_percentile_year?.min ?? null,
+      fwci: Number.isFinite(work?.fwci) ? work.fwci : null,
       oaStatus: String(work?.open_access?.oa_status || "").toLowerCase() || null,
       authors,
       grants,
@@ -1284,8 +1306,9 @@
   function normalizeTitleForMatch(title) {
     return String(title || "")
       .toLowerCase()
-      .replace(/[^a-z0-9\\s]/g, " ")
-      .replace(/\\s+/g, " ")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
   function looksLikeDoi(raw) {
@@ -1300,19 +1323,6 @@
     for (const t of aTokens) if (bTokens.has(t)) inter += 1;
     const union = new Set([...aTokens, ...bTokens]).size;
     return union ? inter / union : 0;
-  }
-  function scoreOpenAlexCandidate(work, title, year, authorName) {
-    if (!work) return 0;
-    let score = titleSimilarity(title, work.display_name || work.title || "");
-    const wYear = Number(work.publication_year) || null;
-    if (year && wYear && Math.abs(wYear - year) <= 1) score += 0.15;
-    if (authorName && Array.isArray(work.authorships)) {
-      const found = work.authorships.some((a) =>
-        String(a?.author?.display_name || "").toLowerCase().includes(authorName.toLowerCase())
-      );
-      if (found) score += 0.15;
-    }
-    return score;
   }
   function decodeOpenAlexAbstract(index) {
     if (!index || typeof index !== "object") return null;
@@ -1350,17 +1360,9 @@
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
     const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
-    if (!results.length) return null;
-    let best = results[0];
-    let bestScore = scoreOpenAlexCandidate(best, q, year, authorName);
-    for (const cand of results.slice(1)) {
-      const score = scoreOpenAlexCandidate(cand, q, year, authorName);
-      if (score > bestScore) {
-        bestScore = score;
-        best = cand;
-      }
-    }
-    if (bestScore < 0.2) return null;
+    // Only a work whose title matches counts; year and author break ties (src/common/openalex-match.js).
+    const best = pickOpenAlexWork(results, q, year, authorName);
+    if (!best) return null;
     return decodeOpenAlexAbstract(best.abstract_inverted_index);
   }
   async function fetchOpenAlexWorkById(id) {
@@ -1422,17 +1424,9 @@
     const url = formatOpenAlexUrl(`https://api.openalex.org/works?${params.toString()}`);
     const data = await fetchExternalJson(url, { timeoutMs: 15000, preferBackground: false });
     const results = Array.isArray(data?.results) ? data.results : [];
-    if (!results.length) return null;
-    let best = results[0];
-    let bestScore = scoreOpenAlexCandidate(best, q, year, authorName);
-    for (const cand of results.slice(1)) {
-      const score = scoreOpenAlexCandidate(cand, q, year, authorName);
-      if (score > bestScore) {
-        bestScore = score;
-        best = cand;
-      }
-    }
-    if (bestScore < 0.2) return null;
+    // Only a work whose title matches counts; year and author break ties (src/common/openalex-match.js).
+    const best = pickOpenAlexWork(results, q, year, authorName);
+    if (!best) return null;
     return compactOpenAlexWork(best);
   }
   async function fetchOpenAlexWorkForPaper(paper, authorName) {
@@ -1699,9 +1693,9 @@
   }
   function extractArxivIdFromUrl(url) {
     const u = String(url || "");
-    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\\d+)?/i);
+    const m = u.match(/arxiv\.org\/(?:abs|pdf)\/([0-9.]+)(?:v\d+)?/i);
     if (m) return m[1];
-    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\\d+)?/i);
+    const m2 = u.match(/arxiv-vanity\.com\/papers\/([0-9.]+)(?:v\d+)?/i);
     if (m2) return m2[1];
     return null;
   }
@@ -1944,7 +1938,7 @@
       const lower = tok.toLowerCase();
       if (lower.length < 2) continue;
       if (TOPIC_TOKEN_STOPWORDS.has(lower)) continue;
-      if (/^\\d+$/.test(lower)) continue;
+      if (/^\d+$/.test(lower)) continue;
       const existing = map.get(lower);
       if (existing) {
         existing.count++;
@@ -3706,7 +3700,9 @@
     }
     // A prefix match can land on a different venue that shares a name start; say which entry it was so a wrong
     // badge is visible rather than silently trusted.
-    if (meta.nearMatch) {
+    if (meta.nearMatch && meta.nearMatchVetted) {
+      parts.push(`<span class="su-badge-near">Listed as "${escapeHtml(meta.nearMatch)}".</span>`);
+    } else if (meta.nearMatch) {
       const read = escapeHtml(meta.venueRead || "");
       parts.push(meta.nearMatchCount > 1
         ? `<span class="su-badge-near">Close match, not exact. ${meta.nearMatchCount} list entries begin with "${read}" (one is "${escapeHtml(meta.nearMatch)}") and all give this value.</span>`
@@ -4236,8 +4232,8 @@
         span.textContent = b.text;
         span.title = badgeKindTitles[b.kind] || (b.metadata?.system ? `${b.text}: ${b.metadata.system}` : b.text);
         if (b.metadata?.nearMatch) {
-          span.title += ` Close match, not exact: list entry "${b.metadata.nearMatch}".`;
-          span.classList.add("su-badge-near-match");
+          span.title += b.metadata.nearMatchVetted ? ` Listed as "${b.metadata.nearMatch}".` : ` Close match, not exact: list entry "${b.metadata.nearMatch}".`;
+          if (!b.metadata.nearMatchVetted) span.classList.add("su-badge-near-match");
         }
         // Add tooltip with metrics if metadata is available
         if (b.metadata) {
@@ -5209,7 +5205,7 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
     openAllBtn.addEventListener("click", () => {
       if (queue.length === 0) return;
@@ -5806,6 +5802,163 @@
     }
     const removeBtn = bar.querySelector('button[data-act="remove"]');
     if (removeBtn) removeBtn.style.display = isSaved ? "" : "none";
+  }
+  // ---- "View article" page (/citations?view_op=view_citation) ----------------------------------------------
+  // Badges on the venue, full-metadata Save / BibTeX / RIS, numbers from the citation chart, the DOI and retraction
+  // check, and where the profile's owner sits among the authors. All free, all read from the open page: no request.
+  let articlePageMod = null;
+  function readArticlePage() {
+    const table = document.getElementById("gsc_oci_table");
+    const titleEl = document.getElementById("gsc_oci_title");
+    if (!table || !titleEl) return null;
+    const titleLink = titleEl.querySelector("a.gsc_oci_title_link") || titleEl.querySelector("a");
+    const rows = Array.from(table.children).filter((el) => el.classList.contains("gs_scl")).map((row) => {
+      const valueEl = row.querySelector(".gsc_oci_value");
+      const cited = valueEl?.querySelector('a[href*="cites="]');
+      const hasGraph = !!valueEl?.querySelector("#gsc_oci_graph_bars, #gsc_oci_graph");
+      return {
+        label: text(row.querySelector(".gsc_oci_field")),
+        value: (valueEl?.textContent || "").trim(),
+        isDescription: valueEl?.id === "gsc_oci_descr" || !!valueEl?.querySelector("#gsc_oci_descr"),
+        isCitations: hasGraph || (!!cited && !valueEl.querySelector(".gsc_oci_merged_snippet")),
+        citedByText: cited ? text(cited) : "",
+        citedByHref: cited?.getAttribute("href") || "",
+        el: row,
+        valueEl,
+      };
+    });
+    const bars = Array.from(document.querySelectorAll("#gsc_oci_graph_bars a.gsc_oci_g_a")).map((a) => {
+      let year = null;
+      try { year = new URL(a.getAttribute("href") || "", location.origin).searchParams.get("as_ylo"); } catch (_) {}
+      return { year, count: text(a.querySelector(".gsc_oci_g_al")) };
+    });
+    const ownerName = Array.from(document.querySelectorAll('#gsc_sb_ui a[href*="user="]')).map((a) => text(a)).find(Boolean) || "";
+    const pdfLink = document.querySelector("#gsc_oci_title_gg a[href]");
+    return {
+      title: text(titleEl),
+      url: titleLink ? tryGetHref(titleLink) || "" : "",
+      pdfUrl: pdfLink ? tryGetHref(pdfLink) || "" : "",
+      ownerName,
+      rows,
+      bars,
+    };
+  }
+  async function renderArticlePage(state) {
+    const raw = readArticlePage();
+    if (!raw) return;
+    if (!articlePageMod) articlePageMod = await importModuleWithRetry("dist/common/article-page.js");
+    const A = articlePageMod;
+    const article = A.articleFromPage(raw);
+    if (!article) return;
+    document.querySelectorAll("[data-su-article]").forEach((el) => el.remove());
+    const rowFor = (pred) => raw.rows.find(pred);
+    const mark = (el) => { el.setAttribute("data-su-article", "1"); return el; };
+    const doi = findResultDoi(
+      [raw.url, raw.pdfUrl, ...Array.from(document.querySelectorAll("#gsc_oci_table a[href]")).map((a) => a.getAttribute("href") || "")],
+      ""
+    );
+    const key = article.clusterId ? `cid:${article.clusterId}` : computeKey({ url: article.url, title: article.title, authors: article.authors.join(", "), year: article.year });
+
+    // 1. Journal badges on the venue line: the same renderer, data and settings as results and profiles.
+    const venueRow = rowFor((r) => r.valueEl && tidyText(r.value) === article.venue && article.venue);
+    if (venueRow && state.settings.showQualityBadges) {
+      const anchor = mark(document.createElement("span"));
+      anchor.className = "su-article-venue-anchor";
+      venueRow.valueEl.appendChild(anchor);
+      renderQuality(venueRow.valueEl, { venue: article.venue, _authorsVenueEl: anchor }, state, false);
+      venueRow.valueEl.querySelectorAll(".su-quality").forEach(mark);
+    }
+
+    // 2 and 4. Save, Copy BibTeX, Copy RIS, Copy DOI, and the retraction check, under the title.
+    const bar = mark(document.createElement("div"));
+    bar.className = "su-article-actions";
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "Scholar Utility Belt actions for this article");
+    const saved = !!state.saved[key];
+    const saveBtn = createButton(saved ? "Saved" : "Save to library", { act: "article-save" });
+    saveBtn.title = saved ? "This paper is in your library." : "Save this paper to your library with its full author list, volume, pages and abstract.";
+    if (saved) saveBtn.disabled = true;
+    const bibBtn = createButton("Copy BibTeX", { act: "article-bib" });
+    bibBtn.title = "Copy BibTeX with every author, volume, issue, pages and publisher shown on this page.";
+    const risBtn = createButton("Copy RIS", { act: "article-ris" });
+    risBtn.title = "Copy RIS (EndNote, Zotero, Mendeley) with the same fields.";
+    bar.append(saveBtn, bibBtn, risBtn);
+    if (doi) {
+      const doiBtn = createButton("DOI", { act: "copydoi" });
+      doiBtn.dataset.doi = doi;
+      doiBtn.title = `Copy the DOI ${doi}`;
+      doiBtn.setAttribute("aria-label", `Copy DOI ${doi}`);
+      bar.append(doiBtn);
+    }
+    if (doi && state.settings.showRetractionWatch && state.retractionBloom && bloomHasDoi(doi, state.retractionBloom)) {
+      const flag = document.createElement("span");
+      flag.className = "su-badge su-retraction-neutral";
+      flag.textContent = "Potential update/retraction";
+      flag.title = "This DOI is on the bundled list built from the Retraction Watch database. Check the publisher's page.";
+      bar.append(flag);
+    }
+    const status = document.createElement("span");
+    status.className = "su-article-status";
+    status.setAttribute("role", "status");
+    bar.append(status);
+    const say = (msg) => { status.textContent = msg; setTimeout(() => { if (status.textContent === msg) status.textContent = ""; }, 2500); };
+    bar.addEventListener("click", async (e) => {
+      const btn = e.target?.closest?.("button[data-act]");
+      if (!btn) return;
+      const act = btn.dataset.act;
+      try {
+        if (act === "article-save") {
+          await upsertPaper({
+            key, title: article.title, url: article.url, authorsVenue: A.authorsVenueLine(article), venue: article.venue,
+            year: article.year, snippet: article.abstract, abstract: article.abstract, doi: doi || "", pdfUrl: article.pdfUrl,
+            volume: article.volume, issue: article.issue, pages: article.pages, publisher: article.publisher,
+            clusterId: article.clusterId, citedByUrl: rowFor((r) => r.isCitations)?.citedByHref || "",
+            sourcePageUrl: location.href, savedAt: new Date().toISOString(),
+          });
+          await refreshState(state);
+          btn.textContent = "Saved";
+          btn.disabled = true;
+          say("Saved to your library.");
+        } else if (act === "article-bib") {
+          await navigator.clipboard.writeText(A.articleBibTeX(article, doi || ""));
+          say("BibTeX copied.");
+        } else if (act === "article-ris") {
+          await navigator.clipboard.writeText(A.articleRis(article, doi || ""));
+          say("RIS copied.");
+        } else if (act === "copydoi") {
+          await navigator.clipboard.writeText(btn.dataset.doi || "");
+          say("DOI copied.");
+        }
+      } catch (_) {
+        say("That did not work. Try again.");
+      }
+    });
+    const titleWrap = document.getElementById("gsc_oci_title_wrapper") || document.getElementById("gsc_oci_title");
+    titleWrap.insertAdjacentElement("afterend", bar);
+
+    // 3. Plain numbers from Scholar's own chart.
+    const citesRow = rowFor((r) => r.isCitations);
+    const lines = A.citationStatsLines(A.citationStats(article));
+    if (citesRow?.valueEl && lines.length) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-cites";
+      p.textContent = `${lines.join(" · ")}.`;
+      p.title = "From the citation chart on this page. The current year is partial, so it is left out of the peak and the trend.";
+      citesRow.valueEl.appendChild(p);
+    }
+
+    // 5. Where the profile's owner sits among the authors.
+    const authorsRow = raw.rows[0];
+    const pos = A.authorPosition(article.authors, article.ownerName);
+    if (authorsRow?.valueEl && pos) {
+      const p = mark(document.createElement("p"));
+      p.className = "su-article-note su-article-author-pos";
+      p.textContent = A.authorPositionText(pos, article.ownerName, article.authorsTruncated);
+      authorsRow.valueEl.appendChild(p);
+    }
+  }
+  function tidyText(s) {
+    return String(s || "").replace(/\s+/g, " ").trim();
   }
   function scanResults() {
     // Check if we're on an author profile page
@@ -7000,7 +7153,7 @@
       return ((below + 0.5 * equal) / dist.totalPapers) * 100;
     }
     const ranked = [];
-    const fwciPercentiles = [];
+    const fwciWorks = [];
     const oaCounts = {};
     let oaTotal = 0;
     let apiCalls = 0;
@@ -7015,11 +7168,8 @@
         apiCalls++;
       } catch { continue; }
       if (!oaWork) continue;
-      // FWCI: use OpenAlex's built-in cited_by_percentile_year if available
-      const oaPercentile = oaWork.citedByPercentileYear;
-      if (oaPercentile != null && Number.isFinite(oaPercentile)) {
-        fwciPercentiles.push(oaPercentile);
-      }
+      // FWCI from OpenAlex's per-work fwci; the citation percentile feeds the top-10% share.
+      fwciWorks.push({ fwci: oaWork.fwci, percentile: oaWork.citedByPercentileYear });
       // Open Access rollup
       if (oaWork.oaStatus) {
         oaCounts[oaWork.oaStatus] = (oaCounts[oaWork.oaStatus] || 0) + 1;
@@ -7060,24 +7210,11 @@
       stats.pIndex = null;
       stats.owpiIndex = null;
     }
-    // FWCI = mean(percentile) / 50. 1.0 = world average.
-    if (fwciPercentiles.length >= 3) {
-      const fSum = fwciPercentiles.reduce((a, b) => a + b, 0);
-      stats.fwci = Math.round((fSum / fwciPercentiles.length / 50) * 100) / 100;
-      stats.fwciArticles = fwciPercentiles.length;
-      // Median FWCI: robust to a single blockbuster paper
-      const sortedP = fwciPercentiles.slice().sort((a, b) => a - b);
-      const mid = Math.floor(sortedP.length / 2);
-      const medP = sortedP.length % 2 ? sortedP[mid] : (sortedP[mid - 1] + sortedP[mid]) / 2;
-      stats.fwciMedian = Math.round((medP / 50) * 100) / 100;
-      // Top-10% share: fraction of papers in the top decile of their field-year
-      const top10 = fwciPercentiles.filter((p) => p >= 90).length;
-      stats.top10Share = Math.round((top10 / fwciPercentiles.length) * 100);
-    } else {
-      stats.fwci = null;
-      stats.fwciMedian = null;
-      stats.top10Share = null;
-    }
+    const fwciSummary = summarizeFwci(fwciWorks);
+    stats.fwci = fwciSummary.fwci;
+    stats.fwciMedian = fwciSummary.fwciMedian;
+    stats.fwciArticles = fwciSummary.fwciArticles;
+    stats.top10Share = fwciSummary.top10Share;
     // Open Access breakdown (gold / green / hybrid / bronze / closed)
     if (oaTotal >= 3) {
       const open = (oaCounts.gold || 0) + (oaCounts.green || 0) + (oaCounts.hybrid || 0) + (oaCounts.bronze || 0) + (oaCounts.diamond || 0);
@@ -7416,7 +7553,7 @@
         good: "OWPI &gt; PI = stronger when leading. OWPI &lt; PI = impact driven by collaborations."
       },
       fwci: {
-        formula: "FWCI = mean(percentile<sub>year</sub>) / 50. Via OpenAlex cited_by_percentile_year.",
+        formula: "FWCI = mean over papers of citations / expected citations for the same field, type and year. Per-paper values from OpenAlex (fwci).",
         description: "Field-Weighted Citation Impact. 1.0 = world average for same field and year. Comparable across disciplines.",
         good: "FWCI &gt; 1.0 = above world average; &gt; 2.0 = strong; &gt; 3.0 = exceptional. Median shown alongside is robust to one blockbuster paper."
       },
@@ -8733,7 +8870,7 @@
         ? `<button type="button" class="su-compare-authors-btn" data-narrative-toggle="1">${narrativeOpen ? "Hide narrative" : "Narrative"}</button>`
         : "";
       statsContainer.innerHTML = `
-        ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers. If it doesn’t respond, try clicking again.</div>' : ''}
+        ${hasFilterBadges ? '<div class="su-filter-hint">Click a badge to filter papers.</div>' : ''}
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
         <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${tenureBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
@@ -10670,7 +10807,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function exportGraph(kind) {
     const graph = window.suGraphState;
@@ -10733,7 +10870,7 @@
           document.body.appendChild(a);
           a.click();
           a.remove();
-          URL.revokeObjectURL(url);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
         });
       };
       img.src = `data:image/svg+xml;base64,${svg64}`;
@@ -11548,7 +11685,7 @@
       root.datasets[key] = {
         status: "idle",
         names: [],
-        nameIndex: null,
+        nameSearch: null,
         edgesLoaded: false,
         forward: null,
         reverse: null,
@@ -11566,7 +11703,8 @@
   async function fetchGzipText(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load ${url}`);
-    if (!res.body || typeof DecompressionStream === "undefined") {
+    // The Edge package stores these files uncompressed (Edge refuses compressed files in a package).
+    if (!url.endsWith(".gz") || !res.body || typeof DecompressionStream === "undefined") {
       return await res.text();
     }
     const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
@@ -11586,26 +11724,10 @@
         const raw = await fetchGzipText(chrome.runtime.getURL(source.namesUrl));
         const parsed = JSON.parse(raw || "{}");
         const names = Array.isArray(parsed?.n) ? parsed.n : (parsed?.names || []);
-        const index = new Map();
-        for (let i = 0; i < names.length; i++) {
-          // Indexing 900,000 names in one go froze the page for about 3.5 seconds, long enough that the
-          // "Looking up this name" message never painted. Give the page a turn every 20,000 names.
-          if (i > 0 && i % 20000 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
-          const norm = normalizeAuthorName(names[i]);
-          if (!norm) continue;
-          if (index.has(norm)) {
-            const existing = index.get(norm);
-            if (Array.isArray(existing)) {
-              existing.push(i);
-            } else {
-              index.set(norm, [existing, i]);
-            }
-          } else {
-            index.set(norm, i);
-          }
-        }
+        // Normalizing all 900,000 names into an index took about 3.5 s; the search normalizes only the names
+        // that contain the author's surname (src/common/genealogy-search.js).
         data.names = names;
-        data.nameIndex = index;
+        data.nameSearch = buildNameSearch(names, normalizeAuthorName);
         data.status = "ready";
         return data;
       } catch (e) {
@@ -11637,18 +11759,18 @@
       ? authorVariations
       : (authorName ? generateAuthorNameVariations(authorName) : []);
     const normalized = variations.map((v) => normalizeAuthorName(v)).filter(Boolean);
-    const index = data?.nameIndex;
-    if (!index || !normalized.length) return null;
+    const search = data?.nameSearch;
+    if (!search || !normalized.length) return null;
     for (const key of normalized) {
-      if (!index.has(key)) continue;
-      const found = index.get(key);
-      if (Array.isArray(found)) {
+      const found = findNameIndices(search, key, normalizeAuthorName);
+      if (!found.length) continue;
+      if (found.length > 1) {
         const variationSet = new Set(variations.map((v) => normalizeFullNameForMatch(v)).filter(Boolean));
         const exactMatches = found.filter((idx) => variationSet.has(normalizeFullNameForMatch(data.names?.[idx] || "")));
         if (exactMatches.length === 1) return exactMatches[0];
         return null;
       }
-      return found;
+      return found[0];
     }
     return null;
   }
@@ -13362,13 +13484,14 @@
       }
       btn.disabled = false;
     }
-    // .su-within-results-filter is position: fixed (see content.css), so it's
-    // out of normal document flow — a DOM-sibling "afterend" insertion lands
-    // wherever that bar happens to sit in the DOM tree, not visually below
-    // it. Anchor the panel with its own fixed position instead.
-    const fixedBar = document.querySelector(".su-within-results-filter");
+    // The filter bar normally sits in the page above the result list: put the panel right under it. Only the
+    // floating fallback bar (no result column) is out of document flow, so anchor the panel with a fixed position there.
+    const inPageBar = document.querySelector(".su-within-results-filter:not(.su-within-results-filter-floating)");
+    const fixedBar = document.querySelector(".su-within-results-filter-floating");
     const flowBar = document.getElementById("gs_res_ccl");
-    if (fixedBar) {
+    if (inPageBar) {
+      inPageBar.insertAdjacentElement("afterend", panel);
+    } else if (fixedBar) {
       const rect = fixedBar.getBoundingClientRect();
       panel.style.position = "fixed";
       panel.style.top = `${Math.round(rect.bottom + 8)}px`;
@@ -13619,8 +13742,8 @@
     banner.id = "su-apikey-banner";
     banner.className = "su-apikey-banner";
     banner.innerHTML = [
-      '<span class="su-apikey-banner-text">Add a free <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">OpenAlex API key</a> in Options for reliable citation metrics, trends, and related-works results (recommended since Feb 2026).</span>',
-      '<button type="button" class="su-apikey-banner-open" data-apikey-open-options="1">Open Options</button>',
+      '<span class="su-apikey-banner-text">Add a free <a href="https://openalex.org/settings/api" target="_blank" rel="noopener">OpenAlex API key</a> for reliable citation metrics.</span>',
+      '<button type="button" class="su-apikey-banner-open" data-apikey-open-options="1">Add key</button>',
       '<button type="button" class="su-apikey-banner-dismiss" aria-label="Dismiss">&times;</button>'
     ].join("");
     banner.querySelector(".su-apikey-banner-dismiss").addEventListener("click", async () => {
@@ -13632,12 +13755,10 @@
       chrome.runtime.sendMessage({ action: "openOptionsPage" });
       banner.remove();
     });
-    const container = document.querySelector("#gs_res_ccl_mid, #gs_res_ccl, #gs_bdy");
-    if (container) {
-      container.insertBefore(banner, container.firstChild);
-    } else {
-      document.body.insertBefore(banner, document.body.firstChild);
-    }
+    // A floating card, not an inline row, so it never pushes Scholar's own layout around.
+    banner.setAttribute("role", "region");
+    banner.setAttribute("aria-label", "Scholar Utility Belt tip");
+    document.body.appendChild(banner);
   }
   function applyCitationSort() {
     const mode = window.suSearchSortByCitations;
@@ -14629,7 +14750,15 @@
       } catch (_) {}
       updateToggleLabel();
     };
-    document.body.appendChild(bar);
+    // Sit in the page, directly above the result list, so the bar never floats over results while scrolling.
+    // Only a layout without Scholar's result column falls back to the old fixed position.
+    const resultList = document.getElementById("gs_res_ccl_mid");
+    if (resultList?.parentElement) {
+      resultList.parentElement.insertBefore(bar, resultList);
+    } else {
+      bar.classList.add("su-within-results-filter-floating");
+      document.body.appendChild(bar);
+    }
   }
   const FILTER_STORAGE_KEY = "su-filter-client";
   function loadClientFilterFromStorage() {
@@ -14897,6 +15026,11 @@
       forceFull = false;
       pendingDirtyRows.clear();
       try {
+        // A "View article" page has no result rows: it gets its own features and nothing else.
+        if (document.getElementById("gsc_oci_table")) {
+          await renderArticlePage(state).catch((e) => console.warn("[SU] article page", e));
+          return;
+        }
         let { results, isAuthorProfile } = scanResults();
         if (!isAuthorProfile && window.suSearchSortByCitations && window.suSearchSortByCitations !== "default") {
           applyCitationSort();

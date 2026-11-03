@@ -171,13 +171,18 @@ export function parseMedline(text) {
 
 // ------------------------------------------------------------- BibTeX
 
-const LATEX_ACCENTS = /\\['"`^~=.uvHckrb]\s*\{?([A-Za-z])\}?/g;
-const LATEX_COMMANDS = { "\\&": "&", "\\%": "%", "\\_": "_", "\\#": "#", "\\$": "$", "{\\ss}": "ss", "\\ss": "ss", "{\\o}": "o", "{\\O}": "O", "{\\ae}": "ae", "{\\aa}": "a", "{\\l}": "l", "{\\L}": "L" };
+const LATEX_ACCENTS = /\\(['"`^~=.uvHckrb])\s*\{?([A-Za-z])\}?/g;
+// Each accent command as a Unicode combining mark, so {\"u} becomes ü (Müller, Gómez and Peña keep their names).
+const COMBINING = { "'": "\u0301", '"': "\u0308", "`": "\u0300", "^": "\u0302", "~": "\u0303", "=": "\u0304", ".": "\u0307",
+  u: "\u0306", v: "\u030c", H: "\u030b", c: "\u0327", k: "\u0328", r: "\u030a", b: "\u0331" };
+const LATEX_COMMANDS = { "\\&": "&", "\\%": "%", "\\_": "_", "\\#": "#", "\\$": "$", "{\\ss}": "ß", "\\ss": "ß", "{\\o}": "ø", "{\\O}": "Ø",
+  "{\\ae}": "æ", "{\\AE}": "Æ", "{\\aa}": "å", "{\\AA}": "Å", "{\\l}": "ł", "{\\L}": "Ł", "\\i": "i", "\\j": "j" };
 
 function cleanLatex(s) {
   let out = String(s ?? "");
   for (const [k, v] of Object.entries(LATEX_COMMANDS)) out = out.split(k).join(v);
-  out = out.replace(LATEX_ACCENTS, "$1").replace(/\\[a-zA-Z]+\s*/g, "").replace(/[{}]/g, "").replace(/~/g, " ");
+  out = out.replace(LATEX_ACCENTS, (_, cmd, ch) => ch + COMBINING[cmd]).normalize("NFC")
+    .replace(/\\[a-zA-Z]+\s*/g, "").replace(/[{}]/g, "").replace(/~/g, " ");
   return clean(out);
 }
 

@@ -57,6 +57,10 @@ export function sanitizeBibKey(key) {
  * @param {string} e.url
  * @param {string[]} e.tags   written as keywords
  * @param {string} e.abstract
+ * @param {string} [e.volume]
+ * @param {string} [e.number]   issue
+ * @param {string} [e.pages]    "9128-9143" is written as 9128--9143
+ * @param {string} [e.publisher]
  */
 export function buildBibTeXEntry(e) {
   const type = bibtexEntryType(e.venue);
@@ -65,6 +69,10 @@ export function buildBibTeXEntry(e) {
     ["author", (e.authors || []).map(escapeBibText).filter(Boolean).join(" and ")],
     ["year", String(e.year || "").replace(/\D/g, "").slice(0, 4)],
     [VENUE_FIELD[type], escapeBibText(e.venue)],
+    ["volume", escapeBibText(e.volume)],
+    ["number", escapeBibText(e.number)],
+    ["pages", escapeBibText(e.pages).replace(/\s*[-–—]+\s*/g, "--")],
+    ["publisher", escapeBibText(e.publisher)],
     ["doi", String(e.doi || "").trim()],
     ["url", String(e.url || "").trim()],
     ["keywords", (e.tags || []).map(escapeBibText).filter(Boolean).join(", ")],

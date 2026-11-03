@@ -6,47 +6,56 @@ Scholar Utility Belt for Google Scholar
 (The store reads this from the manifest `name`. `short_name`, "Scholar Utility Belt", is what Chrome shows where space is short.)
 
 ## Short Description (132 char max)
-Journal rankings, citation analytics and author metrics on Google Scholar. Free to use, and your data stays on your computer.
+See journal rankings, impact factor and quartiles beside every Google Scholar result, plus h-index on profiles. Free, no account.
 
 ## Detailed Description
 
-Scholar Utility Belt adds journal quality badges, citation analytics, author metrics, advisor–student genealogy trees, and research trend tracking directly to Google Scholar — no extra tabs, no manual lookups.
+Scholar Utility Belt puts journal rankings, impact factor and quartiles next to every Google Scholar result, and adds the h-index and other author metrics to every Scholar profile. It is free, needs no account, and the ranking lists ship with the extension, so the badges themselves need no network request.
 
-★ JOURNAL QUALITY BADGES
+More than 1,400 researchers use it every week. It is open source.
+
+FREE FOR EVERYONE
+
+JOURNAL QUALITY BADGES
 See journal quality as color-coded badges, taken from established ranking lists for business, computing and other fields, plus quartile rankings, on every search result and author profile page. Instantly identify top-tier publications without leaving Scholar.
 
-★ YOUR OWN JOURNAL LIST
-Upload a CSV of journals and conferences with your own tier labels, such as a department's A, B and C list. Matching venues get a badge with your label next to the built-in ones. The file is read in your browser and stays there.
-
-★ CITATION VELOCITY & ANALYTICS
-Each paper shows citations per year. An arrow marks papers cited faster (↑) or slower (↓) than papers of similar age on the same page.
-
-★ AUTHOR PROFILE METRICS
+AUTHOR PROFILE METRICS
 On any Scholar author page, see h-index, m-index, L-index and g-index, a self-citation rate estimated from OpenAlex, a publication quality breakdown (how many papers fall in each ranking tier) and coauthor analytics, calculated from the papers loaded on the page.
 
-★ ADVISOR–STUDENT GENEALOGY
-Trace advisor–student genealogy across generations. See who advised whom in an interactive tree view with 900,000+ researchers drawn from public genealogy projects and institutional repository data.
-
-★ QUERY TREND TRACKER
-A panel above the results, closed until you open it, lists the research methods named in the results and related OpenAlex topics marked rising (↑), flat (→) or falling (↓). OpenAlex is asked only while the panel is open.
-
-★ RETRACTION ALERTS
+RETRACTION ALERTS
 Results whose DOI matches a list built from the Retraction Watch database, bundled with the extension, get a "Potential update/retraction" badge. Check the publisher's page before relying on it.
 
-★ QUICK ACTIONS
+QUICK ACTIONS
 One-click Save to library, BibTeX export, abstract preview, DOI lookup, and code/dataset link detection (from the result's own links and DataCite) — all inline on search results.
 
-★ DARK MODE
+YOUR OWN JOURNAL LIST
+Upload a CSV of journals and conferences with your own tier labels, such as a department's A, B and C list. Matching venues get a badge with your label next to the built-in ones. The file is read in your browser and stays there.
+
+CITATION VELOCITY & ANALYTICS
+Each paper shows citations per year. An arrow marks papers cited faster (↑) or slower (↓) than papers of similar age on the same page.
+
+ARTICLE PAGES
+On a Scholar profile's article page, the venue gets the same journal badges, and you can save the paper or copy BibTeX or RIS with every author, volume, issue, pages and publisher. The citation chart gets plain numbers (average per year, peak year, last year against the years before), and a line says where the profile's owner sits among the authors. A DOI in the title link gets a copy button and the retraction check.
+
+ADVISOR–STUDENT GENEALOGY
+Trace advisor–student genealogy across generations. See who advised whom in an interactive tree view with 900,000+ researchers drawn from public genealogy projects and institutional repository data.
+
+QUERY TREND TRACKER
+A panel above the results, closed until you open it, lists the research methods named in the results and related OpenAlex topics marked rising (↑), flat (→) or falling (↓). OpenAlex is asked only while the panel is open.
+
+DARK MODE
 Full dark theme that matches Scholar's interface, with all badges and panels adapting automatically.
 
-★ PRO (OPTIONAL)
+PRIVACY-FIRST
+All ranking data is bundled locally — no API calls needed for quality badges. In the detailed view, which is the default, each result's DOI, arXiv or PubMed id is looked up at Crossref, OpenCitations, DataCite, Unpaywall, Semantic Scholar, arXiv, Europe PMC and NCBI, and author pages ask OpenAlex and DBLP. These requests carry the identifier or author name, never personal data, and one switch in Options turns the per-result lookups off. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. If you turn on the optional bring-your-own-key feature, the paper text you select and your question go to the AI provider you picked, using your own key, and to no one else. App Pass is off by default and contacts joinapppass.com only after you turn it on.
+
+PAID EXTRAS (OPTIONAL)
+
+PRO (OPTIONAL)
 Everything above is free. Scholar Utility Belt Pro adds tools for literature reviews and research workflows: author compare, paper idea lineage (how a paper's ideas trace back through its citations), extended bibliometrics, a narrative CV, a review workspace with reference import, risk-of-bias notes and screening agreement, a citation-graph overlay and a Publish-or-Perish report. Newer Pro tools include exports to reference managers, note apps and document formats, collection packets, watch lists, a bibliography checker and a tenure packet. Try it free for 14 days, buy it once or subscribe, or unlock it with an App Pass if you already have one. If you installed before Pro launched, the Pro features that existed then stay free for you forever.
 
-★ OPTIONAL AI FEATURES (PRO, OFF BY DEFAULT)
+OPTIONAL AI FEATURES (PRO, OFF BY DEFAULT)
 Triage cards show study design, sample and setting under a result, read from the snippet by Chrome's built-in on-device model where your Chrome offers one; a value appears only if it is in the snippet. Ask my shortlist lets you ask one question about papers you saved, using your own API key from an AI provider you choose in Options. If you use it, the titles and saved abstract or snippet text of the papers you select, plus your question, are sent to the provider you chose, only after you review the cost estimate and confirm. Each quoted sentence in the answer is checked against the saved text.
-
-★ PRIVACY-FIRST
-All ranking data is bundled locally — no API calls needed for quality badges. In the detailed view, which is the default, each result's DOI, arXiv or PubMed id is looked up at Crossref, OpenCitations, DataCite, Unpaywall, Semantic Scholar, arXiv, Europe PMC and NCBI, and author pages ask OpenAlex and DBLP. These requests carry the identifier or author name, never personal data, and one switch in Options turns the per-result lookups off. No tracking, no analytics, and no account for any free feature. The extension itself sends nothing to its developer: it opens a getting-started page on purplelink.llc once, when you first install it, and Chrome opens a short page there if you uninstall it, and those two visits are counted like any web page, without cookies or accounts. If you choose Pro, ExtensionPay handles the trial or payment and asks for your email. If you turn on the optional bring-your-own-key feature, the paper text you select and your question go to the AI provider you picked, using your own key, and to no one else. App Pass is off by default and contacts joinapppass.com only after you turn it on.
 
 RANKING SOURCES
 The badges come from ranking lists bundled with the extension, plus Google Scholar's own venue h5-index. The full list of sources and how each is used is in the README on GitHub.
@@ -74,19 +83,28 @@ English
 
 ## Files to Upload
 
-### Screenshots (1280×800, PNG), made 2026-10-16 from real captures of 1.0.2
-Delete the old five in the dashboard first, then upload these three in order:
-1. screenshot-1-1280x800.png: Journal rankings beside every Scholar result
-2. screenshot-2-1280x800.png: Author metrics on every profile (profile photo blurred)
-3. screenshot-3-1280x800.png: Add your department's journal list
+### Screenshots (1280×800, PNG)
+Upload in this order (the first one is the one the listing opens on):
+1. screenshot-1-1280x800.png: Journal rankings beside every Scholar result (2026-10-16 capture of 1.0.2)
+2. screenshot-2-1280x800.png: Author metrics on every profile (2026-10-16, profile photo blurred)
+3. screenshot-4-1280x800.png: Save papers and keep their rankings (2026-11-01, the 1.1.0 library page with five real papers saved)
+4. screenshot-3-1280x800.png: Add your department's journal list (2026-10-16)
+A fifth, retraction alerts on a results page, needs a capture from a normal Chrome window: Google Scholar answers
+an automated browser with its "unusual traffic" page, so new Scholar captures cannot be scripted.
 
 How they were made: `store-assets/source/` (capture.py captures one Chrome window and crops off the toolbar;
-compose.mjs and specs.json lay them out; tiles.mjs draws the promo tiles). The old HTML mockups
-(screenshots.html, render.mjs) are kept for reference but are no longer the source.
+compose.mjs and specs.json lay them out). The library shot came from the extension's own page in a headless Edge
+profile with every non-extension request blocked. The old HTML mockups (screenshots.html, render.mjs) are kept for
+reference but are no longer the source.
 
-### Promotional Images (new belt icon, 2026-10-16)
+### Promotional Images (2026-11-01)
+The small tile is what people see in store search, so it now shows a real Scholar result with the extension's
+badges (drawn with src/content/content.css, bold palette) instead of only the name. Made by `source/tiles2.mjs`.
 - Small tile: promo-small-440x280.png (440×280)
 - Marquee: promo-marquee-1400x560.png (1400×560)
+
+### Promo video (YouTube URL field)
+https://www.youtube.com/watch?v=L_MmXQAS1_k (45-second tour, published 2026-10-04, already on the product page)
 
 ### Icon
 - Already in manifest: icons/icon128.png (128×128)
@@ -129,11 +147,34 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.1.4 (paste into the dashboard's "What's new")
+
+Tidier page layout: the OpenAlex API key tip is now a small card in the corner instead of a banner that pushed Google
+Scholar's page aside, the Filter bar sits above the results instead of floating over them, and the Look up lineage
+button on author profiles is a normal size.
+
+## Release notes for 1.1.3 (paste into the dashboard's "What's new")
+
+Faster Look up lineage on author profiles: the advisor-student match now answers in a fraction of a second instead
+of 2 to 3 seconds, with the same matches as before.
+
+For Chrome, where 1.1.2 was still in review: add the 1.1.2 line below.
+
+## Release notes for 1.1.2 (paste into the dashboard's "What's new")
+
+Faster journal badges: each venue on a results page is looked up about 12 times faster, with the same badges as before.
+
+## Release notes for 1.1.1 (paste into the dashboard's "What's new")
+
+Fixes. Journals whose name begins like another journal's (Acta Informatica Medica and Acta Informatica, Information Systems and Information Systems Research) no longer show that other journal's impact factor, rank, h5 or FT50 badge. Workshops, cut-off venue names, longer titles and ICCV no longer take another venue's rank. The Updated badge now marks the corrected or retracted paper, not the correction notice. FWCI is OpenAlex's own figure for each work, so it is no longer capped at 2.0. A paper without a DOI is matched to an OpenAlex work only when the titles match, not on year and author alone. Exports and downloads (CSV, BibTeX, RIS, the citation graph image, library exports) no longer get cancelled in Firefox.
+
+For Firefox and Edge, which did not get 1.1.0, paste the 1.1.0 notes below first and then these.
+
 ## Release notes for 1.1.0 (paste into the dashboard's "What's new")
 
 Fewer requests to Google Scholar: opening an author profile no longer presses "Show more" by itself (stats cover the papers on screen, and "Load all for full stats" loads the rest), and the Emerging score no longer reads neighbouring Scholar pages in the background. Compare authors needs 5 requests instead of 25, and every feature that asks Scholar for more pages stops and waits 15 minutes after a "not a robot" check. Two switches in Options bring the old automatic loading back.
 
-New: a DOI button on results whose own links or snippet contain a DOI copies it (Scholar does not show DOIs), and "Copy DOIs" in the filter bar copies every DOI on the page. Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, the retraction list is refreshed (64,385 DOIs) and wrongly flags far fewer papers, ABDC badges use the 2025 list (111 journals moved up, 27 down), citation counts and velocity work when Scholar is set to another language, BibTeX exports escape the characters that stop a LaTeX build, the citation graph's BibTeX, CSV and RIS downloads have proper line breaks again, the review workspace logs each Scholar search you add results from (query, date, page address, counts) next to database imports, and text contrast meets WCAG AA in light and dark mode.
+New: a DOI button on results whose own links or snippet contain a DOI copies it (Scholar does not show DOIs), and "Copy DOIs" in the filter bar copies every DOI on the page. Also: downloaded PDFs get their author-year-title file names again, results pages do about 80 ms less work, reading-queue BibTeX keeps each paper's link, the retraction list is refreshed (64,385 DOIs) and wrongly flags far fewer papers, ABDC badges use the 2025 list (111 journals moved up, 27 down), citation counts and velocity work when Scholar is set to another language, BibTeX exports escape the characters that stop a LaTeX build, the citation graph's BibTeX, CSV and RIS downloads have proper line breaks again, BibTeX imports keep accented names (Müller, Peña), and article pages on Scholar profiles get journal badges, full-metadata BibTeX, RIS and Save, plain numbers for the citation chart and the owner's author position, all free, the review workspace logs each Scholar search you add results from (query, date, page address, counts) next to database imports, and text contrast meets WCAG AA in light and dark mode.
 
 For Firefox (AMO "Release notes"), leave out the PDF file-name sentence: Firefox has no API for suggesting a download name, so the Firefox build drops that feature. The text is in output/firefox-store/release-notes.txt.
 

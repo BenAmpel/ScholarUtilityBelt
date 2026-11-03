@@ -1,6 +1,6 @@
 {
   "name": "chrome-scholar-extension",
-  "version": "1.1.0",
+  "version": "1.1.4",
   "description": "[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18645552.svg)](https://doi.org/10.5281/zenodo.18645552)",
   "main": "index.js",
   "scripts": {
@@ -12,10 +12,12 @@
     "test:e2e": "node build.js && node scripts/e2e-check.mjs",
     "e2e": "node scripts/e2e/run.mjs",
     "store-status": "node scripts/store_status.mjs",
+    "publish-stores": "node scripts/publish_stores.mjs",
     "a11y": "node scripts/e2e/a11y.mjs",
     "focus": "node scripts/e2e/focus.mjs",
     "idle": "node scripts/e2e/idle.mjs",
-    "theme": "node scripts/e2e/theme.mjs"
+    "theme": "node scripts/e2e/theme.mjs",
+    "audit:venues": "node --import ./tests/register-loader.mjs scripts/audit-venue-matches.mjs"
   },
   "keywords": [],
   "author": "",

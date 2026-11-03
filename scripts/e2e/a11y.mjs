@@ -9,7 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const FX = (n) => fs.readFileSync(path.join(ROOT, "tests/e2e/fixtures", n), "utf8");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sub-a11y-"));
 const ctx = await chromium.launchPersistentContext(dir, { executablePath: EDGE, headless: false, args: [`--disable-extensions-except=${ROOT}`, `--load-extension=${ROOT}`, "--headless=new", "--no-first-run"], viewport: { width: 1400, height: 900 } });
-await ctx.route("**/*", (r) => { const u = new URL(r.request().url()); if (/^scholar\.google\./.test(u.hostname)) { if (u.pathname === "/scholar") return r.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-results.html") }); if (u.pathname === "/citations") return r.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-profile.html") }); return r.fulfill({ status: 204, body: "" }); } if (u.protocol === "chrome-extension:") return r.continue(); return r.abort(); });
+await ctx.route("**/*", (r) => { const u = new URL(r.request().url()); if (/^scholar\.google\./.test(u.hostname)) { if (u.pathname === "/citations" && u.searchParams.get("view_op") === "view_citation") return r.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-article.html") }); if (u.pathname === "/scholar") return r.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-results.html") }); if (u.pathname === "/citations") return r.fulfill({ status: 200, contentType: "text/html", body: FX("scholar-profile.html") }); return r.fulfill({ status: 204, body: "" }); } if (u.protocol === "chrome-extension:") return r.continue(); return r.abort(); });
 const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker"); const id = new URL(sw.url()).host;
 const summary = {};
 async function audit(url, label, onlyExtension, scheme) {
@@ -29,6 +29,7 @@ async function audit(url, label, onlyExtension, scheme) {
 for (const scheme of ["light", "dark"]) {
   await audit("https://scholar.google.com/scholar?hl=en&q=x", "results", true, scheme);
   await audit("https://scholar.google.com/citations?user=FIXTURE&hl=en", "profile", true, scheme);
+  await audit("https://scholar.google.com/citations?view_op=view_citation&hl=en&user=eEcALuEAAAAJ&citation_for_view=eEcALuEAAAAJ:0EnyYjriUFMC", "article", true, scheme);
   for (const pg of ["options/options.html", "library/library.html", "popup/popup.html"]) await audit(`chrome-extension://${id}/src/${pg}`, pg.split("/")[0], false, scheme);
 }
 let total = 0;

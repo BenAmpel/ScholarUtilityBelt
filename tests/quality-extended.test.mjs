@@ -217,3 +217,145 @@ describe("prefix matches never guess between different venues", async () => {
     assert.equal(idx.abdc.has("journal of things"), false);
   });
 });
+
+describe("a known journal never takes another known journal's badge", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const sjr = { "acta orthopaedica": "Q2", "acta orthopaedica belgica": "Q4", "acoustics": "Q2", "acoustics australia": "Q3",
+    "national academy of sciences india section a physical sciences": "Q3", "computer": "Q1" };
+  const h5Of = (venue, h5Index) => qualityBadgesForVenue(venue, compileQualityIndex({}, { quartilesIndex: sjr, h5Index })).find((b) => b.kind === "h5")?.text;
+  it("forward: Acoustics does not show Acoustics Australia's h5", () => {
+    assert.equal(h5Of("Acoustics", { "acoustics australia": 31 }), undefined);
+  });
+  it("reverse: Acta Orthopaedica Belgica does not show Acta Orthopaedica's h5", () => {
+    assert.equal(h5Of("Acta Orthopaedica Belgica", { "acta orthopaedica": 136 }), undefined);
+  });
+  it("reverse: a complete title does not borrow a shorter list entry (PNAS India is not PNAS)", () => {
+    assert.equal(h5Of("Proceedings of the National Academy of Sciences, India Section A: Physical Sciences", { "national academy of sciences": 242 }), undefined);
+  });
+  it("a one-word generic venue does not prefix-match (Computer -> Computer and Telecommunications Law Review)", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Computer and Telecommunications Law Review,C" }, { quartilesIndex: sjr });
+    assert.equal(qualityBadgesForVenue("Computer", idx).find((b) => b.kind === "abdc"), undefined);
+  });
+  it("a truncated Scholar venue still matches its one list entry", () => {
+    assert.equal(h5Of("Journal of Experimental Psychology: Learning", { "journal of experimental psychology learning memory and cognition": 80 }), "h5: 80");
+  });
+});
+
+describe("ERA goes through the shared near-match rules", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const eraSet = new Set(["findings", "punishment and society the international journal of penology"]);
+  const idx = compileQualityIndex({}, { eraSet, quartilesIndex: { "punishment and society": "Q1" } });
+  it("ACL Findings does not take the journal Findings' ERA listing", () => {
+    assert.equal(qualityBadgesForVenue("Findings of the Association for Computational Linguistics: EMNLP 2023", idx).find((b) => b.kind === "era"), undefined);
+  });
+  it("a full title matches its subtitled ERA entry, vetted (no warning edge)", () => {
+    const b = qualityBadgesForVenue("Punishment & Society", idx).find((x) => x.kind === "era");
+    assert.equal(b?.text, "ERA 2023");
+    assert.equal(b.metadata.nearMatchVetted, true);
+  });
+});
+
+describe("FT50 and UTD24 go through the same known-title and specificity rules", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const list = "Information Systems Research\nManagement Science\nProduction and Operations Management";
+  const idx = compileQualityIndex({ qualityFt50List: list, qualityUtd24List: list }, { quartilesIndex: { "information systems": "Q1" } });
+  const kinds = (venue) => qualityBadgesForVenue(venue, idx).map((b) => b.kind).filter((k) => k === "ft50" || k === "utd24");
+  it("the journal Information Systems (Elsevier) is not Information Systems Research", () => {
+    assert.deepEqual(kinds("Information Systems"), []);
+  });
+  it("a one-word venue does not prefix-match (Management is not Management Science)", () => {
+    assert.deepEqual(kinds("Management"), []);
+  });
+  it("a truncated Scholar venue still matches, with the entry shown on hover", () => {
+    const b = qualityBadgesForVenue("Production and Operations", idx).find((x) => x.kind === "ft50");
+    assert.equal(b?.metadata.nearMatch, "production and operations management");
+    assert.deepEqual(kinds("Production and Operations"), ["ft50", "utd24"]);
+  });
+  it("an exact title still matches", () => {
+    assert.deepEqual(kinds("Management Science"), ["ft50", "utd24"]);
+  });
+});
+
+describe("venue lines that are not the list entry they start with", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue, extractVenueFromAuthorsVenue, customBadgeForVenue } = await import("../src/common/quality.js");
+  const kinds = (venue, idx) => qualityBadgesForVenue(venue, idx).map((b) => b.text);
+  const core = compileQualityIndex({
+    qualityCoreRanks: "International Conference on Computer Vision|ICCV,A*\nICC,B\nACM Conference on Computer and Communications Security|CCS,A*\nHawaii International Conference on System Sciences|HICSS,A\nInternational Conference on Information Systems|ICIS,A*\nICIS,C\nDSN,C\nDSN,A",
+  });
+  it("keeps the V of ICCV and ECCV when it strips volume numbers", () => {
+    assert.equal(extractVenueFromAuthorsVenue("J Smith - ICCV 2021"), "ICCV 2021");
+    assert.equal(extractVenueFromAuthorsVenue("J Smith - Journal of X V. 41, 2021"), "Journal of X");
+    assert.deepEqual(kinds("ICCV 2021", core), ["CORE A*"]);
+  });
+  it("a workshop, companion or doctoral consortium does not take the main conference's rank", () => {
+    assert.deepEqual(kinds("ACM Conference on Computer and Communications Security Workshops", core), []);
+    assert.deepEqual(kinds("Hawaii International Conference on System Sciences: Doctoral Consortium", core), []);
+    assert.deepEqual(kinds("ICIS 2019 Workshop on Foo", core), []);
+  });
+  it("bare ICIS is the A* conference, not the other ICIS", () => {
+    assert.deepEqual(kinds("ICIS", core), ["CORE A*"]);
+  });
+  it("the later CORE row wins for an acronym in both lists (ICORE2026 is loaded last)", () => {
+    assert.deepEqual(kinds("DSN", core), ["CORE A"]);
+  });
+  it("a longer title does not borrow a shorter journal's badges", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Management Science,A*" });
+    assert.deepEqual(kinds("Management Science and Engineering", idx), []);
+    assert.deepEqual(kinds("Academy of Management Review, Special Issue", compileQualityIndex({ qualityAbdcRanks: "Academy of Management Review,A*" })), ["ABDC A*"]);
+  });
+  it("a cut-off venue is not the short journal with that name, and an ambiguous cut gets nothing", () => {
+    const quartilesIndex = { "information systems": "Q1", "information systems research": "Q1", "information systems journal": "Q1",
+      "production and operations management": "Q1" };
+    const idx = compileQualityIndex({ qualityFt50List: "Information Systems Research\nProduction and Operations Management" }, { quartilesIndex });
+    assert.deepEqual(kinds("Information Systems …", idx), []);
+    assert.deepEqual(kinds("… Science", idx), []);
+    assert.deepEqual(kinds("Production and Operations …", idx), ["Q1", "FT50"]);
+    assert.deepEqual(kinds("Information Systems", idx), ["Q1"]);
+  });
+  it("one word is not the cut-off start of a longer title (Sustainability)", () => {
+    const idx = compileQualityIndex({ qualityAbdcRanks: "Sustainability Accounting, Management and Policy Journal,A" });
+    assert.deepEqual(kinds("Sustainability", idx), []);
+  });
+  it("MDPI's Applied Sciences does not take the smaller journal's quartile", () => {
+    const idx = compileQualityIndex({}, { quartilesIndex: { "applied sciences": "Q4", "applied sciences switzerland": "Q2" } });
+    assert.deepEqual(kinds("Applied Sciences", idx), []);
+  });
+  it("a custom list entry is not a longer venue that starts with it, and a near match says so", () => {
+    const custom = { name: "Mine", map: new Map([["journal of marketing", "A*"], ["production and operations management", "Top"]]) };
+    assert.equal(customBadgeForVenue("Journal of Marketing Research", custom), null);
+    assert.equal(customBadgeForVenue("Journal of Marketing", custom).text, "A*");
+    assert.equal(customBadgeForVenue("Production and Operations", custom).metadata.nearMatch, "production and operations management");
+  });
+});
+
+describe("bundled VHB list", async () => {
+  const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+  const { readFileSync } = await import("node:fs");
+  const idx = compileQualityIndex({ qualityVhbRanks: readFileSync(new URL("../src/data/vhb2024.csv", import.meta.url), "utf8") });
+  const vhb = (venue) => qualityBadgesForVenue(venue, idx).find((b) => b.kind === "vhb")?.text;
+  it("American Economic Review is A+ (an AER: Insights row used to overwrite it with A)", () => {
+    assert.equal(vhb("American Economic Review"), "VHB A+");
+    assert.equal(vhb("American Economic Review: Insights"), "VHB A");
+  });
+  it("bare Corporate Governance is two journals with different ratings: no badge", () => {
+    assert.equal(vhb("Corporate Governance"), undefined);
+  });
+});
+
+describe("first-word index for near matches", async () => {
+  const { customBadgeForVenue } = await import("../src/common/quality.js");
+  it("sees entries added to a list after its first lookup", () => {
+    const map = new Map([["journal of finance", "A"]]);
+    const custom = { name: "Mine", map };
+    assert.equal(customBadgeForVenue("Production and Operations", custom), null);
+    map.set("production and operations management", "Top");
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "Top");
+  });
+  it("reads the current value, not one cached in the index", () => {
+    const map = new Map([["production and operations management", "B"]]);
+    const custom = { name: "Mine", map };
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "B");
+    map.set("production and operations management", "A");
+    assert.equal(customBadgeForVenue("Production and Operations", custom)?.text, "A");
+  });
+});
