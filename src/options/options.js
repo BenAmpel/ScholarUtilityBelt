@@ -26,6 +26,7 @@ import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
 import { initRatingPrompt } from "../common/rating-prompt.js";
 import { initAskSettings } from "./ask-settings.js";
+import { applyPageTheme, normalizeThemeChoice, watchPageTheme } from "../common/theme.js";
 
 function el(id) {
   return document.getElementById(id);
@@ -192,7 +193,9 @@ function initBadgePaletteDropdown() {
 
 async function load() {
   const s = await getSettings();
-  el("theme").value = s.theme || "auto";
+  themeChoice = normalizeThemeChoice(s.theme);
+  el("theme").value = themeChoice;
+  watchPageTheme(document, () => themeChoice);
   setBadgePaletteUI(s.badgePalette || "soft", true);
   el("viewMode").value = s.viewMode || "detailed";
   const qb = s.qualityBadgeKinds || {};
@@ -334,6 +337,25 @@ async function updateOptionalPermStatus() {
     statusEl.textContent = "";
   }
 }
+
+// The theme is saved the moment it is picked, apart from the Save button: a pick that waited for Save was
+// lost whenever the page was closed first, and this page showed the system theme meanwhile, so the choice
+// looked as if it had not taken.
+let themeChoice = "auto";
+el("theme")?.addEventListener("change", async () => {
+  themeChoice = normalizeThemeChoice(el("theme").value);
+  applyPageTheme(document, themeChoice);
+  await setSettings({ theme: themeChoice });
+  if (!isDirty) setStatus("Theme saved.");
+});
+chrome.storage?.onChanged?.addListener?.((changes, area) => {
+  if (area !== "local" || !changes.settings?.newValue) return;
+  const next = normalizeThemeChoice(changes.settings.newValue.theme);
+  if (next === themeChoice) return;
+  themeChoice = next;
+  if (el("theme")) el("theme").value = next;
+  applyPageTheme(document, themeChoice);
+});
 
 function setStatus(msg) {
   el("status").textContent = msg;
@@ -726,6 +748,7 @@ function getCurrentSnapshot() {
   const state = {};
   for (const el of inputs) {
     if (!el.id) continue;
+    if (el.id === "theme") continue; // saved on change, never "unsaved"
     if (el.type === "checkbox") state[el.id] = !!el.checked;
     else state[el.id] = el.value;
   }

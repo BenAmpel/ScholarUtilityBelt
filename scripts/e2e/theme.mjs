@@ -57,8 +57,8 @@ async function run(colorScheme) {
     check(`system ${colorScheme}, Auto: page follows the system`, want(s), JSON.stringify(s));
 
     // Toolbar button cycles Auto -> Light -> Dark.
-    await p.click("#su-theme-toggle");
-    if (other === "dark") await p.click("#su-theme-toggle");
+    await p.$eval("#su-theme-toggle", (b) => b.click()); // a DOM click: Playwright's pointer click timed out on the floating toolbar
+    if (other === "dark") await p.$eval("#su-theme-toggle", (b) => b.click());
     await p.waitForTimeout(300);
     s = await shade(p);
     check(`system ${colorScheme}: toolbar switch to ${other} repaints the open page`, wantOther(s), JSON.stringify(s));

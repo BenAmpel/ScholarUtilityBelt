@@ -1,7 +1,6 @@
 /**
- * Runs at document_start to prevent white flash when in dark mode.
- * Injects dark background immediately so the first paint is never white for dark-mode users.
- * Then reads theme from storage and switches to light background if the user prefers light.
+ * Runs at document_start so the first paint already has the right background.
+ * Paints from the cached choice (or the system setting), then repaints from the saved setting.
  */
 (function () {
   const DARK_BG = "#202124";
@@ -25,44 +24,39 @@
     swallowStorageContextError(event, reason?.message || reason || "");
   }, true);
 
+  // A saved Light or Dark choice always wins; "auto" (Follow system) uses prefers-color-scheme.
+  // Keep in step with resolveTheme in src/common/theme.js.
+  const systemDark = () => {
+    try { return typeof window.matchMedia !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (_) { return false; }
+  };
+  const resolve = (choice) => (choice === "light" || choice === "dark" ? choice : systemDark() ? "dark" : "light");
+
+  // chrome.storage answers asynchronously, so the first paint uses the choice content.js cached in this
+  // page's localStorage on the last visit (or the system setting on a first visit). The stored setting
+  // replaces it whenever it arrives; the cache never overrides it.
+  const CACHE_KEY = "su-theme-choice";
+  let cached = null;
+  try { cached = window.localStorage.getItem(CACHE_KEY); } catch (_) { /* storage blocked: use the system setting */ }
+
   const style = document.createElement("style");
   style.id = "su-early-theme";
   const EARLY_SELECTORS = "html, body, #gs_top, #gs_hdr, #gs_hdr_inn, #gs_hdr_outer, #gs_bdy, #gsc_bdy, #gs_ab, #gs_lnv, #gs_res_ccl, #gs_res_ccl_mid";
-  style.textContent = `${EARLY_SELECTORS} { background: ${DARK_BG} !important; color: ${DARK_COLOR} !important; }`;
+  function paint(resolved) {
+    const [bg, fg] = resolved === "dark" ? [DARK_BG, DARK_COLOR] : [LIGHT_BG, LIGHT_COLOR];
+    style.textContent = `${EARLY_SELECTORS} { background: ${bg} !important; color: ${fg} !important; }`;
+    try { document.documentElement?.setAttribute("data-su-theme", resolved); } catch (_) { /* no root element yet */ }
+  }
+  paint(resolve(cached));
   const target = document.head || document.documentElement;
   if (target) target.insertBefore(style, target.firstChild);
 
-  function applyLight() {
-    const el = document.getElementById("su-early-theme");
-    if (el) el.textContent = `${EARLY_SELECTORS} { background: ${LIGHT_BG} !important; color: ${LIGHT_COLOR} !important; }`;
-  }
-
-  // If storage never answers (context invalidated, slow profile), a light-theme page must not stay
-  // dark: after 2 s fall back to the system preference.
-  let themeSettled = false;
-  setTimeout(() => {
-    if (themeSettled) return;
-    themeSettled = true;
-    try {
-      if (typeof window.matchMedia !== "undefined" && !window.matchMedia("(prefers-color-scheme: dark)").matches) applyLight();
-    } catch (_) {}
-  }, 2000);
   try {
     if (chrome && chrome.storage && chrome.storage.local && chrome.storage.local.get) {
       chrome.storage.local.get({ settings: {} }, function (result) {
-        if (themeSettled) return;
-        themeSettled = true;
-        const settings = result.settings || {};
-        const theme = settings.theme || "auto";
-        const resolved =
-          theme === "dark"
-            ? "dark"
-            : theme === "light"
-              ? "light"
-              : typeof window.matchMedia !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light";
-        if (resolved === "light") applyLight();
+        // No late-answer cut-off: however long storage takes, the saved choice is what the page shows.
+        const choice = (result && result.settings && result.settings.theme) || "auto";
+        paint(resolve(choice));
+        try { window.localStorage.setItem(CACHE_KEY, choice); } catch (_) { /* storage blocked: no cache */ }
       });
     }
   } catch (_) {}
