@@ -20,7 +20,7 @@ import {
   setQualityQuartilesIndex,
   setSettings
 } from "../common/storage.js";
-import { normalizeVenueName } from "../common/quality.js";
+import { BADGE_SOURCES as BUNDLED_BADGE_SOURCES, normalizeVenueName } from "../common/quality.js";
 import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
@@ -1354,21 +1354,8 @@ initRatingPrompt();
 
 // "Where the built-in badges come from": one row per bundled list. Counts are read from the files themselves when the
 // section is first opened (about 2 MB of local files), so the table cannot drift from the data that makes the badges.
-const BADGE_SOURCES = [
-  { badge: "Q1–Q4", name: "SCImago Journal Rank", file: "scimago_2024_quartiles.json", url: "https://www.scimagojr.com/journalrank.php" },
-  { badge: "ABDC", name: "ABDC Journal Quality List 2025", file: "abdc2025.csv", key: "abdc2025" },
-  { badge: "ABS", name: "Chartered ABS Academic Journal Guide 2024", file: "abs2024.csv", key: "abs2024" },
-  { badge: "VHB", name: "VHB JOURQUAL 2024", file: "vhb2024.csv", key: "vhb2024" },
-  { badge: "FNEGE", name: "FNEGE 2025, from the Harzing Journal Quality List (72nd edition)", file: "fnege2025.csv", key: "fnege2025" },
-  { badge: "FT50", name: "Financial Times 50 research journals", file: "ft50.txt", key: "ft50" },
-  { badge: "UTD24", name: "UT Dallas 24 journals", file: "utd24.txt", key: "utd24" },
-  { badge: "CORE", name: "CORE/ICORE 2026 conference ranking", file: "core_icore2026.csv", key: "core_icore2026" },
-  { badge: "CCF", name: "China Computer Federation recommended venues", file: "ccf_ranks.csv" },
-  { badge: "ERA 2023", name: "Excellence in Research for Australia 2023 journal list", file: "era2023.txt" },
-  { badge: "Level 1/2", name: "Norwegian Register for Scientific Journals", file: "norwegian_compact.json" },
-  { badge: "h5", name: "Google Scholar Metrics 5-year h-index", file: "venue_h5_index.json" },
-  { badge: "IF", name: "Journal Impact Factor 2024", file: "journal_impact_2024.csv" },
-];
+// The rows come from quality.js, which the badge popover on Scholar also reads.
+const BADGE_SOURCES = BUNDLED_BADGE_SOURCES.filter((s) => s.file);
 
 function countListEntries(file, text) {
   if (file.endsWith(".json")) {
