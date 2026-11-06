@@ -150,6 +150,16 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.2.0 (paste into the dashboard's "What's new")
+
+New on author profiles: a Career citation rank panel shows where the researcher ranks in their sub-field in the
+Ioannidis citation dataset (Elsevier, version 9), with the self-citation share, and lets you pick the right person when
+several share a name. Venue badge popovers now show the list, edition and subject category of the match, with a Wrong
+match? link to report it. An Add to list chip adds an unmatched venue to your own list. Copy Bib offers Fix authors
+when Crossref lists authors that Scholar's BibTeX dropped. Clearer open access wording, a robot-check notice that says
+what is paused and for how long, and a saved Light or Dark theme now always wins. Options lists where the built-in
+badges come from.
+
 ## Release notes for 1.1.4 (paste into the dashboard's "What's new")
 
 Tidier page layout: the OpenAlex API key tip is now a small card in the corner instead of a banner that pushed Google
