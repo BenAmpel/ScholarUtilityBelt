@@ -22,6 +22,9 @@ See journal quality as color-coded badges, taken from established ranking lists 
 AUTHOR PROFILE METRICS
 On any Scholar author page, see h-index, m-index, L-index and g-index, a self-citation rate estimated from OpenAlex, a publication quality breakdown (how many papers fall in each ranking tier) and coauthor analytics, calculated from the papers loaded on the page.
 
+CAREER CITATION RANK
+When a profile matches a researcher in the Stanford/Elsevier career citation ranking (Ioannidis, version 9), the profile shows their rank in their sub-field with self-citations excluded. If the name matches more than one listed researcher, you choose, or pick "None of these". The data ships with the extension.
+
 RETRACTION ALERTS
 Results whose DOI matches a list built from the Retraction Watch database, bundled with the extension, get a "Potential update/retraction" badge. Check the publisher's page before relying on it.
 

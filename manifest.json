@@ -222,6 +222,8 @@
         "dist/content/genealogy-lineage.js",
         "dist/content/review-workspace.js",
         "dist/content/signals-ui.js",
+        "dist/content/top2pct-core.js",
+        "dist/content/top2pct.js",
         "dist/content/trend-methods.js",
         "dist/content/trend-tracker.js",
         "src/data/*.txt",

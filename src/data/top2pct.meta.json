@@ -1,0 +1,29 @@
+{
+  "version": "9",
+  "doi": "10.17632/btchxktzyw.9",
+  "year": 2025,
+  "license": "CC BY-NC 3.0",
+  "title": "Updated science-wide author databases of standardized citation indicators",
+  "author": "John P.A. Ioannidis",
+  "publisher": "Elsevier Data Repository",
+  "url": "https://doi.org/10.17632/btchxktzyw.9",
+  "changes": "Only name, institution, country, years, sub-field rank (self-citations excluded), sub-field size, self-citation share (whole percent), citations per citing paper (one decimal) and retracted-paper count are kept; removal requests are dropped.",
+  "source_sha256": {
+    "career": "cf5fd523dcb369b066a41b901f861c703d696ca7d3be907a94ff6ec0f59e4ec1",
+    "singleyr": "8bd46b5cbdc4de05ea09afc662623ca3059b4d705d4582045c5244edf94b02f5"
+  },
+  "file": "top2pct.json.gz",
+  "file_sha256": "e0287655322dd6f86878e337e3202d5b14f4ccb09c099085fce1005495c55a63",
+  "format": 1,
+  "people": 347572,
+  "rows": {
+    "career": {
+      "rows": 243928,
+      "skipped": 21
+    },
+    "singleyr": {
+      "rows": 249257,
+      "skipped": 53
+    }
+  }
+}

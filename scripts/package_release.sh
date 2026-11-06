@@ -61,6 +61,8 @@ zip -r "${ZIP_PATH}" \
   "src/content/genealogy-lineage.js" \
   "src/content/review-workspace.js" \
   "src/content/signals-ui.js" \
+  "src/content/top2pct.js" \
+  "src/content/top2pct-core.js" \
   "src/content/trend-methods.js" \
   "src/content/trend-tracker.js"
 
