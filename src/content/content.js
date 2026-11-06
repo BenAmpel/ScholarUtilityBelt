@@ -336,6 +336,27 @@
     const el = document.getElementById("gsc_prf_in");
     return el ? el.textContent.trim() : "";
   }
+  // Free top-2% panel (src/content/top2pct.js). Loaded only on profile pages with the setting on; any failure hides it.
+  async function runTop2pctPanel(scholarId) {
+    try {
+      const infoLines = document.querySelectorAll("#gsc_prf_i .gsc_prf_il");
+      const affiliation = infoLines.length ? infoLines[0].textContent.trim() : "";
+      const verified = (document.getElementById("gsc_prf_ivh") || {}).textContent || "";
+      const m = verified.match(/\bat\s+([a-z0-9.-]+\.[a-z]{2,})/i);
+      const anchor = document.getElementById("su-author-stats") || (infoLines.length ? infoLines[infoLines.length - 1] : document.getElementById("gsc_prf_inw"));
+      const mod = await importModuleWithRetry("dist/content/top2pct.js");
+      await mod.runTop2pct({
+        userId: scholarId,
+        name: getScholarAuthorName(),
+        affiliation,
+        emailDomain: m ? m[1] : "",
+        anchor,
+        extVersion: chrome.runtime.getManifest().version
+      });
+    } catch (e) {
+      console.warn("[SU] top-2% panel failed", e);
+    }
+  }
   function getScholarSampleTitles(limit = 10) {
     return Array.from(document.querySelectorAll(".gsc_a_at")).slice(0, limit).map((el) => el.textContent.trim());
   }
@@ -15100,6 +15121,9 @@
       ensureGraphStateForAuthor(scholarId, authorName || getScholarAuthorName()).catch((e) => {
         console.warn("[SU] graph state bootstrap failed", e);
       });
+      if (scholarId && state.settings && state.settings.top2pctPanel !== false) {
+        setTimeout(() => { runTop2pctPanel(scholarId); }, 0);
+      }
     }
     const scheduleNonCriticalBootstrap = () => {
       if (state.__suNonCriticalScheduled) return;

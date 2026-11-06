@@ -5714,3 +5714,94 @@ body[data-su-theme="dark"] .su-reload-banner-btn { background: #2d2e31; border-c
 }
 .su-bib-author-notice-btn:focus-visible,
 .su-bib-author-notice-close:focus-visible { outline: var(--su-focus-ring); outline-offset: 2px; }
+
+/* Free top-2% panel on profile pages (src/content/top2pct.js). Theme tokens only. */
+.su-top2pct {
+  margin: 8px 0 6px;
+  padding: 10px 12px;
+  max-width: 640px;
+  border: 1px solid var(--su-chip-border);
+  border-radius: var(--su-chip-radius);
+  background: var(--su-surface);
+  color: var(--su-gray-900);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.su-top2pct-heading {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.su-top2pct-heading:focus-visible,
+.su-top2pct button:focus-visible,
+.su-top2pct a:focus-visible,
+.su-top2pct input:focus-visible {
+  outline: var(--su-focus-ring);
+  outline-offset: 2px;
+}
+.su-top2pct p {
+  margin: 2px 0;
+}
+.su-top2pct-ranks {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.su-top2pct-note,
+.su-top2pct-credit {
+  color: var(--su-gray-600);
+  font-size: 12px;
+}
+.su-top2pct-more {
+  margin: 6px 0 2px;
+  padding: 2px 10px;
+  min-height: 24px;
+  border: 1px solid var(--su-chip-border);
+  border-radius: var(--su-chip-radius);
+  background: var(--su-chip-bg);
+  color: var(--su-chip-text);
+  font: inherit;
+  cursor: pointer;
+}
+.su-top2pct-more:hover {
+  background: var(--su-chip-bg-hover);
+}
+.su-top2pct-detail {
+  margin: 4px 0;
+}
+.su-top2pct-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+  margin-top: 6px;
+}
+.su-top2pct-footer .su-top2pct-credit {
+  flex-basis: 100%;
+}
+.su-top2pct-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--su-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.su-top2pct-link:hover {
+  color: var(--su-accent-hover);
+}
+.su-top2pct-pick fieldset {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--su-chip-border);
+  border-radius: var(--su-chip-radius);
+}
+.su-top2pct-pick legend {
+  padding: 0 4px;
+}
+.su-top2pct-opt {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 3px 0;
+}

@@ -136,6 +136,7 @@ Local-only or packaged-data features include:
 - venue-quality lists shipped with the extension
 - cached page-visit and reading-load metadata
 - many DOM-derived result annotations
+- the career citation rank panel on author profiles: the matching runs on a dataset bundled with the extension, and a choice you make ("Use this person" or "None of these") is kept in `chrome.storage.local` under `suTop2pctPicks`, at most 500 profiles; turning the panel off in Options deletes them
 
 ### Requests to Google Scholar itself
 

@@ -235,6 +235,14 @@ const TARGETS = [
     args: ['src/content/data-loader.js', '--bundle=true', '--format=esm', '--minify', '--outfile=dist/content/data-loader.js', '--log-level=warning'],
   },
   {
+    label: 'content/top2pct.js',
+    args: ['src/content/top2pct.js', '--bundle=true', '--format=esm', '--minify', '--outfile=dist/content/top2pct.js', '--log-level=warning'],
+  },
+  {
+    label: 'content/top2pct-core.js',
+    args: ['src/content/top2pct-core.js', '--bundle=false', '--minify', '--outfile=dist/content/top2pct-core.js', '--log-level=warning'],
+  },
+  {
     label: 'content/trend-tracker.js',
     args: ['src/content/trend-tracker.js', '--bundle=true', '--format=esm', '--minify', '--outfile=dist/content/trend-tracker.js', '--log-level=warning'],
   },

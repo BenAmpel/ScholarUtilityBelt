@@ -22,6 +22,9 @@ See journal quality as color-coded badges, taken from established ranking lists 
 AUTHOR PROFILE METRICS
 On any Scholar author page, see h-index, m-index, L-index and g-index, a self-citation rate estimated from OpenAlex, a publication quality breakdown (how many papers fall in each ranking tier) and coauthor analytics, calculated from the papers loaded on the page.
 
+CAREER CITATION RANK
+When a profile matches a researcher in the Stanford/Elsevier career citation ranking (Ioannidis, version 9), the profile shows their rank in their sub-field with self-citations excluded. If the name matches more than one listed researcher, you choose, or pick "None of these". The data ships with the extension.
+
 RETRACTION ALERTS
 Results whose DOI matches a list built from the Retraction Watch database, bundled with the extension, get a "Potential update/retraction" badge. Check the publisher's page before relying on it.
 
@@ -146,6 +149,16 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 - **Privacy policy URL.** It must describe the flows above, including the AI provider flow; the README's "A note on the Pro tier" section has the wording.
 
 ---
+
+## Release notes for 1.2.0 (paste into the dashboard's "What's new")
+
+New on author profiles: a Career citation rank panel shows where the researcher ranks in their sub-field in the
+Ioannidis citation dataset (Elsevier, version 9), with the self-citation share, and lets you pick the right person when
+several share a name. Venue badge popovers now show the list, edition and subject category of the match, with a Wrong
+match? link to report it. An Add to list chip adds an unmatched venue to your own list. Copy Bib offers Fix authors
+when Crossref lists authors that Scholar's BibTeX dropped. Clearer open access wording, a robot-check notice that says
+what is paused and for how long, and a saved Light or Dark theme now always wins. Options lists where the built-in
+badges come from.
 
 ## Release notes for 1.1.4 (paste into the dashboard's "What's new")
 

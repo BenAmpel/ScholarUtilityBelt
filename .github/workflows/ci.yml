@@ -52,5 +52,6 @@ jobs:
         run: |
           EDGE="$(command -v microsoft-edge || command -v microsoft-edge-stable || true)"
           bash scripts/package_release.sh
+          node --import ./tests/register-loader.mjs --test --test-name-pattern packaged tests/top2pct.test.mjs
           if [ -z "$EDGE" ]; then echo "Microsoft Edge not on this runner; skipping"; exit 0; fi
           EDGE_PATH="$EDGE" EXT_DIR=output/variants/edge npm run e2e

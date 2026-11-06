@@ -235,6 +235,7 @@ async function load() {
   el("showResearchIntel").checked = s.showResearchIntel !== false;
   el("showAdvancedFilters").checked = s.showAdvancedFilters !== false;
   el("showTrendTracker").checked = s.showTrendTracker !== false;
+  el("top2pctPanel").checked = s.top2pctPanel !== false;
   el("groupVersions").checked = !!s.groupVersions;
   el("versionOrder").value = s.versionOrder || "journal-first";
   el("showNewSinceLastVisit").checked = s.showNewSinceLastVisit !== false;
@@ -721,6 +722,7 @@ async function handleSave() {
     showResearchIntel: el("showResearchIntel").checked,
     showAdvancedFilters: el("showAdvancedFilters").checked,
     showTrendTracker: el("showTrendTracker").checked,
+    top2pctPanel: el("top2pctPanel").checked,
     groupVersions: el("groupVersions").checked,
     versionOrder: el("versionOrder").value || "journal-first",
 
@@ -734,6 +736,10 @@ async function handleSave() {
     qualityCoreRanks: el("qualityCoreRanks").value,
     qualityCcfRanks: el("qualityCcfRanks").value
   });
+  // Turning the top-2% panel off deletes its saved choices ("Not this person", picks).
+  if (!el("top2pctPanel").checked) {
+    try { await chrome.storage.local.remove("suTop2pctPicks"); } catch { /* nothing saved */ }
+  }
   setStatus("Saved.");
   markClean();
 }
@@ -1064,7 +1070,8 @@ el("clearCaches")?.addEventListener("click", async () => {
       "externalSignalCache",
       "localCohortCache",
       "citationSnapshots",
-      "authorHIndexSnapshots"
+      "authorHIndexSnapshots",
+      "suTop2pctPicks"
     ]);
     if (cacheStatus) cacheStatus.textContent = "Caches cleared.";
     setTimeout(() => {

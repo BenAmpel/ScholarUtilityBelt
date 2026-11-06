@@ -179,6 +179,7 @@ export const DEFAULT_SETTINGS = {
   showResearchIntel: true,
   showAdvancedFilters: true,
   showTrendTracker: true,
+  top2pctPanel: true, // free top-2% panel on profile pages (src/content/top2pct.js)
   groupVersions: true,
   versionOrder: "journal-first", // "journal-first" | "conference-first" | "preprint-first"
 

@@ -155,6 +155,8 @@ module.exports = [
       "src/content/genealogy-lineage.js",
       "src/content/review-workspace.js",
       "src/content/trend-methods.js",
+      "src/content/top2pct.js",
+      "src/content/top2pct-core.js",
       "src/content/trend-tracker.js",
       "src/library/biblio-check.js",
       "src/library/librarian-report.js",

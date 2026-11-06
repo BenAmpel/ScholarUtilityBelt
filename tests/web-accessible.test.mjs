@@ -14,7 +14,7 @@ const listed = manifest.web_accessible_resources[0].resources.filter((r) => r.st
 
 // Everything the content script can load by name, in any of the files it runs.
 const CONTENT_SIDE = ["content/content.js", "content/content-author.js", "content/review-workspace.js", "content/signals-ui.js",
-  "content/trend-tracker.js", "content/genealogy-lineage.js", "content/data-loader.js"];
+  "content/trend-tracker.js", "content/genealogy-lineage.js", "content/data-loader.js", "content/top2pct.js"];
 const importsOf = (rel) => [...read(`src/${rel}`).matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+\.js)["']/g)]
   .map((m) => normalize(join(dirname(rel), m[1])));
 
