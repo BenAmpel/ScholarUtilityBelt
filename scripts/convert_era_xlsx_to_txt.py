@@ -3,9 +3,10 @@
 Convert era2023.xlsx to era2023.txt (one journal/venue name per line) for the extension.
 Run from repo root: python3 scripts/convert_era_xlsx_to_txt.py
 
-Uses only stdlib (zipfile + xml). Reads src/data/era2023.xlsx and writes src/data/era2023.txt.
+Uses only stdlib (zipfile + xml). Reads src/data/era2023.xlsx and writes src/data/era2023.txt.gz.
 """
 import xml.etree.ElementTree as ET
+import gzip
 import zipfile
 from pathlib import Path
 
@@ -16,7 +17,7 @@ NS = {
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "src" / "data"
 XLSX = DATA / "era2023.xlsx"
-OUT = DATA / "era2023.txt"
+OUT = DATA / "era2023.txt.gz"  # shipped gzipped; read by src/common/gzip-fetch.js
 
 
 def get_shared_strings(zipf):
@@ -118,7 +119,9 @@ def main():
             name = str(row[col]).strip()
             if name and not name.startswith("#"):
                 names.append(name)
-    OUT.write_text("\n".join(names), encoding="utf-8")
+    # mtime=0 and no file name in the header, like `gzip -n -9`, so a rebuild is byte-identical.
+    with open(OUT, "wb") as raw, gzip.GzipFile(filename="", mode="wb", compresslevel=9, fileobj=raw, mtime=0) as gz:
+        gz.write("\n".join(names).encode("utf-8"))
     print(f"Wrote {len(names)} entries to {OUT}")
     return 0
 

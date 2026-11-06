@@ -1,0 +1,6 @@
+{
+  "_comment": "Largest allowed store zip per package, in bytes. Set 2026-11-05 to the measured size plus 10% (Chrome 12,408,566; Firefox 12,408,623; Edge 12,559,024). A change that needs more must raise the number here on purpose.",
+  "chrome": { "maxBytes": 13649422 },
+  "firefox": { "maxBytes": 13649485 },
+  "edge": { "maxBytes": 13814926 }
+}

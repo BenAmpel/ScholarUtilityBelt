@@ -67,6 +67,10 @@ const TARGETS = [
     args: ['src/common/custom-venues.js', '--bundle=false', '--minify', '--outfile=dist/common/custom-venues.js', '--log-level=warning'],
   },
   {
+    label: 'common/gzip-fetch.js',
+    args: ['src/common/gzip-fetch.js', '--bundle=false', '--minify', '--outfile=dist/common/gzip-fetch.js', '--log-level=warning'],
+  },
+  {
     label: 'common/reference-import.js',
     args: ['src/common/reference-import.js', '--bundle=false', '--minify', '--outfile=dist/common/reference-import.js', '--log-level=warning'],
   },

@@ -71,3 +71,14 @@ echo "Wrote ${ZIP_PATH}"
 # The Microsoft Edge and Firefox packages are made from the Chrome one (store links, wording, manifest keys).
 node "${ROOT_DIR}/scripts/make_variant.mjs" edge
 node "${ROOT_DIR}/scripts/make_variant.mjs" firefox
+
+# Size budget: fail the packaging when a store zip grows past scripts/size-budget.json, so data growth is a decision.
+over=0
+for target in chrome firefox edge; do
+  if [[ "${target}" == "chrome" ]]; then zip_file="${ZIP_PATH}"; else zip_file="${OUT_DIR}/ScholarUtilityBelt-${VERSION}-${target}.zip"; fi
+  size="$(wc -c < "${zip_file}" | tr -d ' ')"
+  max="$(node -p "require('${ROOT_DIR}/scripts/size-budget.json')['${target}'].maxBytes")"
+  echo "Size ${target}: ${size} bytes (budget ${max})"
+  if (( size > max )); then echo "ERROR: ${zip_file} is over its size budget in scripts/size-budget.json" >&2; over=1; fi
+done
+exit "${over}"

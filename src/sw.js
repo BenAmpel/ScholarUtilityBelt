@@ -533,7 +533,16 @@ async function fetchBundledDataset(files) {
   return merged ? merged + "\n" : "";
 }
 
-const BUNDLED_QUARTILES_FILE = "src/data/scimago_2024_quartiles.json";
+const BUNDLED_QUARTILES_FILE = "src/data/scimago_2024_quartiles.json.gz";
+// The same rule as src/common/gzip-fetch.js, which this classic worker cannot import: only a .gz path is gunzipped,
+// because the Edge package stores the file uncompressed under the name without .gz (scripts/variant-data.mjs).
+async function fetchBundledJson(path) {
+  const url = chrome.runtime.getURL(path);
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  if (!url.endsWith(".gz") || !res.body || typeof DecompressionStream === "undefined") return res.json();
+  return new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).json();
+}
 // The bundled snapshot's meta.source; Options imports use "SCImago (SJR export)" or "SCImago (download)".
 function isBundledQuartilesMeta(meta) {
   return meta?.source === "SCImago Journal Rank (CSV export)";
@@ -566,10 +575,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   const hasIndex = qualityQuartilesIndex && Object.keys(qualityQuartilesIndex).length > 0;
   if (!hasIndex || isBundledQuartilesMeta(qualityQuartilesMeta)) {
     try {
-      const url = chrome.runtime.getURL(BUNDLED_QUARTILES_FILE);
-      const r = await fetch(url);
-      if (r.ok) {
-        const data = await r.json();
+      const data = await fetchBundledJson(BUNDLED_QUARTILES_FILE);
+      if (data) {
         const index = data?.index || {};
         const meta = data?.meta || null;
         const newer = !hasIndex || Number(meta?.year) > Number(qualityQuartilesMeta?.year || 0);
