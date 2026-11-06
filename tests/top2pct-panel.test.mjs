@@ -13,6 +13,8 @@ class El {
     this.tagName = tag.toUpperCase(); this.doc = doc; this.children = []; this.parent = null; this.attrs = {};
     this._text = ""; this.hidden = false; this.listeners = {}; this.id = ""; this.className = "";
   }
+  get parentNode() { return this.parent; }
+  get classList() { return { add: (c) => { this.className = (this.className + " " + c).trim(); } }; }
   get isConnected() { let n = this; while (n.parent) n = n.parent; return n === this.doc.body; }
   set textContent(v) { this._text = String(v); this.children = []; }
   get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); }
@@ -43,8 +45,11 @@ function makeDoc() {
   doc.createElement = (t) => new El(t, doc);
   doc.body = new El("body", doc);
   doc.getElementById = (id) => doc.body.all((n) => n.id === id)[0] || null;
+  const row = doc.body.appendChild(doc.createElement("div"));
+  const nameEl = row.appendChild(doc.createElement("div"));
+  nameEl.id = "gsc_prf_in";
   const anchor = doc.body.appendChild(doc.createElement("div"));
-  return { doc, anchor };
+  return { doc, anchor, nameEl, row };
 }
 const memoryStorage = (init = {}) => {
   const s = { map: { ...init }, writes: 0 };
@@ -74,47 +79,73 @@ const KRESSE = { userId: "K1", name: "Georg Kresse", affiliation: "University of
 const SMITH = { userId: "S1", name: "John Smith", affiliation: "University of Oxford; Harvard University" };
 
 async function run(profile, opts = {}) {
-  const { doc, anchor } = opts.page || makeDoc();
+  const page = opts.page || makeDoc();
+  const { doc, anchor } = page;
   const storage = opts.storage || memoryStorage();
-  const state = await runTop2pct({ doc, anchor, load: opts.load || load, storage, now: () => 1000, ...profile });
-  return { state, doc, anchor, storage, panel: doc.getElementById("su-top2pct") };
+  const nameEl = opts.noBadge ? null : page.nameEl;
+  const state = await runTop2pct({ doc, anchor, nameEl, load: opts.load || load, storage, now: () => 1000, ...profile });
+  return { state, doc, anchor, storage, page, panel: doc.getElementById("su-top2pct"), badge: doc.getElementById("su-top2pct-badge") };
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe("top2pct panel", () => {
-  it("shows a confident match after the anchor, with ranks and detail behind the button", async () => {
-    const { state, panel, anchor } = await run(KRESSE);
+  it("shows a foil badge after the name; the badge opens the collapsed panel with ranks and detail", async () => {
+    const { state, panel, anchor, badge, page } = await run(KRESSE);
     assert.equal(state, "confident");
     assert.equal(anchor.parent.children[anchor.parent.children.indexOf(anchor) + 1], panel);
+    // The badge sits right after the name element, never inside it, so the name's text stays clean.
+    assert.equal(page.row.children[1], badge);
+    assert.equal(page.nameEl.textContent, "");
+    assert.match(page.row.className, /su-top2pct-namerow/);
+    assert.equal(badge.textContent, COPY.badge);
+    assert.equal(badge.getAttribute("aria-controls"), "su-top2pct");
+    assert.equal(badge.getAttribute("aria-expanded"), "false");
+    assert.equal(panel.hidden, true);
+    badge.click();
+    assert.equal(badge.getAttribute("aria-expanded"), "true");
+    assert.equal(panel.hidden, false);
     const text = panel.textContent;
     assert.match(text, /Matched: Kresse, Georg · Universität Wien · AUT/);
     assert.match(text, /Career: rank 3 of 50,000 researchers in Chemical Physics \(self-citations excluded\)/);
     assert.match(text, /2025 alone: rank 3 of 50,000/);
     assert.doesNotMatch(text, /Retraction Watch/); // a zero count is never shown
-    const more = panel.querySelector(".su-top2pct-more");
     const detail = panel.querySelector(".su-top2pct-detail");
-    assert.equal(detail.hidden, true);
-    more.click();
-    assert.equal(more.getAttribute("aria-expanded"), "true");
-    assert.equal(detail.hidden, false);
     assert.match(detail.textContent, /Career: 3% of citations to this person's papers are self-citations\./);
     assert.match(detail.textContent, /each citing paper cites this person 1\.2 times on average/);
+    badge.click();
+    assert.equal(panel.hidden, true);
+    // A second run on the same page replaces the badge instead of adding another.
+    await runTop2pct({ doc: page.doc, anchor, nameEl: page.nameEl, load, storage: memoryStorage(), now: () => 1, ...KRESSE });
+    assert.equal(page.row.all((n) => n.id === "su-top2pct-badge").length, 1);
+  });
+
+  it("shows the panel open, with no badge, when the name element is missing", async () => {
+    const r = await run(KRESSE, { noBadge: true });
+    assert.equal(r.state, "confident");
+    assert.equal(r.badge, null);
+    assert.equal(r.panel.hidden, false);
   });
 
   it("offers a pick list with None of these first, and a choice is stored and shown with its retraction line", async () => {
     const r = await run(SMITH);
     assert.equal(r.state, "pick");
-    r.panel.querySelector(".su-top2pct-more").click(); // Choose
+    assert.equal(r.badge.textContent, COPY.badgePick);
+    assert.equal(r.panel.hidden, true);
+    await tick();
+    assert.equal(r.doc.activeElement, null); // page load never moves focus
+    r.badge.click();
+    assert.equal(r.panel.hidden, false);
     const radios = r.panel.all((n) => n.tagName === "INPUT");
     assert.equal(radios[0].value, "none");
     assert.equal(radios[0].checked, true);
-    assert.equal(r.doc.activeElement, radios[0]);
     const oxford = radios.find((n) => n.parent.textContent.includes("Oxford"));
     radios[0].checked = false; oxford.checked = true;
     r.panel.querySelector(".su-top2pct-pick").dispatch("submit");
     await tick();
     const shown = r.doc.getElementById("su-top2pct");
     assert.match(shown.textContent, /You chose this person/);
+    assert.equal(shown.hidden, false); // stays open after the choice
+    assert.equal(r.doc.getElementById("su-top2pct-badge").textContent, COPY.badge);
     assert.match(shown.textContent, /2 papers by Smith, John \(University of Oxford\) are listed in Retraction Watch/);
     assert.equal(r.doc.activeElement.className, "su-top2pct-heading");
     const saved = r.storage.map.S1;
@@ -134,6 +165,7 @@ describe("top2pct panel", () => {
     r.panel.querySelector(".su-top2pct-pick").dispatch("submit"); // None of these is checked by default
     await tick();
     assert.equal(r.doc.getElementById("su-top2pct"), null);
+    assert.equal(r.doc.getElementById("su-top2pct-badge"), null);
     assert.deepEqual(r.storage.map.S1, { v: "9", none: true, t: 1000 });
     assert.equal((await run(SMITH, { storage: r.storage })).state, "none");
     r.storage.map.S1.v = "8";

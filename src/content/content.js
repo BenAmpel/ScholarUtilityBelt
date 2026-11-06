@@ -351,6 +351,7 @@
         affiliation,
         emailDomain: m ? m[1] : "",
         anchor,
+        nameEl: document.getElementById("gsc_prf_in"),
         extVersion: chrome.runtime.getManifest().version
       });
     } catch (e) {

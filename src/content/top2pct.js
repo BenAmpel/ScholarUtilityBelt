@@ -12,16 +12,20 @@ import {
 export const PICKS_KEY = "suTop2pctPicks";
 export const PICKS_MAX = 500;
 const PANEL_ID = "su-top2pct";
+const BADGE_ID = "su-top2pct-badge";
 
 /** Every string the panel shows. tests/top2pct-copy.test.mjs reads these. */
 export const COPY = {
   heading: "Top-2% scientists list",
+  badge: "Top 2%",
+  badgePick: "Top 2%?",
+  badgeLabel: "Top-2% scientists list: show details",
+  badgePickLabel: "Top-2% scientists list: several listed researchers match, show them",
   matched: "Matched: ",
   savedHere: "You chose this person. Saved on this device only.",
   tableLabel: { career: "Career", singleyr: (year) => `${year} alone` },
   rank: (rank, of, sub) => `rank ${rank} of ${of} researchers in ${sub} (self-citations excluded)`,
   caveat: "A citation ranking from one dataset, not a measure of research quality.",
-  moreDetail: "More detail",
   selfShare: (pct, label) => `${label}: ${pct}% of citations to this person's papers are self-citations.`,
   perCiting: (x, label) => `${label}: each citing paper cites this person ${x} times on average. There is no field benchmark.`,
   retracted: (n, who) => `${n} ${n === 1 ? "paper" : "papers"} by ${who} ${n === 1 ? "is" : "are"} listed in Retraction Watch as retracted. This does not show who was responsible.`,
@@ -29,7 +33,6 @@ export const COPY = {
   notThisPerson: "Not this person?",
   report: "Report a wrong match",
   several: "Several listed researchers match this profile.",
-  choose: "Choose",
   pickLegend: "Which listed researcher is this profile?",
   noneOfThese: "None of these",
   usePerson: "Use this person",
@@ -113,6 +116,8 @@ export async function runTop2pct(deps) {
   const doc = deps.doc || document;
   const old = doc.getElementById(PANEL_ID);
   if (old) old.remove();
+  const oldBadge = doc.getElementById(BADGE_ID);
+  if (oldBadge) oldBadge.remove();
   if (!deps.userId || !deps.name || !scholarKeys(deps.name)) return "none";
   const db = await loadDb(deps.load || (() => fetchDataJson("src/data/top2pct.json.gz")));
   if (!db) return "none";
@@ -121,7 +126,10 @@ export async function runTop2pct(deps) {
   const version = String(db.meta.version);
   const affHash = affiliationHash(deps.affiliation || "");
   const profile = { name: deps.name, affiliation: deps.affiliation || "", emailDomain: deps.emailDomain || "" };
-  const ctx = { doc, userId: deps.userId, version, year: Number(db.meta.year) || 2025, extVersion: deps.extVersion };
+  const ctx = {
+    doc, userId: deps.userId, version, year: Number(db.meta.year) || 2025, extVersion: deps.extVersion,
+    nameEl: deps.nameEl || null,
+  };
 
   const result = matchProfile(db, profile);
   const savePick = async (rec) => {
@@ -129,11 +137,13 @@ export async function runTop2pct(deps) {
       await writePick(storage, deps.userId, { v: version, none: true, t: now() });
       const p = doc.getElementById(PANEL_ID);
       if (p) p.remove();
+      const b = doc.getElementById(BADGE_ID);
+      if (b) b.remove();
       return;
     }
     await writePick(storage, deps.userId, { v: version, ...identityOf(rec), aff: affHash, t: now() });
     const panel = renderMatched(ctx, rec, { picked: true, onNotThis: () => notThis() });
-    mount(ctx, deps.anchor, panel);
+    mount(ctx, deps.anchor, panel, "match", true);
     const h = panel.querySelector(".su-top2pct-heading");
     if (h) h.focus();
   };
@@ -141,7 +151,7 @@ export async function runTop2pct(deps) {
     const others = result.candidates.length >= 2 ? result.candidates : [];
     if (!others.length) return savePick(null);
     const panel = renderPickList(ctx, others, savePick, true);
-    mount(ctx, deps.anchor, panel);
+    mount(ctx, deps.anchor, panel, "pick", true);
     return undefined;
   }
 
@@ -155,7 +165,7 @@ export async function runTop2pct(deps) {
       const rec = resolveIdentity(db, stored);
       if (rec) {
         if (stored.v !== version) await writePick(storage, deps.userId, { ...stored, v: version, t: now() });
-        mount(ctx, deps.anchor, renderMatched(ctx, rec, { picked: true, onNotThis: () => notThis() }));
+        mount(ctx, deps.anchor, renderMatched(ctx, rec, { picked: true, onNotThis: () => notThis() }), "match", false);
         return "picked";
       }
       await writePick(storage, deps.userId, null);
@@ -165,20 +175,63 @@ export async function runTop2pct(deps) {
   }
 
   if (result.state === "confident") {
-    mount(ctx, deps.anchor, renderMatched(ctx, result.candidates[0], { picked: false, onNotThis: () => notThis() }));
+    mount(ctx, deps.anchor, renderMatched(ctx, result.candidates[0], { picked: false, onNotThis: () => notThis() }), "match", false);
     return "confident";
   }
   if (result.state === "pick") {
-    mount(ctx, deps.anchor, renderPickList(ctx, result.candidates, savePick, false));
+    mount(ctx, deps.anchor, renderPickList(ctx, result.candidates, savePick, false), "pick", false);
     return "pick";
   }
   return "none";
 }
 
-function mount(ctx, anchor, panel) {
-  const old = ctx.doc.getElementById(PANEL_ID);
-  if (old) { old.replaceWith(panel); return; }
-  if (anchor && anchor.isConnected) anchor.insertAdjacentElement("afterend", panel);
+/**
+ * Place the panel after the anchor. With a name element, the panel starts collapsed and a foil badge after the name
+ * opens it; without one (a changed Scholar layout), the panel shows open as before, so nothing is lost.
+ * kind is "match" or "pick"; open keeps the panel visible (after a choice the user just made).
+ */
+function mount(ctx, anchor, panel, kind, open) {
+  const { doc } = ctx;
+  const old = doc.getElementById(PANEL_ID);
+  if (old) old.replaceWith(panel);
+  else if (anchor && anchor.isConnected) anchor.insertAdjacentElement("afterend", panel);
+  else return;
+  const badge = ensureBadge(ctx);
+  if (!badge) { panel.hidden = false; return; }
+  const pick = kind === "pick";
+  badge.querySelector(".su-top2pct-badge-text").textContent = pick ? COPY.badgePick : COPY.badge;
+  badge.setAttribute("aria-label", pick ? COPY.badgePickLabel : COPY.badgeLabel);
+  badge.setAttribute("data-kind", kind);
+  const isOpen = open || badge.getAttribute("aria-expanded") === "true";
+  badge.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  panel.hidden = !isOpen;
+}
+
+function ensureBadge(ctx) {
+  const { doc, nameEl } = ctx;
+  const existing = doc.getElementById(BADGE_ID);
+  if (existing) return existing;
+  if (!nameEl || !nameEl.isConnected) return null;
+  const b = el(doc, "button", "su-top2pct-badge");
+  b.type = "button";
+  b.id = BADGE_ID;
+  b.setAttribute("aria-controls", PANEL_ID);
+  b.setAttribute("aria-expanded", "false");
+  b.appendChild(el(doc, "span", "su-top2pct-badge-text", COPY.badge));
+  const chev = el(doc, "span", "su-top2pct-badge-chev");
+  chev.setAttribute("aria-hidden", "true");
+  b.appendChild(chev);
+  b.addEventListener("click", () => {
+    const panel = doc.getElementById(PANEL_ID);
+    if (!panel) return;
+    const open = b.getAttribute("aria-expanded") !== "true";
+    b.setAttribute("aria-expanded", open ? "true" : "false");
+    panel.hidden = !open;
+  });
+  // The badge sits after the name element, not inside it, so code that reads the name's text never sees "Top 2%".
+  if (nameEl.parentNode && nameEl.parentNode.classList) nameEl.parentNode.classList.add("su-top2pct-namerow");
+  nameEl.insertAdjacentElement("afterend", b);
+  return b;
 }
 
 function shell(ctx) {
@@ -237,13 +290,8 @@ export function renderMatched(ctx, rec, { picked, onNotThis }) {
   panel.appendChild(list);
   panel.appendChild(el(doc, "p", "su-top2pct-note", COPY.caveat));
 
-  const more = el(doc, "button", "su-top2pct-more", COPY.moreDetail);
-  more.type = "button";
-  more.setAttribute("aria-expanded", "false");
-  more.setAttribute("aria-controls", "su-top2pct-detail");
+  // The badge already hides the panel, so the detail shows with the rest once it is opened.
   const detail = el(doc, "div", "su-top2pct-detail");
-  detail.id = "su-top2pct-detail";
-  detail.hidden = true;
   for (const [t, r] of Object.entries(rec.tables)) {
     const label = tableLabel(t, year);
     detail.appendChild(el(doc, "p", null, COPY.selfShare(r.selfPct, label)));
@@ -261,23 +309,17 @@ export function renderMatched(ctx, rec, { picked, onNotThis }) {
     p.appendChild(v);
     detail.appendChild(p);
   }
-  more.addEventListener("click", () => {
-    const open = more.getAttribute("aria-expanded") !== "true";
-    more.setAttribute("aria-expanded", open ? "true" : "false");
-    detail.hidden = !open;
-  });
-  panel.appendChild(more);
   panel.appendChild(detail);
   panel.appendChild(footer(ctx, rec, onNotThis));
   return panel;
 }
 
-export function renderPickList(ctx, candidates, onChoose, openNow) {
+/** The pick list. focusNow moves focus to it, only when the user just asked for it ("Not this person?"). */
+export function renderPickList(ctx, candidates, onChoose, focusNow) {
   const { doc } = ctx;
   const panel = shell(ctx);
   panel.appendChild(el(doc, "p", "su-top2pct-who", COPY.several));
   const form = el(doc, "form", "su-top2pct-pick");
-  form.hidden = !openNow;
   const fs = el(doc, "fieldset");
   fs.appendChild(el(doc, "legend", null, COPY.pickLegend));
   const radio = (value, text, i) => {
@@ -312,19 +354,8 @@ export function renderPickList(ctx, candidates, onChoose, openNow) {
     const v = sel ? sel.value : "none";
     onChoose(v === "none" ? null : candidates[Number(v)] || null);
   });
-  if (!openNow) {
-    const choose = el(doc, "button", "su-top2pct-more", COPY.choose);
-    choose.type = "button";
-    choose.setAttribute("aria-expanded", "false");
-    choose.addEventListener("click", () => {
-      form.hidden = false;
-      choose.setAttribute("aria-expanded", "true");
-      noneInput.focus();
-    });
-    panel.appendChild(choose);
-  }
   panel.appendChild(form);
   panel.appendChild(footer(ctx, null, null));
-  if (openNow) queueMicrotask(() => noneInput.focus());
+  if (focusNow) queueMicrotask(() => noneInput.focus());
   return panel;
 }
