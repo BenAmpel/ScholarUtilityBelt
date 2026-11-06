@@ -1,5 +1,5 @@
 {
-  "_comment": "Largest allowed store zip per package, in bytes. Raised 2026-11-05 for the bundled top-2% career citation data (src/data/top2pct.json.gz, about 6.4 MB): measured size plus 5% (Chrome 18,784,660; Firefox 18,784,718; Edge 19,096,956). A change that needs more must raise the number here on purpose.",
+  "_comment": "Largest allowed store zip per package, in bytes. Raised 2026-11-05 for the bundled top-2% career citation data (about 6.4 MB): measured size plus 5% (Chrome 18,784,660; Firefox 18,784,718; Edge 19,096,956). A change that needs more must raise the number here on purpose.",
   "chrome": {
     "maxBytes": 19723893
   },
