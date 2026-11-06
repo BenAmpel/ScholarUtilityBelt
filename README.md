@@ -199,9 +199,11 @@ The repository includes local snapshots under [`src/data/`](src/data):
 - `fnege2025.csv`
 - `core_icore2026.csv`
 - `core_portal_ranks.csv`
-- `scimago_2024_quartiles.json`
-- `journal_impact_2024.csv`
+- `scimago_2024_quartiles.json.gz`
+- `journal_impact_2024.csv.gz`
 - `quality_sources.json`
+
+The five largest lists (`scimago_2024_quartiles`, `journal_impact_2024`, `era2023`, `norwegian_compact`, `venue_h5_index`) ship gzipped (`gzip -n -9`) and are read with `src/common/gzip-fetch.js`. The Edge package stores them uncompressed (`scripts/variant-data.mjs`).
 
 The new packaged `fnege2025.csv` is derived from the latest Harzing Journal Quality List title PDF (72nd edition, 27 March 2026). It reflects the JQL-covered journal set rather than the full FNEGE master list.
 

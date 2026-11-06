@@ -2,11 +2,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { gunzipSync } from "node:zlib";
 
 const root = new URL("..", import.meta.url);
 const swSource = readFileSync(new URL("src/sw.js", root), "utf8");
 const bundledFile = swSource.match(/BUNDLED_QUARTILES_FILE = "([^"]+)"/)[1];
-const bundled = JSON.parse(readFileSync(new URL(bundledFile, root), "utf8"));
+// Bundled data files ship gzipped; read them as the extension would see them after gunzip.
+const readData = (p) => { const b = readFileSync(new URL(p, root)); return (p.endsWith(".gz") ? gunzipSync(b) : b).toString("utf8"); };
+const bundled = JSON.parse(readData(bundledFile));
 
 // Runs sw.js in a sandbox with a fake chrome, fires every onInstalled listener for an update, and returns storage.
 async function runUpdate(initialLocal) {
@@ -33,7 +36,7 @@ async function runUpdate(initialLocal) {
   const fetch = async (url) => {
     const path = String(url).replace("chrome-extension://test/", "");
     try {
-      const body = readFileSync(new URL(path, root), "utf8");
+      const body = readData(path);
       return { ok: true, status: 200, json: async () => JSON.parse(body), text: async () => body };
     } catch {
       return { ok: false, status: 404, json: async () => ({}), text: async () => "" };

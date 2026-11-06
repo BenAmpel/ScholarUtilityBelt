@@ -1,4 +1,5 @@
 import { buildBibTeXEntry } from "../common/bibtex.js";
+import { fetchDataText } from "../common/gzip-fetch.js";
 import { safeHref } from "../common/scholar-links.js";
 import {
   csvToTags,
@@ -252,9 +253,7 @@ async function loadImpactIndex() {
   if (impactIndexCache) return impactIndexCache;
   const map = new Map();
   try {
-    const url = chrome.runtime.getURL("src/data/journal_impact_2024.csv");
-    const r = await fetch(url);
-    const text = r.ok ? await r.text() : "";
+    const text = await fetchDataText("src/data/journal_impact_2024.csv.gz");
     for (const line of (text || "").split(/\r?\n/)) {
       if (!line || /^\s*Journal\s*Name\s*,/i.test(line)) continue;
       const idx = line.lastIndexOf(",");

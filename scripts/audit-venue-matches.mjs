@@ -5,11 +5,16 @@
 //   node --import ./tests/register-loader.mjs scripts/audit-venue-matches.mjs [--list]
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const q = await import(path.join(ROOT, "src/common/quality.js"));
-const D = (f) => fs.readFileSync(path.join(ROOT, "src/data", f), "utf8");
+// The larger lists ship gzipped (src/data/<name>.gz); read whichever form is in the tree.
+const D = (f) => {
+  const p = path.join(ROOT, "src/data", f);
+  return fs.existsSync(p + ".gz") ? zlib.gunzipSync(fs.readFileSync(p + ".gz")).toString("utf8") : fs.readFileSync(p, "utf8");
+};
 const sjr = JSON.parse(D("scimago_2024_quartiles.json")).index;
 const h5Index = JSON.parse(D("venue_h5_index.json"));
 const absIndex = new Map(D("abs2024.csv").split(/\r?\n/).map((l) => {

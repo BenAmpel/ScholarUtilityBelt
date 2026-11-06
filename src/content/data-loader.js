@@ -1,26 +1,5 @@
 import { normalizeVenueName, normalizeVhbRank } from "../common/quality.js";
-
-function parseCsvLine(line, delim = ";") {
-  const s = String(line || "");
-  const out = [];
-  let cur = "";
-  let inQ = false;
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    if (inQ) {
-      if (ch === '"') {
-        if (s[i + 1] === '"') { cur += '"'; i++; }
-        else inQ = false;
-      } else cur += ch;
-    } else {
-      if (ch === '"') inQ = true;
-      else if (ch === delim) { out.push(cur.replace(/^"|"$/g, "").replace(/""/g, '"').trim()); cur = ""; }
-      else cur += ch;
-    }
-  }
-  out.push(cur.replace(/^"|"$/g, "").replace(/""/g, '"').trim());
-  return out;
-}
+import { fetchDataJson, fetchDataText } from "../common/gzip-fetch.js";
 
 export async function loadEraAndNorwegian() {
   if (window.__suEraNorwegian) return window.__suEraNorwegian;
@@ -28,12 +7,11 @@ export async function loadEraAndNorwegian() {
   let norwegianMap = new Map();
   let absIndex = new Map();
   try {
-    const base = chrome.runtime.getURL("src/data/");
-    // The 1 MB Norwegian register is fetched together with the other two, not after them.
+    // The Norwegian register is fetched together with the other two, not after them.
     const [eraText, absText, norJson] = await Promise.all([
-      fetch(base + "era2023.txt").then((r) => (r.ok ? r.text() : "")).catch(() => ""),
-      fetch(base + "abs2024.csv").then((r) => (r.ok ? r.text() : "")).catch(() => ""),
-      fetch(base + "norwegian_compact.json").then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      fetchDataText("src/data/era2023.txt.gz").catch(() => ""),
+      fetchDataText("src/data/abs2024.csv").catch(() => ""),
+      fetchDataJson("src/data/norwegian_compact.json.gz").catch(() => null)
     ]);
 
     for (const line of (eraText || "").split(/\r?\n/)) {
@@ -43,34 +21,9 @@ export async function loadEraAndNorwegian() {
       if (n) eraSet.add(n);
     }
 
-    let norwegianLoaded = false;
-    try {
-      if (norJson && typeof norJson === "object") {
-        for (const [key, level] of Object.entries(norJson)) {
-          if (level === "1" || level === "2") norwegianMap.set(key, level);
-        }
-        norwegianLoaded = true;
-      }
-    } catch (_) {}
-
-    if (!norwegianLoaded) {
-      const norwegianText = await fetch(base + "norwegian_register.csv").then((r) => (r.ok ? r.text() : "")).catch(() => "");
-      const norLines = (norwegianText || "").split(/\r?\n/).filter((l) => l.trim());
-      if (norLines.length > 0) {
-        const header = parseCsvLine(norLines[0], ";");
-        const titleIdx = header.findIndex((h) => /International Title|Original Title/i.test(String(h)));
-        const levelIdx = header.findIndex((h) => /^Level 20\d{2}$/.test(String(h).trim()));
-        const useTitleIdx = titleIdx >= 0 ? titleIdx : 2;
-        const useLevelIdx = levelIdx >= 0 ? levelIdx : 9;
-        for (let i = 1; i < norLines.length; i++) {
-          const cells = parseCsvLine(norLines[i], ";");
-          const name = (cells[useTitleIdx] || "").trim();
-          const level = String(cells[useLevelIdx] || "").replace(/\D/g, "").slice(0, 1);
-          if (name && (level === "1" || level === "2")) {
-            const n = normalizeVenueName(name);
-            if (n) norwegianMap.set(n, level);
-          }
-        }
+    if (norJson && typeof norJson === "object") {
+      for (const [key, level] of Object.entries(norJson)) {
+        if (level === "1" || level === "2") norwegianMap.set(key, level);
       }
     }
 
@@ -97,9 +50,7 @@ export async function loadEraAndNorwegian() {
 export async function loadH5Index() {
   if (window.__suH5Index) return window.__suH5Index;
   try {
-    const url = chrome.runtime.getURL("src/data/venue_h5_index.json");
-    const r = await fetch(url);
-    const data = (r.ok ? await r.json() : null) || {};
+    const data = (await fetchDataJson("src/data/venue_h5_index.json.gz")) || {};
     window.__suH5Index = data;
     return data;
   } catch (_) {
@@ -135,9 +86,7 @@ export async function loadImpactIndex() {
   if (window.__suImpactIndex) return window.__suImpactIndex;
   const map = new Map();
   try {
-    const url = chrome.runtime.getURL("src/data/journal_impact_2024.csv");
-    const r = await fetch(url);
-    const text = r.ok ? await r.text() : "";
+    const text = await fetchDataText("src/data/journal_impact_2024.csv.gz");
     for (const line of (text || "").split(/\r?\n/)) {
       if (!line || /^\s*Journal\s*Name\s*,/i.test(line)) continue;
       const idx = line.lastIndexOf(",");

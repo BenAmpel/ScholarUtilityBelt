@@ -5,14 +5,14 @@
  *
  * Run: node scripts/build_norwegian_compact.js
  *
- * Output: src/data/norwegian_compact.json  (~150-300 KB, loaded instead of the 15 MB CSV)
+ * Output: src/data/norwegian_compact.json.gz  (gzipped; ~150-300 KB raw, loaded instead of the 15 MB CSV)
  */
 
 const fs   = require("fs");
 const path = require("path");
 
 const IN_PATH  = path.join(__dirname, "..", "src", "data", "norwegian_register.csv");
-const OUT_PATH = path.join(__dirname, "..", "src", "data", "norwegian_compact.json");
+const OUT_PATH = path.join(__dirname, "..", "src", "data", "norwegian_compact.json.gz");
 
 // Mirror of normalizeVenueName from quality.js so we produce identical keys.
 function normalizeVenueName(s) {
@@ -99,7 +99,8 @@ for (let i = 1; i < lines.length; i++) {
   kept++;
 }
 
-fs.writeFileSync(OUT_PATH, JSON.stringify(result), "utf8");
+// Shipped gzipped (src/common/gzip-fetch.js reads it); level 9 and no timestamp, like `gzip -n -9`.
+fs.writeFileSync(OUT_PATH, require("zlib").gzipSync(JSON.stringify(result), { level: 9 }));
 const kbIn  = Math.round(fs.statSync(IN_PATH).size  / 1024);
 const kbOut = Math.round(fs.statSync(OUT_PATH).size / 1024);
 console.log(`Done. Rows: ${total} total, ${kept} kept (Level 1 or 2).`);

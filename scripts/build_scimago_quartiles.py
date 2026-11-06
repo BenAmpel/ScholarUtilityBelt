@@ -6,7 +6,7 @@ Input: SCImago Journal Rank export CSV (often semicolon-delimited) with columns:
 - Title
 - SJR Best Quartile (Q1-Q4 or '-')
 
-Output: src/data/scimago_<year>_quartiles.json containing:
+Output: src/data/scimago_<year>_quartiles.json.gz (gzipped) containing:
 { meta: {...}, index: { normalized_title: "Q1"|"Q2"|"Q3"|"Q4" } }
 """
 
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
 import re
 from datetime import datetime, timezone
@@ -72,7 +73,7 @@ def main() -> int:
 
     out_dir = Path(args.out).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"scimago_{args.year}_quartiles.json"
+    out_path = out_dir / f"scimago_{args.year}_quartiles.json.gz"  # shipped gzipped; see src/common/gzip-fetch.js
 
     text0 = in_path.read_text(encoding="utf-8", errors="ignore")
     first_line = (text0.splitlines() or [""])[0]
@@ -109,7 +110,8 @@ def main() -> int:
     }
 
     out = {"meta": meta, "index": idx}
-    out_path.write_text(json.dumps(out, indent=2, sort_keys=True), encoding="utf-8")
+    with open(out_path, "wb") as raw, gzip.GzipFile(filename="", mode="wb", compresslevel=9, fileobj=raw, mtime=0) as gz:
+        gz.write(json.dumps(out, indent=2, sort_keys=True).encode("utf-8"))
     print(f"Wrote {out_path} (journals={len(idx)})")
     return 0
 

@@ -108,6 +108,7 @@ module.exports = [
       "src/common/reload-banner.js",
       "src/common/pro-prompt.js",
       "src/common/custom-venues.js",
+      "src/common/gzip-fetch.js",
       "src/common/reference-import.js",
       "src/common/reference-import.js",
       "src/common/rob.js",

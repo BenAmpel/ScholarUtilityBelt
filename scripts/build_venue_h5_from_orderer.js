@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build src/data/venue_h5_index.json from Google-Scholar-Orderer data/core-rankings.json.
+ * Build src/data/venue_h5_index.json.gz from Google-Scholar-Orderer data/core-rankings.json.
  * Run after extracting the Orderer zip, e.g.:
  *   node scripts/build_venue_h5_from_orderer.js /path/to/Google-Scholar-Orderer-main/data/core-rankings.json
  * Or from repo root with extracted zip in project:
@@ -65,7 +65,8 @@ if (data.journals) {
 }
 
 const root = path.resolve(__dirname, "..");
-const outPath = path.join(root, "src", "data", "venue_h5_index.json");
-fs.writeFileSync(outPath, JSON.stringify(out, null, 0), "utf8");
+const outPath = path.join(root, "src", "data", "venue_h5_index.json.gz");
+// Shipped gzipped (src/common/gzip-fetch.js reads it); level 9 and no timestamp, like `gzip -n -9`.
+fs.writeFileSync(outPath, require("zlib").gzipSync(JSON.stringify(out, null, 0), { level: 9 }));
 console.log("Wrote", outPath, "with", Object.keys(out).length, "venue h5 entries.");
 process.exit(0);

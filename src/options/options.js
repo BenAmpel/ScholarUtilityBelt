@@ -22,6 +22,7 @@ import {
 } from "../common/storage.js";
 import { BADGE_SOURCES as BUNDLED_BADGE_SOURCES, normalizeVenueName } from "../common/quality.js";
 import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
+import { fetchDataText } from "../common/gzip-fetch.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
 import { initRatingPrompt } from "../common/rating-prompt.js";
@@ -1358,7 +1359,7 @@ initRatingPrompt();
 const BADGE_SOURCES = BUNDLED_BADGE_SOURCES.filter((s) => s.file);
 
 function countListEntries(file, text) {
-  if (file.endsWith(".json")) {
+  if (file.replace(/\.gz$/, "").endsWith(".json")) {
     const data = JSON.parse(text);
     if (data?.meta?.journalCount) return { count: data.meta.journalCount, year: data.meta.year };
     return { count: Object.keys(data?.index || data || {}).length };
@@ -1371,9 +1372,8 @@ function countListEntries(file, text) {
 async function renderBadgeSources() {
   const tbody = document.querySelector("#badgeSourcesTable tbody");
   if (!tbody || tbody.childElementCount) return;
-  const base = chrome.runtime.getURL("src/data/");
   let manifest = {};
-  try { manifest = (await (await fetch(base + "quality_sources.json")).json())?.sources || {}; } catch (_) { /* links are optional */ }
+  try { manifest = JSON.parse(await fetchDataText("src/data/quality_sources.json"))?.sources || {}; } catch (_) { /* links are optional */ }
   for (const src of BADGE_SOURCES) {
     const tr = document.createElement("tr");
     const badgeCell = document.createElement("td");
@@ -1385,7 +1385,7 @@ async function renderBadgeSources() {
     const url = src.url || manifest[src.key]?.url;
     let name = src.name;
     try {
-      const { count, year } = countListEntries(src.file, await (await fetch(base + src.file)).text());
+      const { count, year } = countListEntries(src.file, await fetchDataText(src.file));
       if (year) name = `${name} ${year}`;
       countCell.textContent = count.toLocaleString();
     } catch (_) {

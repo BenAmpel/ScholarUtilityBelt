@@ -198,6 +198,7 @@
         "dist/common/evidence-matrix.js",
         "dist/common/export-model.js",
         "dist/common/genealogy-search.js",
+        "dist/common/gzip-fetch.js",
         "dist/common/openalex-match.js",
         "dist/common/pro-prompt.js",
         "dist/common/quality.js",
