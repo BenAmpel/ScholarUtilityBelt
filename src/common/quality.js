@@ -47,6 +47,9 @@ function normalizeVenueNameUncached(s) {
   t = t.replace(LEADING_WORD_ORDINAL_ANNUAL, "").trim();
   // Strip leading year so "2019 IEEE International Conference..." matches "IEEE International Conference..."
   t = t.replace(/^(19|20)\d{2}\s+/, "").trim();
+  // Strip a trailing letter-prefixed article number ("Heliyon, e12345", "Results in Engineering, e113331"): journals
+  // that number articles instead of pages. Needs 4+ digits so a name ending in a short code is left alone.
+  t = t.replace(/\s+e\d{4,}(?=(?:\s+\d+)*$)/, "").trim();
   // Strip trailing page/date fragment ", N-N" or ", N N" so "Conference (AMCIS), 1-10" matches
   t = t.replace(/\s+\d+\s*-\s*\d+$/, "").trim();
   // Strip trailing number pairs (pages, then volume/issue) so "IEEE Internet of Things Journal 7 (9), 9128 - 9143" → "ieee internet of things journal"

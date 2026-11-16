@@ -415,3 +415,41 @@ describe("qualityBadgesForVenue", () => {
     assert.ok(badges.some((b) => b.kind === "findings"), "but should still get the informational Findings badge");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #124: "Results in Engineering, 113331" (trailing article number)
+// ---------------------------------------------------------------------------
+describe("venue strings with a trailing article number (issue #124)", () => {
+  const idx = compileQualityIndex({}, {
+    impactIndex: new Map([["results in engineering", 7.9], ["results in physics", 4.6]]),
+    quartilesIndex: { "Results in Engineering": "Q1", "Results in Physics": "Q1" },
+  });
+  const ifText = (v) => qualityBadgesForVenue(v, idx).find((b) => b.kind === "if")?.text;
+  const exactIf = (v) => qualityBadgesForVenue(v, idx).find((b) => b.kind === "if")?.metadata;
+
+  it("normalizes article numbers away", () => {
+    for (const v of [
+      "Results in Engineering, 113331",
+      "Results in Engineering 25, 113331, 2025",
+      "Results in Engineering, e113331",
+      "Results in Engineering 25, e113331",
+    ]) assert.equal(normalizeVenueName(v), "results in engineering", v);
+  });
+
+  it("gives Results in Engineering its own impact factor, as an exact match", () => {
+    for (const v of ["Results in Engineering, 113331", "Results in Engineering 25, 113331, 2025", "Results in Engineering, e113331"]) {
+      assert.equal(ifText(v), "IF 7.9", v);
+      assert.equal(exactIf(v).nearMatch, undefined, v);
+    }
+  });
+
+  it("extracts the venue from a Scholar byline with an article number", () => {
+    const v = extractVenueFromAuthorsVenue("A Smith, B Jones - Results in Engineering, 113331, 2025 - Elsevier");
+    assert.equal(ifText(v), "IF 7.9");
+  });
+
+  it("does not give a different Results in ... journal the same badge", () => {
+    assert.equal(ifText("Results in Physics, 102345"), "IF 4.6");
+    assert.equal(ifText("Results in Chemistry, 100123"), undefined);
+  });
+});
