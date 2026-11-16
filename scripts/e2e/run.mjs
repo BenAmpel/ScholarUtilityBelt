@@ -297,8 +297,11 @@ try {
   await o.evaluate(() => { const d = document.getElementById("badgeSources"); d.open = true; });
   await o.waitForFunction(() => [...document.querySelectorAll("#badgeSourcesTable td.num")].length >= 13 && ![...document.querySelectorAll("#badgeSourcesTable td.num")].some((td) => td.textContent === "…"), null, { timeout: 15000 }).catch(() => {});
   const sources = await o.evaluate(() => [...document.querySelectorAll("#badgeSourcesTable tbody tr")].map((tr) => [...tr.cells].map((c) => c.textContent.trim())));
-  const badCounts = sources.filter(([, , n]) => !(Number(String(n).replace(/\D/g, "")) > 0));
-  check("Options lists where each badge comes from, with entry counts", sources.length === 13 && badCounts.length === 0, sources.map(([b, , n]) => `${b} ${n}`).join("; "));
+  // Columns: Badge, List, Edition, Source, Entries.
+  const entries = (r) => r[4];
+  const badCounts = sources.filter((r) => r.length !== 5 || !(Number(String(entries(r)).replace(/\D/g, "")) > 0));
+  const missingEdSrc = sources.filter((r) => !r[2] || !r[3]);
+  check("Options lists where each badge comes from, with edition, source and entry counts", sources.length === 13 && badCounts.length === 0 && missingEdSrc.length === 0, sources.map((r) => `${r[0]} ${entries(r)}`).join("; "));
   await o.close();
 
   // 4. The extension's own pages load without errors.
