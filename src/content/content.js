@@ -15843,6 +15843,21 @@
     ensureReadingQueueSidebar().catch((e) => {
       console.warn("[SU] reading queue bootstrap failed", e);
     });
+    // The first render above can take seconds, and the service worker may finish seeding the quartile lists in that
+    // window, before the listener below exists. Compare what this page used with what storage holds now.
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage?.local?.get) {
+        const listStamp = (m) => (m && (m.importedAt || m.version || m.rowCount)) || "";
+        const afterListener = async () => {
+          const cur = await chrome.storage.local.get(["qualityQuartilesMeta", "qualityJcrMeta"]);
+          if (listStamp(cur.qualityQuartilesMeta) !== listStamp(state.quartilesMeta) || listStamp(cur.qualityJcrMeta) !== listStamp(state.jcrMeta)) {
+            await refreshState(state);
+            scheduleProcess({ full: true });
+          }
+        };
+        window.__suRecheckLists = afterListener;
+      }
+    } catch (_) { /* storage not available */ }
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.onChanged?.addListener) {
         const onChanged = chrome.storage.onChanged;
@@ -15865,6 +15880,7 @@
               if (!String(e?.message || "").includes("Extension context invalidated")) throw e;
             }
           });
+          setTimeout(() => { window.__suRecheckLists?.().catch(() => {}); }, 1500);
         }
       }
     } catch (e) {

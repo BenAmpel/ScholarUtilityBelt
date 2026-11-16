@@ -44,4 +44,13 @@ describe("content script storage listener", () => {
   it("does not keep a compiled index built without its bundled lists", () => {
     assert.match(src, /listsLoaded \? \{ qIndex: state\.qIndex, settingsHash \} : null/);
   });
+  it("re-checks the stored lists once the listener exists, to catch a seed that landed during the first render", () => {
+    const start = src.indexOf("window.__suRecheckLists = afterListener");
+    assert.ok(start > 0, "re-check not defined");
+    const defn = src.slice(start - 700, start);
+    assert.ok(defn.includes("qualityQuartilesMeta") && defn.includes("qualityJcrMeta"), "re-check does not read list meta");
+    const reg = src.indexOf("onChanged.addListener(async (changes, area)");
+    const call = src.indexOf("window.__suRecheckLists?.()");
+    assert.ok(call > reg, "re-check must run after the listener is registered");
+  });
 });
