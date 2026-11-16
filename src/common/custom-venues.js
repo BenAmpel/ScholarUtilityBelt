@@ -102,6 +102,52 @@ export function compileCustomVenueIndex(entries) {
   return map;
 }
 
+/**
+ * Merges uploaded [venue, label] entries into an existing list without changing the inputs.
+ * Venues are matched by normalizeVenueName. Rule: on a match the uploaded row wins (its venue
+ * spelling and label replace the old entry, which keeps its place; "updated" counts a changed label); every other existing
+ * entry is kept. New venues are appended until the list holds MAX_ROWS; the rest are counted
+ * in `dropped`. With no existing list, starts one called `name`.
+ * @returns {{ list: object, added: number, updated: number, unchanged: number, dropped: number }}
+ */
+export function mergeCustomVenueList(list, entries, { name = DEFAULT_LIST_NAME, now = new Date() } = {}) {
+  const base = list && Array.isArray(list.entries)
+    ? list
+    : { name: cleanListName(name), uploadedAt: now.toISOString(), entries: [] };
+  const merged = base.entries.map((e) => [e[0], e[1]]);
+  const index = new Map();
+  merged.forEach((e, i) => {
+    const key = normalizeVenueName(e[0]);
+    if (key && !index.has(key)) index.set(key, i);
+  });
+  let added = 0, updated = 0, unchanged = 0, dropped = 0;
+  for (const [venue, label] of entries || []) {
+    const key = normalizeVenueName(venue);
+    if (!key || !label) continue;
+    if (index.has(key)) {
+      const i = index.get(key);
+      if (merged[i][1] === label) unchanged++; else updated++;
+      merged[i] = [venue, label];
+    } else if (merged.length >= MAX_ROWS) {
+      dropped++;
+    } else {
+      index.set(key, merged.length);
+      merged.push([venue, label]);
+      added++;
+    }
+  }
+  return { list: { ...base, uploadedAt: now.toISOString(), entries: merged }, added, updated, unchanged, dropped };
+}
+
+/** "Added 12 venues, updated 3." for the options page status line. */
+export function describeMerge({ added, updated, unchanged = 0, dropped = 0 }) {
+  const n = (k) => `${k} venue${k === 1 ? "" : "s"}`;
+  let text = `Added ${n(added)}, updated ${updated}.`;
+  if (unchanged) text += ` ${unchanged} already matched.`;
+  if (dropped) text += ` ${dropped} not added because the list is full (5,000 venues).`;
+  return text;
+}
+
 /** Cleans a user-typed list name for display in the badge tooltip. */
 export function cleanListName(name) {
   const n = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_LIST_NAME_LENGTH);

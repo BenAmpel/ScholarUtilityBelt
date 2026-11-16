@@ -21,7 +21,7 @@ import {
   setSettings
 } from "../common/storage.js";
 import { BADGE_SOURCES as BUNDLED_BADGE_SOURCES, normalizeVenueName } from "../common/quality.js";
-import { cleanListName, parseCustomVenueCsv } from "../common/custom-venues.js";
+import { cleanListName, describeMerge, mergeCustomVenueList, parseCustomVenueCsv } from "../common/custom-venues.js";
 import { fetchDataText } from "../common/gzip-fetch.js";
 import { getEntitlementStatus, TRIAL_DAYS } from "../common/entitlement.js";
 import { initPromoCard } from "../common/promo-card.js";
@@ -1289,7 +1289,8 @@ async function initCustomList() {
   const fileEl = document.getElementById("customListFile");
   const statusEl = document.getElementById("customListStatus");
   const clearBtn = document.getElementById("customListClear");
-  if (!nameEl || !fileEl || !statusEl || !clearBtn) return;
+  const addFileEl = document.getElementById("customListAddFile");
+  if (!nameEl || !fileEl || !statusEl || !clearBtn || !addFileEl) return;
 
   const show = (list) => {
     clearBtn.hidden = !list;
@@ -1331,6 +1332,34 @@ async function initCustomList() {
       statusEl.textContent = "Couldn't read that file.";
     } finally {
       fileEl.value = "";
+    }
+  });
+
+  addFileEl.addEventListener("change", async () => {
+    const file = addFileEl.files && addFileEl.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      statusEl.textContent = "That file is over 2 MB. A list of 5,000 venues is far smaller; check it is a CSV.";
+      addFileEl.value = "";
+      return;
+    }
+    try {
+      const parsed = parseCustomVenueCsv(await file.text());
+      if (parsed.error) {
+        statusEl.textContent = parsed.error;
+        return;
+      }
+      const result = mergeCustomVenueList(await getCustomVenueList(), parsed.entries, {
+        name: nameEl.value || file.name.replace(/\.[^.]+$/, "")
+      });
+      await setCustomVenueList(result.list);
+      show(result.list);
+      statusEl.textContent = `${describeMerge(result)} ${statusEl.textContent}`;
+      if (parsed.skipped) statusEl.textContent += ` ${parsed.skipped} row${parsed.skipped === 1 ? "" : "s"} in the file skipped (missing venue or tier, or a repeated venue).`;
+    } catch (e) {
+      statusEl.textContent = "Couldn't read that file.";
+    } finally {
+      addFileEl.value = "";
     }
   });
 

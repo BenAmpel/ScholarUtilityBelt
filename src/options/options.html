@@ -114,14 +114,18 @@
       <!-- ── Your own journal list ─────────────────────────────────── -->
       <section class="card" id="su-custom-list-card" data-section="custom-list">
         <h2>Your own journal list</h2>
-        <p class="sub">Upload a CSV of journals or conferences with a tier label, for example your department&rsquo;s A, B and C list. Matching venues get a purple badge with your label next to the built-in ones. Two columns, venue then tier (a header row with <em>venue</em> and <em>tier</em> also works). Up to 5,000 rows. The file is read in your browser and stored only in this browser; nothing is uploaded. A search result whose venue is on no list shows an <em>Add to list</em> chip that adds that venue here with the tier you pick (it starts a list called My list if you have none). Uploading a new file replaces the whole list, including venues added that way.</p>
+        <p class="sub">Upload a CSV of journals or conferences with a tier label, for example your department&rsquo;s A, B and C list. Matching venues get a purple badge with your label next to the built-in ones. Two columns, venue then tier (a header row with <em>venue</em> and <em>tier</em> also works). Up to 5,000 rows. The file is read in your browser and stored only in this browser; nothing is uploaded. A search result whose venue is on no list shows an <em>Add to list</em> chip that adds that venue here with the tier you pick (it starts a list called My list if you have none). Choosing a file under <em>Replace my list</em> replaces the whole list, including venues added that way. Choosing one under <em>Add to my list</em> keeps your list and merges the file in: a venue already on your list (matched by name, ignoring case and punctuation) takes the tier from the file.</p>
         <label class="field">
           <div class="label">List name (shown in the badge tooltip)</div>
           <input type="text" id="customListName" maxlength="40" placeholder="e.g. Business School list" autocomplete="off" />
         </label>
         <label class="field">
-          <div class="label">CSV file</div>
+          <div class="label">Replace my list with a CSV file</div>
           <input type="file" id="customListFile" accept=".csv,.tsv,.txt,text/csv,text/plain" />
+        </label>
+        <label class="field">
+          <div class="label">Add to my list from a CSV file</div>
+          <input type="file" id="customListAddFile" accept=".csv,.tsv,.txt,text/csv,text/plain" />
         </label>
         <p id="customListStatus" role="status" aria-live="polite"></p>
         <div class="actions">

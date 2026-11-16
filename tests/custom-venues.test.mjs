@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-const { parseCustomVenueCsv, compileCustomVenueIndex, cleanListName, MAX_ROWS, MAX_LABEL_LENGTH } =
+const { mergeCustomVenueList, describeMerge, parseCustomVenueCsv, compileCustomVenueIndex, cleanListName, MAX_ROWS, MAX_LABEL_LENGTH } =
   await import("../src/common/custom-venues.js");
 const { customBadgeForVenue } = await import("../src/common/quality.js");
 
@@ -88,5 +88,54 @@ describe("cleanListName", () => {
     assert.equal(cleanListName("x".repeat(100)).length, 40);
     assert.equal(cleanListName(""), "My list");
     assert.equal(cleanListName(undefined), "My list");
+  });
+});
+
+describe("mergeCustomVenueList", () => {
+  const base = () => ({ name: "Dept", uploadedAt: "2026-01-01T00:00:00.000Z", entries: [["MIS Quarterly", "A"], ["Nature", "B"]] });
+  const now = new Date("2026-11-16T00:00:00Z");
+
+  it("adds new venues and keeps existing entries", () => {
+    const r = mergeCustomVenueList(base(), [["Science", "A"], ["Cell", "C"]], { now });
+    assert.deepEqual(r.list.entries, [["MIS Quarterly", "A"], ["Nature", "B"], ["Science", "A"], ["Cell", "C"]]);
+    assert.equal(r.added, 2);
+    assert.equal(r.updated, 0);
+    assert.equal(r.list.name, "Dept");
+  });
+
+  it("matches duplicates by normalized name and the uploaded row wins", () => {
+    const r = mergeCustomVenueList(base(), [["NATURE.", "A*"], ["mis quarterly", "A"], ["Cell", "C"]], { now });
+    assert.deepEqual(r.list.entries[1], ["NATURE.", "A*"]);
+    assert.equal(r.list.entries.length, 3);
+    assert.equal(r.added, 1);
+    assert.equal(r.updated, 1);
+    assert.equal(r.unchanged, 1);
+    assert.equal(describeMerge(r).startsWith("Added 1 venue, updated 1."), true);
+  });
+
+  it("does not change its inputs", () => {
+    const b = base();
+    mergeCustomVenueList(b, [["Nature", "Z"]], { now });
+    assert.deepEqual(b, base());
+  });
+
+  it("starts a list when none exists", () => {
+    const r = mergeCustomVenueList(null, [["Nature", "A"]], { name: "  Mine ", now });
+    assert.equal(r.list.name, "Mine");
+    assert.deepEqual(r.list.entries, [["Nature", "A"]]);
+  });
+
+  it("stops at MAX_ROWS and counts what was dropped", () => {
+    const full = { name: "x", uploadedAt: "", entries: Array.from({ length: MAX_ROWS }, (_, i) => [`Journal ${i} Alpha`, "A"]) };
+    const r = mergeCustomVenueList(full, [["Brand New Venue", "A"], ["Journal 3 Alpha", "B"]], { now });
+    assert.equal(r.added, 0);
+    assert.equal(r.dropped, 1);
+    assert.equal(r.updated, 1);
+    assert.equal(r.list.entries.length, MAX_ROWS);
+  });
+
+  it("replace path is unchanged: a parsed upload is stored as the whole list", () => {
+    const parsed = parseCustomVenueCsv("venue,tier\nScience,A\n");
+    assert.deepEqual(parsed.entries, [["Science", "A"]]);
   });
 });
