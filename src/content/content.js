@@ -56,6 +56,7 @@
   let qualityBadgesForVenue;
   let customBadgeForVenue;
   let renderBadgeExplanation;
+  let listWithEdition;
   let renderWrongMatchLink;
   let compileCustomVenueIndex;
   let addVenueToStoredList;
@@ -218,7 +219,8 @@
       makeBadgePopoverAccessible,
       customBadgeForVenue,
       renderBadgeExplanation,
-      renderWrongMatchLink
+      renderWrongMatchLink,
+      listWithEdition
     } = quality);
     ({ getCachedElement, getCachedElements } = domCache);
     ({
@@ -4307,14 +4309,14 @@
     const badgeKindTitles = {
       quartile: "SCImago Journal Rank quartile: Q1 = top 25%, Q2 = next 25%, etc.",
       abdc: "ABDC Journal Quality List rank (A*, A, B, C).",
-      vhb: "VHB JOURQUAL 2024 journal ranking (A+, A, B, C, D, E).",
+      vhb: `${listWithEdition?.("vhb") || "VHB JOURQUAL"} journal ranking (A+, A, B, C, D, E).`,
       jcr: "Clarivate JCR (Journal Citation Reports) impact quartile or indicator.",
-      if: "Journal Impact Factor (2024).",
+      if: `${listWithEdition?.("if") || "Journal Impact Factor"}.`,
       ft50: "Financial Times 50 list of top journals used in business school research.",
       utd24: "UT Dallas 24: top journals from the UTD Top 100 Business School Research Rankings.",
       core: "CORE/ICORE conference ranking (A*, A, B, C).",
       ccf: "China Computer Federation conference ranking.",
-      era: "Excellence in Research for Australia 2023 listed venue.",
+      era: `${listWithEdition?.("era") || "Excellence in Research for Australia"} listed venue.`,
       norwegian: "Norwegian Register: Level 1 or 2 journal.",
       preprint: "Pre-print server (e.g. arXiv, SSRN); not peer-reviewed journal.",
       h5: "Google Scholar 5-year h-index for this venue (from Scholar Metrics).",

@@ -628,7 +628,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const VALID_ABDC = /^A\*?$|^[BCD]$/i;
   if (abdc && VALID_ABDC.test(String(abdc).trim())) {
     const r = String(abdc).trim().toUpperCase();
-    badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: "ABDC Journal Quality List 2025" } });
+    badges.push({ kind: "abdc", text: `ABDC ${r}`, metadata: { rank: r, system: listWithEdition("abdc") } });
   }
 
   let vhb = exact(qIndex.vhb);
@@ -636,7 +636,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const VALID_VHB = /^A\+?$|^[BCDE]$/i;
   if (vhb && VALID_VHB.test(String(vhb).trim())) {
     const r = String(vhb).trim().toUpperCase().replace("*", "+");
-    badges.push({ kind: "vhb", text: `VHB ${r}`, metadata: { rank: r, system: "VHB JOURQUAL 2024" } });
+    badges.push({ kind: "vhb", text: `VHB ${r}`, metadata: { rank: r, system: listWithEdition("vhb") } });
   }
 
   let fnege = exact(qIndex.fnege);
@@ -652,7 +652,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const VALID_ABS = /^4\*?$|^[1234]$/i;
   if (abs && VALID_ABS.test(String(abs).trim())) {
     const r = String(abs).trim();
-    badges.push({ kind: "abs", text: `ABS ${r}`, metadata: { rank: r, system: "ABS Academic Journal Guide 2024" } });
+    badges.push({ kind: "abs", text: `ABS ${r}`, metadata: { rank: r, system: listWithEdition("abs") } });
   }
 
   const VALID_QUARTILE = /^Q[1-4]$/i;
@@ -670,7 +670,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const impactNum = typeof impact === "number" ? impact : parseFloat(String(impact || "").replace(/[^0-9.]/g, ""));
   if (Number.isFinite(impactNum) && impactNum > 0) {
     const display = impactNum.toFixed(1);
-    impactBadge = { kind: "if", text: `IF ${display}`, metadata: { impact: impactNum, system: "Journal Impact Factor (2024)" } };
+    impactBadge = { kind: "if", text: `IF ${display}`, metadata: { impact: impactNum, system: listWithEdition("if") } };
   }
 
   // Resolve CORE and CCF first so we can treat venue as conference when present.
@@ -715,7 +715,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   const looksLikeWorkshop = /\bworkshops?\b/.test(v);
   if (exactQuartile || !isConference) {
     const q = exactQuartile || (looksLikeWorkshop ? null : fuzzy("quartile", qIndex.quartiles));
-    if (q && VALID_QUARTILE.test(String(q))) badges.push({ kind: "quartile", text: String(q).toUpperCase(), metadata: { quartile: q, system: "SCImago Journal Rank 2024, best quartile across the journal's subject categories" } });
+    if (q && VALID_QUARTILE.test(String(q))) badges.push({ kind: "quartile", text: String(q).toUpperCase(), metadata: { quartile: q, system: `${listWithEdition("quartile")}, best quartile across the journal's subject categories` } });
   }
 
   // For sets (ft50, utd24), check exact match and prefix matches
@@ -751,7 +751,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   // ERA's ~26,000 titles include many short generic ones ("Findings", "Analysis"); findBestMatchEntry's guards keep
   // "Findings of the Conference on Empirical Methods..." (ACL's Findings track) off the unrelated journal "Findings".
   if ((!truncated && qIndex.era?.has?.(v)) || (qIndex.eraMap && fuzzy("era", qIndex.eraMap))) {
-    badges.push({ kind: "era", text: "ERA 2023", metadata: { system: "Excellence in Research for Australia 2023" } });
+    badges.push({ kind: "era", text: "ERA 2023", metadata: { system: listWithEdition("era") } });
   }
 
   let norLevel = exact(qIndex.norwegian);
@@ -761,7 +761,7 @@ export function qualityBadgesForVenue(venue, qIndex) {
   let h5Val = exact(qIndex.h5);
   if (h5Val == null && qIndex.h5) h5Val = fuzzy("h5", qIndex.h5);
   if (typeof h5Val === "number" && h5Val > 0) {
-    badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: "Google Scholar Metrics 2025, 5-year h-index" } });
+    badges.push({ kind: "h5", text: `h5: ${h5Val}`, metadata: { h5: h5Val, system: `Google Scholar Metrics ${editionText("h5")}, 5-year h-index` } });
   }
 
   if (impactBadge) badges.push(impactBadge);
@@ -784,23 +784,70 @@ export function qualityBadgesForVenue(venue, qIndex) {
 // One row per bundled list: the Options table "Where the built-in badges come from" and the badge popover both read
 // this, so the list name and edition a user sees in the two places cannot disagree. `edition` is the edition of the
 // bundled file; the SJR year is read from the file's own meta where it is known (options table, imported files).
-export const BADGE_SOURCES = [
-  { kind: "quartile", badge: "Q1–Q4", name: "SCImago Journal Rank", list: "SCImago Journal Rank (SJR)", edition: "2024", file: "src/data/scimago_2024_quartiles.json.gz", url: "https://www.scimagojr.com/journalrank.php" },
-  { kind: "abdc", badge: "ABDC", name: "ABDC Journal Quality List 2025", list: "ABDC Journal Quality List", edition: "2025", file: "src/data/abdc2025.csv", key: "abdc2025" },
-  { kind: "abs", badge: "ABS", name: "Chartered ABS Academic Journal Guide 2024", list: "Chartered ABS Academic Journal Guide", edition: "2024", file: "src/data/abs2024.csv", key: "abs2024" },
-  { kind: "vhb", badge: "VHB", name: "VHB JOURQUAL 2024", list: "VHB JOURQUAL (VHB Rating)", edition: "2024", file: "src/data/vhb2024.csv", key: "vhb2024" },
-  { kind: "fnege", badge: "FNEGE", name: "FNEGE 2025, from the Harzing Journal Quality List (72nd edition)", list: "FNEGE journal ranking", edition: "2025, as given in the Harzing Journal Quality List, 72nd edition", file: "src/data/fnege2025.csv", key: "fnege2025" },
-  { kind: "ft50", badge: "FT50", name: "Financial Times 50 research journals", list: "Financial Times 50 research journals (FT50)", edition: "No edition year; the current FT list", file: "src/data/ft50.txt", key: "ft50" },
-  { kind: "utd24", badge: "UTD24", name: "UT Dallas 24 journals", list: "UT Dallas 24 journals (UTD24)", edition: "No edition year; the current UT Dallas list", file: "src/data/utd24.txt", key: "utd24" },
-  { kind: "core", badge: "CORE", name: "CORE/ICORE 2026 conference ranking", list: "CORE conference ranking", edition: "ICORE2026, or the older CORE portal rank where ICORE2026 has none", file: "src/data/core_icore2026.csv", key: "core_icore2026" },
-  { kind: "ccf", badge: "CCF", name: "China Computer Federation recommended venues", list: "China Computer Federation (CCF) recommended venues", edition: "No edition year in the bundled file", file: "src/data/ccf_ranks.csv" },
-  { kind: "era", badge: "ERA 2023", name: "Excellence in Research for Australia 2023 journal list", list: "Excellence in Research for Australia (ERA) journal list", edition: "2023", file: "src/data/era2023.txt.gz" },
-  { kind: "norwegian", badge: "Level 1/2", name: "Norwegian Register for Scientific Journals", list: "Norwegian Register for Scientific Journals", edition: "No edition year in the bundled file", file: "src/data/norwegian_compact.json.gz" },
-  { kind: "h5", badge: "h5", name: "Google Scholar Metrics 5-year h-index", list: "Google Scholar Metrics, 5-year h-index", edition: "2025", file: "src/data/venue_h5_index.json.gz" },
-  { kind: "if", badge: "IF", name: "Journal Impact Factor 2024", list: "Journal Impact Factor", edition: "2024", file: "src/data/journal_impact_2024.csv.gz" },
+// The ONE table of editions and sources for every bundled list, keyed by the badge kind (the list id that
+// BADGE_SOURCES enumerates). The badge popover, the Options "Where the built-in badges come from" table, the badge
+// hover titles and the wrong-match report all read it. `edition: null` means the repo does not record one; the UI then
+// says "Edition not recorded" instead of guessing a year. Facts come from the data files, src/data/quality_sources.json
+// and the build scripts in scripts/. It lives in this module (not a new file) so no new web-accessible resource is needed.
+export const LIST_EDITIONS = {
+  quartile: { label: "SCImago Journal Rank", edition: "2024", source: "SCImago Journal Rank CSV export (scripts/build_scimago_quartiles.py)", sourceUrl: "https://www.scimagojr.com/journalrank.php" },
+  abdc: { label: "ABDC Journal Quality List", edition: "2025", source: "ABDC Journal Quality List 2025 workbook (abdc.edu.au)", sourceUrl: "https://abdc.edu.au/" },
+  abs: { label: "Chartered ABS Academic Journal Guide", edition: "2024", source: "Chartered ABS Academic Journal Guide 2024 (journalranking.org)", sourceUrl: "https://journalranking.org/" },
+  vhb: { label: "VHB JOURQUAL", edition: "2024", source: "VHB JOURQUAL 2024, official VHB area-rating PDFs", sourceUrl: "https://www.vhbonline.org/en/services/vhb-rating-2024/rating-structure" },
+  fnege: { label: "FNEGE journal ranking", edition: "2025, as given in the Harzing Journal Quality List, 72nd edition", source: "FNEGE 2025 column of the Harzing Journal Quality List, 72nd edition (JQL journal set only)", sourceUrl: "https://harzing.com/resources/journal-quality-list" },
+  // FT50 and UTD24 are the publishers' current lists; the bundled files carry no edition year.
+  ft50: { label: "Financial Times 50 research journals", edition: null, source: "Financial Times 50 list (ft.com)", sourceUrl: "https://www.ft.com/content/3405a512-5cbb-11e1-8f1f-00144feabdc0" },
+  utd24: { label: "UT Dallas 24 journals", edition: null, source: "UT Dallas Top 100 Business School Research Rankings journal list", sourceUrl: "https://jsom.utdallas.edu/the-utd-top-100-business-school-research-rankings/list-of-journals" },
+  core: { label: "CORE conference ranking", edition: "ICORE2026, or the older CORE portal rank where ICORE2026 has none", source: "CORE portal conference rankings (ICORE2026 plus the older portal list)", sourceUrl: "https://portal.core.edu.au/conf-ranks/" },
+  // The bundled CCF file has no year or edition in it, and scripts/parse_ccf_mhtml.py does not record one.
+  ccf: { label: "China Computer Federation (CCF) recommended venues", edition: null, source: "CCF recommended conference list, parsed from saved CCF pages (scripts/parse_ccf_mhtml.py)" },
+  era: { label: "Excellence in Research for Australia (ERA) journal list", edition: "2023", source: "ERA 2023 journal list workbook (scripts/convert_era_xlsx_to_txt.py)" },
+  // The compacted Norwegian register file carries no year; scripts/build_norwegian_compact.js does not record one.
+  norwegian: { label: "Norwegian Register for Scientific Journals", edition: null, source: "Norwegian Register for Scientific Journals CSV (scripts/build_norwegian_compact.js)" },
+  h5: { label: "Google Scholar Metrics, 5-year h-index", edition: "2025", source: "Google Scholar Metrics pages (scripts/scrape_scholar_h5.py)" },
+  if: { label: "Journal Impact Factor", edition: "2024", source: "JIF 2024 column of the bundled journal_impact_2024.csv.gz" },
+};
+
+export const EDITION_NOT_RECORDED = "Edition not recorded";
+
+/** The edition text for a list id, or "Edition not recorded" when the table has none. */
+export function editionText(kind) {
+  const e = LIST_EDITIONS[kind]?.edition;
+  return e ? String(e) : EDITION_NOT_RECORDED;
+}
+
+/** List name with its year where it has a simple one (listWithEdition("vhb")), else the name alone. */
+export function listWithEdition(kind) {
+  const t = LIST_EDITIONS[kind];
+  if (!t) return "";
+  return t.edition && /^\d{4}$/.test(t.edition) ? `${t.label} ${t.edition}` : t.label;
+}
+
+const BADGE_SOURCE_ROWS = [
+  { kind: "quartile", badge: "Q1–Q4", name: "SCImago Journal Rank", list: "SCImago Journal Rank (SJR)", file: "src/data/scimago_2024_quartiles.json.gz", url: "https://www.scimagojr.com/journalrank.php" },
+  { kind: "abdc", badge: "ABDC", name: listWithEdition("abdc"), list: "ABDC Journal Quality List", file: "src/data/abdc2025.csv", key: "abdc2025" },
+  { kind: "abs", badge: "ABS", name: "Chartered ABS Academic Journal Guide 2024", list: "Chartered ABS Academic Journal Guide", file: "src/data/abs2024.csv", key: "abs2024" },
+  { kind: "vhb", badge: "VHB", name: listWithEdition("vhb"), list: "VHB JOURQUAL (VHB Rating)", file: "src/data/vhb2024.csv", key: "vhb2024" },
+  { kind: "fnege", badge: "FNEGE", name: "FNEGE 2025, from the Harzing Journal Quality List (72nd edition)", list: "FNEGE journal ranking", file: "src/data/fnege2025.csv", key: "fnege2025" },
+  { kind: "ft50", badge: "FT50", name: "Financial Times 50 research journals", list: "Financial Times 50 research journals (FT50)", file: "src/data/ft50.txt", key: "ft50" },
+  { kind: "utd24", badge: "UTD24", name: "UT Dallas 24 journals", list: "UT Dallas 24 journals (UTD24)", file: "src/data/utd24.txt", key: "utd24" },
+  { kind: "core", badge: "CORE", name: "CORE/ICORE 2026 conference ranking", list: "CORE conference ranking", file: "src/data/core_icore2026.csv", key: "core_icore2026" },
+  { kind: "ccf", badge: "CCF", name: "China Computer Federation recommended venues", list: "China Computer Federation (CCF) recommended venues", file: "src/data/ccf_ranks.csv" },
+  { kind: "era", badge: "ERA 2023", name: "Excellence in Research for Australia 2023 journal list", list: "Excellence in Research for Australia (ERA) journal list", file: "src/data/era2023.txt.gz" },
+  { kind: "norwegian", badge: "Level 1/2", name: "Norwegian Register for Scientific Journals", list: "Norwegian Register for Scientific Journals", file: "src/data/norwegian_compact.json.gz" },
+  { kind: "h5", badge: "h5", name: "Google Scholar Metrics 5-year h-index", list: "Google Scholar Metrics, 5-year h-index", file: "src/data/venue_h5_index.json.gz" },
+  { kind: "if", badge: "IF", name: "Journal Impact Factor 2024", list: "Journal Impact Factor", file: "src/data/journal_impact_2024.csv.gz" },
   { kind: "jcr", list: "Clarivate Journal Citation Reports (JCR), your imported file" },
   { kind: "custom", list: "Your list" },
 ];
+
+export const BADGE_SOURCES = BADGE_SOURCE_ROWS.map((r) => {
+  const t = LIST_EDITIONS[r.kind];
+  if (!t) return r;
+  // Names that carry a year are built from the table, so a new edition is changed in one place.
+  const name = ["abdc", "abs", "vhb", "era", "if"].includes(r.kind) ? listWithEdition(r.kind) : r.name;
+  return { ...r, name, edition: editionText(r.kind), source: t.source, sourceUrl: t.sourceUrl };
+});
 const BADGE_SOURCE_BY_KIND = Object.fromEntries(BADGE_SOURCES.map((s) => [s.kind, s]));
 
 const QUARTILE_NOT_APPLICABLE = "Not applicable. This badge is a rank on the list, not a quartile.";
@@ -816,7 +863,7 @@ export function explainBadge(badge, meta = {}) {
   if (!src) return null;
   const m = badge.metadata || {};
   let list = src.list;
-  let edition = src.edition || "";
+  let edition = src.edition || EDITION_NOT_RECORDED;
   let category = QUARTILE_NOT_APPLICABLE;
   if (badge.kind === "quartile") {
     const qm = meta.quartilesMeta;
@@ -837,6 +884,7 @@ export function explainBadge(badge, meta = {}) {
   return {
     list,
     edition,
+    source: src.source || "",
     category,
     venueShown: shown || "Not available",
     venueMatched: matched ? (same ? `${matched} (exact match)` : matched) : "Not available",
@@ -846,6 +894,7 @@ export function explainBadge(badge, meta = {}) {
 export const BADGE_EXPLANATION_LABELS = [
   ["list", "List"],
   ["edition", "Edition"],
+  ["source", "Source"],
   ["category", "Subject category"],
   ["venueShown", "Scholar shows"],
   ["venueMatched", "Matched in the list"],
