@@ -9,6 +9,8 @@ const {
   explainBadge,
   renderBadgeExplanation,
   BADGE_SOURCES,
+  LIST_EDITIONS,
+  editionText,
 } = await import("../src/common/quality.js");
 const { compileCustomVenueIndex } = await import("../src/common/custom-venues.js");
 
@@ -53,7 +55,7 @@ describe("badge popover: list, edition, subject category, venue shown vs matched
     assert.equal(dl.tag, "dl");
     assert.equal(dl.className, "su-badge-source");
     const { out } = read(dl);
-    assert.deepEqual(Object.keys(out), ["List", "Edition", "Subject category", "Scholar shows", "Matched in the list"]);
+    assert.deepEqual(Object.keys(out), ["List", "Edition", "Source", "Subject category", "Scholar shows", "Matched in the list"]);
     assert.equal(out.List, "SCImago Journal Rank (SJR)");
     assert.equal(out.Edition, "2024");
     assert.match(out["Subject category"], /best of those quartiles/);
@@ -131,5 +133,45 @@ describe("badge popover: list, edition, subject category, venue shown vs matched
     // Options reads the same rows, so its table and the popover cannot disagree.
     const options = readFileSync(new URL("../src/options/options.js", import.meta.url), "utf8");
     assert.match(options, /BADGE_SOURCES as BUNDLED_BADGE_SOURCES/);
+  });
+});
+
+describe("list editions table", () => {
+  it("every bundled list id has an entry with a non-empty source and a plain edition or null", async () => {
+    const { LIST_EDITIONS, editionText, EDITION_NOT_RECORDED } = await import("../src/common/quality.js");
+    const ids = BADGE_SOURCES.filter((s) => s.file).map((s) => s.kind);
+    assert.ok(ids.length >= 13, "the bundled lists are enumerated from BADGE_SOURCES");
+    for (const id of ids) {
+      const e = LIST_EDITIONS[id];
+      assert.ok(e, `${id} has a list-editions entry`);
+      assert.ok(typeof e.source === "string" && e.source.trim(), `${id} has a source`);
+      assert.ok(typeof e.label === "string" && e.label.trim(), `${id} has a label`);
+      assert.ok(e.edition === null || (typeof e.edition === "string" && e.edition.trim()), `${id} edition is a string or null`);
+      assert.equal(editionText(id), e.edition || EDITION_NOT_RECORDED);
+    }
+    // No table row without a bundled list, so the table cannot drift the other way.
+    for (const id of Object.keys(LIST_EDITIONS)) assert.ok(ids.includes(id), `${id} is a bundled list`);
+  });
+
+  it("the popover renders the edition and source from the table for every bundled list", () => {
+    for (const s of BADGE_SOURCES.filter((x) => x.file)) {
+      const dl = renderBadgeExplanation(doc, { kind: s.kind, text: s.kind, metadata: {} });
+      const { byField } = read(dl);
+      assert.equal(byField.edition, editionText(s.kind), s.kind);
+      assert.equal(byField.source, LIST_EDITIONS[s.kind].source, s.kind);
+    }
+  });
+
+  it("a list with no recorded edition says so instead of a year", () => {
+    const { byField } = read(renderBadgeExplanation(doc, { kind: "ccf", text: "CCF A", metadata: {} }));
+    assert.equal(byField.edition, "Edition not recorded");
+    assert.match(byField.source, /CCF/);
+  });
+
+  it("the JIF edition on the popover, the hover title and the system string all come from the table", () => {
+    assert.equal(explainBadge({ kind: "if", text: "IF 1.0", metadata: {} }).edition, LIST_EDITIONS.if.edition);
+    const jif = qualityBadgesForVenue("Some Journal", compileQualityIndex({}, { impactIndex: { "some journal": 3.2 } })).find((b) => b.kind === "if");
+    assert.ok(jif);
+    assert.ok(jif.metadata.system.includes(LIST_EDITIONS.if.edition));
   });
 });

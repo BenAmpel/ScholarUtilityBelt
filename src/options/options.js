@@ -1415,6 +1415,10 @@ async function renderBadgeSources() {
     const badgeCell = document.createElement("td");
     badgeCell.textContent = src.badge;
     const nameCell = document.createElement("td");
+    const editionCell = document.createElement("td");
+    editionCell.textContent = src.edition;
+    const sourceCell = document.createElement("td");
+    sourceCell.textContent = src.source || "";
     const countCell = document.createElement("td");
     countCell.className = "num";
     countCell.textContent = "…";
@@ -1437,7 +1441,7 @@ async function renderBadgeSources() {
     } else {
       nameCell.textContent = name;
     }
-    tr.append(badgeCell, nameCell, countCell);
+    tr.append(badgeCell, nameCell, editionCell, sourceCell, countCell);
     tbody.appendChild(tr);
   }
 }
