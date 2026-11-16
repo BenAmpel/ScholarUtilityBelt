@@ -69,6 +69,8 @@
   let summarizeFwci;
   let getCachedElement;
   let getCachedElements;
+  let createDeferredSweep;
+  let isOnlyOwnTooltipMutation;
   let loadEraAndNorwegian;
   let loadH5Index;
   let loadVhbIndex;
@@ -222,7 +224,7 @@
       renderWrongMatchLink,
       listWithEdition
     } = quality);
-    ({ getCachedElement, getCachedElements } = domCache);
+    ({ getCachedElement, getCachedElements, createDeferredSweep, isOnlyOwnTooltipMutation } = domCache);
     ({
       loadEraAndNorwegian,
       loadH5Index,
@@ -750,17 +752,18 @@
       // Sweep for tooltips whose owner row was removed. Mutation records arrive in bursts (every row
       // render, and this function's own appendChild), so run one sweep a second after the last burst
       // instead of a full querySelectorAll per record.
-      let tooltipSweepTimer = null;
-      window.__suFloatingTooltipObserver = new MutationObserver(() => {
-        if (tooltipSweepTimer) return;
-        tooltipSweepTimer = setTimeout(() => {
-          tooltipSweepTimer = null;
-          for (const t of document.querySelectorAll(".su-floating-tooltip")) {
-            const owner = t.__suOwner;
-            if (owner && !owner.isConnected) t.remove();
-          }
-        }, 1000);
+      const sweepTooltips = createDeferredSweep(() => {
+        for (const t of document.querySelectorAll(".su-floating-tooltip")) {
+          const owner = t.__suOwner;
+          if (owner && !owner.isConnected) t.remove();
+        }
+      }, 1000);
+      // The sweep's own tooltip appends and removals are ignored; a hidden tab holds the sweep until it is shown.
+      window.__suFloatingTooltipObserver = new MutationObserver((records) => {
+        if (isOnlyOwnTooltipMutation(records)) return;
+        sweepTooltips.request();
       });
+      document.addEventListener("visibilitychange", () => sweepTooltips.resume());
       window.__suFloatingTooltipObserver.observe(document.body, { childList: true, subtree: true });
     }
     // Single shared listener set, not one per tooltip: this function is called
@@ -13841,7 +13844,8 @@
         onRetry: retryAfterScholarCooldown,
         onHide: () => { cooldownNoticeHidden = true; },
       });
-      if (!cooldownNoticeTimer) cooldownNoticeTimer = setInterval(() => { refreshScholarCooldownNotice(); }, 30000);
+      // A hidden tab skips the 30 s recheck; the notice is refreshed when the tab is shown again (see below).
+      if (!cooldownNoticeTimer) cooldownNoticeTimer = setInterval(() => { if (!document.hidden) refreshScholarCooldownNotice(); }, 30000);
     } catch (_) { /* the notice is a convenience; the buttons still say why they wait */ }
   }
   async function retryAfterScholarCooldown() {
@@ -13856,6 +13860,7 @@
       if (area === "local" && changes && Object.prototype.hasOwnProperty.call(changes, SCHOLAR_COOLDOWN_KEY)) refreshScholarCooldownNotice();
     });
   } catch (_) { /* no live updates across tabs */ }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && cooldownNoticeTimer) refreshScholarCooldownNotice(); });
   async function scholarCooldownLeftMs() {
     try {
       const got = await chrome.storage.local.get(SCHOLAR_COOLDOWN_KEY);

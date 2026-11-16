@@ -94,3 +94,48 @@ export function clearAllCaches() {
   // WeakMap doesn't support iteration, so we can't clear all
   // This is intentional - caches will be garbage collected when containers are removed
 }
+
+/**
+ * True when every node a batch of mutation records added or removed is one of the extension's own floating
+ * tooltips. Those writes come from the extension itself, so they must not wake the tooltip sweep again.
+ * @param {Array} records - MutationObserver records
+ * @returns {boolean}
+ */
+export function isOnlyOwnTooltipMutation(records) {
+  if (!Array.isArray(records) || records.length === 0) return false;
+  const own = (n) => n?.nodeType === 1 && n.classList?.contains?.("su-floating-tooltip");
+  return records.every((r) => {
+    const nodes = [...(r.addedNodes || []), ...(r.removedNodes || [])];
+    return nodes.length > 0 && nodes.every(own);
+  });
+}
+
+/**
+ * A "run once soon" scheduler for observer-driven cleanup. Repeated requests share one timer. While the tab is
+ * hidden no timer runs: the sweep is held until the tab is visible again, so a background tab does no work.
+ * @param {Function} sweep - the work
+ * @param {number} delayMs - wait after the last request before sweeping
+ * @param {object} [env] - injectable for tests: isHidden, setTimer, clearTimer
+ * @returns {{request: Function, resume: Function}} call resume() from a visibilitychange handler
+ */
+export function createDeferredSweep(sweep, delayMs, env = {}) {
+  const isHidden = env.isHidden || (() => typeof document !== "undefined" && document.hidden);
+  const setTimer = env.setTimer || ((fn, ms) => setTimeout(fn, ms));
+  let timer = null;
+  let held = false;
+  const start = () => {
+    if (timer) return;
+    timer = setTimer(() => { timer = null; sweep(); }, delayMs);
+  };
+  return {
+    request() {
+      if (isHidden()) { held = true; return; }
+      start();
+    },
+    resume() {
+      if (!held || isHidden()) return;
+      held = false;
+      start();
+    },
+  };
+}
