@@ -933,3 +933,46 @@ export function renderWrongMatchLink(doc, badge, meta = {}) {
   wrap.appendChild(a);
   return wrap;
 }
+
+let badgePopoverSeq = 0;
+
+/**
+ * Make a badge that owns a details popover usable from the keyboard. The badge becomes focusable, Enter or
+ * Space opens the popover, Escape closes it and puts focus back on the badge, and moving focus out of the badge
+ * (and its popover) closes it. open() and close() do the showing; hover stays wired by the caller. Returns
+ * setOpen(bool), which the caller runs from every open and close path so aria-expanded stays true to the screen.
+ */
+export function makeBadgePopoverAccessible(badge, popover, { open, close }) {
+  if (!popover.id) popover.id = `su-badge-popover-${++badgePopoverSeq}`;
+  badge.setAttribute("tabindex", "0");
+  badge.setAttribute("role", "button");
+  badge.setAttribute("aria-expanded", "false");
+  badge.setAttribute("aria-controls", popover.id);
+  let expanded = false;
+  const setOpen = (value) => {
+    expanded = !!value;
+    badge.setAttribute("aria-expanded", expanded ? "true" : "false");
+  };
+  badge.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (!expanded) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+      badge.focus();
+      return;
+    }
+    // Keys pressed on the "Wrong match?" link inside the popover keep their normal job.
+    if (e.target !== badge) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  });
+  badge.addEventListener("focusout", (e) => {
+    const next = e.relatedTarget;
+    if (next && badge.contains(next)) return;
+    if (expanded) close();
+  });
+  return setOpen;
+}

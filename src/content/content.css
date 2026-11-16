@@ -5887,3 +5887,9 @@ body[data-su-theme="dark"] .su-top2pct-badge:hover {
   align-items: baseline;
   margin: 3px 0;
 }
+
+/* Venue badge with a details popover: reachable and operable from the keyboard. */
+.su-badge[aria-controls]:focus-visible {
+  outline: var(--su-focus-ring);
+  outline-offset: 2px;
+}

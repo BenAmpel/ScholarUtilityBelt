@@ -48,6 +48,7 @@
   let upsertPaper;
   let DEFAULT_SETTINGS;
   let compileQualityIndex;
+  let makeBadgePopoverAccessible;
   let extractVenueFromAuthorsVenue;
   let isPreprintVenue;
   let normalizeVenueName;
@@ -214,6 +215,7 @@
       normalizeVenueName,
       normalizeVhbRank,
       qualityBadgesForVenue,
+      makeBadgePopoverAccessible,
       customBadgeForVenue,
       renderBadgeExplanation,
       renderWrongMatchLink
@@ -4359,8 +4361,10 @@
             span.style.position = "relative";
             span.style.cursor = "help";
             let hideTimer = 0;
-            span.addEventListener("mouseenter", (e) => {
+            let setPopoverOpen = () => {};
+            const openPopover = () => {
               clearTimeout(hideTimer);
+              setPopoverOpen(true);
               tooltip.style.display = "block";
               const rect = span.getBoundingClientRect();
               const tooltipRect = tooltip.getBoundingClientRect();
@@ -4392,12 +4396,19 @@
                   tooltip.style.transform = "none";
                 }
               });
-            });
+            };
+            const closePopover = () => {
+              clearTimeout(hideTimer);
+              tooltip.style.display = "none";
+              setPopoverOpen(false);
+            };
+            span.addEventListener("mouseenter", openPopover);
             span.addEventListener("mouseleave", () => {
               // A short delay lets the pointer cross the gap into the popover to reach its "Wrong match?" link.
               clearTimeout(hideTimer);
-              hideTimer = setTimeout(() => { tooltip.style.display = "none"; }, 250);
+              hideTimer = setTimeout(closePopover, 250);
             });
+            setPopoverOpen = makeBadgePopoverAccessible(span, tooltip, { open: openPopover, close: closePopover });
           }
         }
         root.appendChild(span);
