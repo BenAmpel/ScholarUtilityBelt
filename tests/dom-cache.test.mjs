@@ -77,3 +77,46 @@ describe("dom-cache", () => {
     assert.doesNotThrow(() => clearCache(null));
   });
 });
+
+import { createDeferredSweep, isOnlyOwnTooltipMutation } from "../src/content/dom-cache.js";
+
+const el = (cls) => ({ nodeType: 1, classList: { contains: (c) => cls.split(" ").includes(c) } });
+
+describe("isOnlyOwnTooltipMutation", () => {
+  it("ignores records that only add or remove the extension's tooltips", () => {
+    assert.equal(isOnlyOwnTooltipMutation([{ addedNodes: [el("su-floating-tooltip")], removedNodes: [] }]), true);
+  });
+  it("does not ignore a row render or an empty batch", () => {
+    assert.equal(isOnlyOwnTooltipMutation([{ addedNodes: [el("gs_r")], removedNodes: [] }]), false);
+    assert.equal(isOnlyOwnTooltipMutation([{ addedNodes: [el("su-floating-tooltip"), el("gs_r")], removedNodes: [] }]), false);
+    assert.equal(isOnlyOwnTooltipMutation([]), false);
+  });
+});
+
+describe("createDeferredSweep", () => {
+  function harness() {
+    const h = { hidden: false, runs: 0, timers: [] };
+    h.sweep = createDeferredSweep(() => { h.runs++; }, 1000, { isHidden: () => h.hidden, setTimer: (fn) => { h.timers.push(fn); return h.timers.length; } });
+    return h;
+  }
+  it("coalesces a burst of requests into one timer and one sweep", () => {
+    const h = harness();
+    h.sweep.request(); h.sweep.request(); h.sweep.request();
+    assert.equal(h.timers.length, 1);
+    h.timers[0]();
+    assert.equal(h.runs, 1);
+  });
+  it("starts no timer while the tab is hidden, and sweeps once when it is shown again", () => {
+    const h = harness();
+    h.hidden = true;
+    h.sweep.request(); h.sweep.request();
+    assert.equal(h.timers.length, 0);
+    h.sweep.resume();            // still hidden: nothing
+    assert.equal(h.timers.length, 0);
+    h.hidden = false;
+    h.sweep.resume();
+    assert.equal(h.timers.length, 1);
+    h.sweep.resume();            // nothing held any more
+    assert.equal(h.timers.length, 1);
+  });
+});
