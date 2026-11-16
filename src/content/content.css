@@ -3931,6 +3931,25 @@ body[data-su-theme="dark"] .su-narrative-note { color: #64748b; }
   cursor: pointer;
 }
 .su-compare-authors-btn:hover { background: #e8f0fe; border-color: #1a73e8; }
+.su-profile-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #5f6368;
+}
+.su-profile-export-year { display: inline-flex; align-items: center; gap: 4px; }
+.su-profile-export-input {
+  width: 64px;
+  padding: 3px 6px;
+  font-size: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+}
+body[data-su-theme="dark"] .su-profile-export { color: #bdc1c6; }
+body[data-su-theme="dark"] .su-profile-export-input { background: transparent; color: #e8eaed; border-color: #5f6368; }
 /* Compare authors overlay */
 .su-author-compare-overlay {
   position: fixed;
