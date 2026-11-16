@@ -54,3 +54,30 @@ describe("content script storage listener", () => {
     assert.ok(call > reg, "re-check must run after the listener is registered");
   });
 });
+
+// Regression for the cold-load "Level 1" oddity: rows 8-9 (truncated venue "2017 International conference …")
+// rendered with only the Norwegian badge before the quartile list arrived, and the re-render after it arrived skipped
+// them because the view observer had not reported them as visible.
+describe("cold load re-render of rows the observer has not reported", () => {
+  const src = fs.readFileSync(new URL("../src/content/content.js", import.meta.url), "utf8");
+  it("a truncated venue gets Level 1 only while cold, then Q4 once the quartile list is loaded", async () => {
+    const { compileQualityIndex, qualityBadgesForVenue } = await import("../src/common/quality.js");
+    const read = (f) => JSON.parse(zlib.gunzipSync(fs.readFileSync(new URL(`../src/data/${f}`, import.meta.url))));
+    const nor = read("norwegian_compact.json.gz");
+    const q = read("scimago_2024_quartiles.json.gz");
+    const norwegianMap = new Map(Object.entries(nor).filter(([, l]) => l === "1" || l === "2"));
+    const venue = "2017 International conference …";
+    const texts = (quartilesIndex) =>
+      qualityBadgesForVenue(venue, compileQualityIndex({}, { quartilesIndex, norwegianMap })).map((b) => b.text);
+    assert.deepEqual(texts({}), ["Level 1"]);
+    assert.ok(texts(q.index || q).includes("Q4"));
+  });
+  it("a full pass also re-renders rows rendered under an older epoch", () => {
+    const start = src.indexOf("const initialRows = visibleRows.size > 0") > 0
+      ? -1
+      : src.indexOf("let initialRows = visibleRows.size > 0");
+    assert.ok(start > 0, "initial row selection not found");
+    const block = src.slice(start, start + 900);
+    assert.ok(block.includes("suRenderEpoch") && block.includes("staleRendered"), "stale rendered rows are not re-queued");
+  });
+});

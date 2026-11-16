@@ -15521,7 +15521,14 @@
         for (const r of Array.from(visibleRows)) {
           if (!r.isConnected) visibleRows.delete(r);
         }
-        const initialRows = visibleRows.size > 0 ? Array.from(visibleRows) : visibleResults.slice(0, UI_BATCH_SIZE);
+        let initialRows = visibleRows.size > 0 ? Array.from(visibleRows) : visibleResults.slice(0, UI_BATCH_SIZE);
+        // Rows already rendered under an older epoch (e.g. the cold pass before the quartile
+        // lists arrived) must be re-rendered too, even when the observer has not reported them.
+        const epochNow = String(state.renderEpoch || 0);
+        const staleRendered = visibleResults.filter(
+          (r) => r.dataset.suRenderEpoch !== undefined && r.dataset.suRenderEpoch !== epochNow && !initialRows.includes(r)
+        );
+        if (staleRendered.length > 0) initialRows = initialRows.concat(staleRendered);
         initialRowsForPrefetch = initialRows.slice();
         if (initialRows.length > 0) {
           initialRows.forEach((r) => { r.dataset.suInView = "1"; });
