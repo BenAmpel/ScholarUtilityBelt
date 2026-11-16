@@ -1958,8 +1958,8 @@
       const unpay = getExternalSignalEntry(doi, "unpaywall")?.data || {};
       const oaPdf = unpay.bestOaUrlPdf || "";
       const oaUrl = unpay.bestOaUrl || "";
-      if (oaPdf && isHttpUrl(oaPdf)) return { url: oaPdf, label: "OA PDF" };
-      if (oaUrl && isHttpUrl(oaUrl)) return { url: oaUrl, label: "OA" };
+      if (oaPdf && isHttpUrl(oaPdf)) return { url: oaPdf, label: "Free legal copy (PDF)" };
+      if (oaUrl && isHttpUrl(oaUrl)) return { url: oaUrl, label: "Free legal copy" };
     }
     if (arxivAbs) return { url: `https://arxiv.org/pdf/${arxivAbs}.pdf`, label: "arXiv PDF" };
     if (ssrnId) return { url: `https://papers.ssrn.com/sol3/Delivery.cfm?abstractid=${ssrnId}&type=2`, label: "SSRN" };
@@ -5173,7 +5173,7 @@
     }
     if (epmc.pmcid || pmcid) {
       const pmc = epmc.pmcid || pmcid;
-      const label = epmc.isOpenAccess ? "PMC OA" : "PMC";
+      const label = epmc.isOpenAccess ? "PMC free copy" : "PMC";
       badges.push({ text: label, cls: "su-external-pmc", title: `PubMed Central ${pmc}` });
     }
     if (Array.isArray(ncbi.meshTerms) && ncbi.meshTerms.length) {
@@ -7727,7 +7727,7 @@
       oaShare: {
         formula: "Open-access publications / OpenAlex-indexed publications.",
         description: "Share of output that is openly accessible (gold, green, hybrid, or bronze).",
-        good: "Higher = broader accessibility. Many funders now require OA."
+        good: "Higher = broader accessibility. Many funders now require free legal copies."
       },
       influential: {
         formula: "Influential rate = influential citations / total citations (Semantic Scholar classifier).",
@@ -14181,12 +14181,12 @@
     const oaCheck = document.createElement("input");
     oaCheck.type = "checkbox";
     oaCheck.checked = !!f.hasOa;
-    oaCheck.title = "Open access (Unpaywall)";
+    oaCheck.title = "Free legal copy (Unpaywall)";
     oaCheck.className = "su-filter-check";
     const oaLabel = document.createElement("label");
     oaLabel.className = "su-filter-label";
     oaLabel.appendChild(oaCheck);
-    oaLabel.appendChild(document.createTextNode(" OA"));
+    oaLabel.appendChild(document.createTextNode(" Free legal copy"));
     const preprintCheck = document.createElement("input");
     preprintCheck.type = "checkbox";
     preprintCheck.checked = !!f.hasPreprint;
