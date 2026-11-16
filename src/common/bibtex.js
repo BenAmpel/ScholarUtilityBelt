@@ -61,6 +61,7 @@ export function sanitizeBibKey(key) {
  * @param {string} [e.number]   issue
  * @param {string} [e.pages]    "9128-9143" is written as 9128--9143
  * @param {string} [e.publisher]
+ * @param {string} [e.note]
  */
 export function buildBibTeXEntry(e) {
   const type = bibtexEntryType(e.venue);
@@ -77,9 +78,112 @@ export function buildBibTeXEntry(e) {
     ["url", String(e.url || "").trim()],
     ["keywords", (e.tags || []).map(escapeBibText).filter(Boolean).join(", ")],
     ["abstract", escapeBibText(e.abstract)],
+    ["note", escapeBibText(e.note)],
   ].filter(([, v]) => v);
   const body = fields.map(([k, v]) => `  ${k}={${v}}`).join(",\n");
   return `@${type}{${sanitizeBibKey(e.key) || "key"},\n${body}\n}`;
+}
+
+// ---------------------------------------------------------------------------
+// Author profile export. Rows come from the profile page already open (title, authors as shown, venue line, year,
+// citation count, Scholar link); nothing is fetched. Scholar cuts long author lists with "..."; the export keeps
+// the names as shown and says so in a note field.
+// ---------------------------------------------------------------------------
+
+/** Parse a year bound from user input: a 4-digit year or null (empty or invalid means open-ended). */
+export function parseYearBound(value) {
+  const m = /^\s*(\d{4})\s*$/.exec(String(value ?? ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Keep rows whose year lies in [from, to]. Either bound may be empty (open-ended). Swapped bounds are corrected.
+ * With any bound set, rows without a year are left out; with no bounds every row is kept.
+ */
+export function filterRowsByYear(rows, from, to) {
+  let lo = parseYearBound(from);
+  let hi = parseYearBound(to);
+  if (lo == null && hi == null) return rows.slice();
+  if (lo != null && hi != null && lo > hi) [lo, hi] = [hi, lo];
+  return rows.filter((r) => {
+    const y = parseYearBound(r.year);
+    if (y == null) return false;
+    return (lo == null || y >= lo) && (hi == null || y <= hi);
+  });
+}
+
+/** Names as shown on the profile ("A Smith, B Jones, ...") split into names; reports whether the list was cut. */
+export function splitProfileAuthors(authors) {
+  const raw = String(authors || "").trim();
+  const truncated = /(\.\.\.|\u2026)\s*$/.test(raw);
+  const names = raw
+    .replace(/(\.\.\.|\u2026)\s*$/, "")
+    .split(/\s*,\s*/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+  return { names, truncated };
+}
+
+const KEY_SKIP_WORDS = new Set(["a", "an", "the", "on", "of", "in", "for", "and", "to"]);
+
+function asciiFold(s) {
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+}
+
+/**
+ * Citation key: first author's surname + year + first meaningful title word, lower case ASCII.
+ * The surname is the last word of the first name as shown ("A Smith" gives "smith").
+ */
+export function profileCiteKey(row) {
+  const { names } = splitProfileAuthors(row.authors);
+  const first = names[0] || "";
+  const surname = asciiFold(first.split(/\s+/).pop()) || "anon";
+  const year = String(row.year || "").replace(/\D/g, "").slice(0, 4);
+  const words = String(row.title || "").split(/\s+/).map(asciiFold).filter(Boolean);
+  const word = words.find((w) => !KEY_SKIP_WORDS.has(w)) || words[0] || "";
+  return `${surname}${year}${word}`;
+}
+
+/**
+ * BibTeX for profile rows. Entry type follows bibtexEntryType: journal-like venue gives @article, a conference
+ * gives @inproceedings, preprints and rows without a venue give @misc. Repeated keys get a, b, c... suffixes.
+ */
+export function buildProfileBibTeX(rows) {
+  const used = new Map();
+  const entries = rows.map((r) => {
+    const base = sanitizeBibKey(profileCiteKey(r)) || "key";
+    const n = used.get(base) || 0;
+    used.set(base, n + 1);
+    const key = n === 0 ? base : `${base}${String.fromCharCode(96 + n)}`;
+    const { names, truncated } = splitProfileAuthors(r.authors);
+    return buildBibTeXEntry({
+      key,
+      title: r.title,
+      authors: names,
+      year: r.year,
+      venue: r.venue,
+      url: r.url,
+      note: truncated ? "Author list shortened on the Google Scholar profile" : "",
+    });
+  });
+  return entries.length ? entries.join("\n\n") + "\n" : "";
+}
+
+/** One CSV cell: RFC 4180 quoting; text starting like a spreadsheet formula gets a leading apostrophe. */
+export function csvCell(value) {
+  let s = String(value ?? "");
+  if (typeof value !== "number" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export const PROFILE_CSV_HEADER = ["Title", "Authors", "Venue", "Year", "Citations", "URL"];
+
+/** CSV for profile rows: header row, CRLF line ends, leading UTF-8 byte order mark so Excel reads accents. */
+export function buildProfileCsv(rows) {
+  const lines = [PROFILE_CSV_HEADER].concat(
+    rows.map((r) => [r.title, r.authors, r.venue, r.year, Number(r.citations) || 0, r.url])
+  );
+  return "\uFEFF" + lines.map((l) => l.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }
 
 // ---------------------------------------------------------------------------

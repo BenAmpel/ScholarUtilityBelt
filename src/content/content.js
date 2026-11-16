@@ -635,6 +635,45 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  // Export of the publications currently shown on an author profile, as BibTeX or CSV. Reads only what is already in
+  // the page (no requests); Scholar's own "..." author truncation is kept as shown.
+  async function exportProfileShown(kind) {
+    const { results, isAuthorProfile } = scanResults();
+    if (!isAuthorProfile) return;
+    const status = document.querySelector(".su-profile-export-status");
+    const say = (msg) => { if (status) status.textContent = msg; };
+    try {
+      const mod = await importModuleWithRetry("dist/common/bibtex.js");
+      const shown = results.filter((r) => !r.classList.contains("su-filtered-out") && !r.classList.contains("su-hidden"));
+      const rows = [];
+      for (const r of shown) {
+        const paper = getCachedAuthorPaper(r);
+        if (!paper || !paper.title) continue;
+        const grayDivs = Array.from(r.querySelectorAll(".gsc_a_t div.gs_gray"));
+        rows.push({
+          title: paper.title,
+          authors: text(grayDivs[0]).trim(),
+          venue: paper.venue || "",
+          year: paper.year || "",
+          citations: getCachedAuthorCitationCount(r) || 0,
+          url: paper.url || "",
+        });
+      }
+      const from = document.querySelector('[data-profile-export-year="from"]')?.value ?? window.suExportYearFrom ?? "";
+      const to = document.querySelector('[data-profile-export-year="to"]')?.value ?? window.suExportYearTo ?? "";
+      const picked = mod.filterRowsByYear(rows, from, to);
+      if (!picked.length) {
+        say(rows.length ? "No publications in that year range." : "No publications are shown.");
+        return;
+      }
+      const name = getScholarAuthorName().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "author";
+      if (kind === "csv") downloadBlob(`${name}-publications.csv`, "text/csv;charset=utf-8", mod.buildProfileCsv(picked));
+      else downloadBlob(`${name}-publications.bib`, "application/x-bibtex;charset=utf-8", mod.buildProfileBibTeX(picked));
+      say(`Exported ${picked.length} of ${rows.length} shown.`);
+    } catch {
+      say("The export could not be built.");
+    }
+  }
   // Per-row parse cache to avoid repeated DOM parsing.
   const rowParseCache = new WeakMap();
   function getRowCache(row) {
@@ -8015,6 +8054,13 @@
           }
           return;
         }
+        const profileExportBtn = e.target.closest("[data-profile-export]");
+        if (profileExportBtn) {
+          e.stopPropagation();
+          e.preventDefault();
+          await exportProfileShown(profileExportBtn.dataset.profileExport === "csv" ? "csv" : "bibtex");
+          return;
+        }
         const exportBtn = e.target.closest("[data-author-export]");
         if (exportBtn) {
           e.stopPropagation();
@@ -8198,6 +8244,12 @@
         }
       });
       statsContainer.addEventListener("input", (e) => {
+        const yearInput = e.target.closest?.("[data-profile-export-year]");
+        if (yearInput) {
+          const side = yearInput.dataset.profileExportYear === "to" ? "suExportYearTo" : "suExportYearFrom";
+          window[side] = yearInput.value || "";
+          return;
+        }
         const input = e.target.closest?.("#su-coauthor-search");
         if (!input) return;
         window.suCoauthorQuery = input.value || "";
@@ -8962,6 +9014,14 @@
       const popReportBtn = showResearchIntel
         ? `<button type="button" class="su-compare-authors-btn" data-pop-report="1">PoP report</button>`
         : "";
+      const profileExportHtml = `<div class="su-profile-export" role="group" aria-label="Export the publications shown">
+          <span class="su-profile-export-label">Export shown:</span>
+          <label class="su-profile-export-year">From <input type="number" class="su-profile-export-input" inputmode="numeric" min="1000" max="9999" placeholder="any" data-profile-export-year="from" value="${escapeHtml(String(window.suExportYearFrom || ""))}" /></label>
+          <label class="su-profile-export-year">To <input type="number" class="su-profile-export-input" inputmode="numeric" min="1000" max="9999" placeholder="any" data-profile-export-year="to" value="${escapeHtml(String(window.suExportYearTo || ""))}" /></label>
+          <button type="button" class="su-compare-authors-btn" data-profile-export="bibtex" title="Download the publications shown on this profile as a BibTeX file">BibTeX</button>
+          <button type="button" class="su-compare-authors-btn" data-profile-export="csv" title="Download the publications shown on this profile as a CSV file">CSV</button>
+          <span class="su-profile-export-status" role="status" aria-live="polite"></span>
+        </div>`;
       const tenureBtn = `<button type="button" class="su-compare-authors-btn" data-tenure-packet="1" title="Build a one-document summary of this profile for a tenure or promotion file">Tenure packet</button>`;
       const activeCoauthor = String(window.suAuthorCoauthorFilter || "").trim();
       const coauthorInsights = window.suState?.authorFeatureToggles?.coauthors !== false;
@@ -9034,6 +9094,7 @@
         <div class="su-stats-row">${parts.join("")}</div>
         ${topicHtml}
         <div class="su-compare-authors-row"><button type="button" class="su-compare-authors-btn" id="su-compare-authors-btn">Compare authors</button><button type="button" class="su-compare-authors-btn" data-author-export="1">Download CSV</button>${narrativeBtn}${popReportBtn}${tenureBtn}${metricsDropdownHtml}${panelsDropdownHtml}</div>
+        ${profileExportHtml}
         ${narrativeBlock}
       `;
       window.suLastCoauthorsHtml = coauthorsHtml || "";
