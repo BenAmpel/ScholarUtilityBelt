@@ -43,18 +43,19 @@ export async function loadEraAndNorwegian() {
     norwegianMap = new Map();
     absIndex = new Map();
   }
-  window.__suEraNorwegian = { eraSet, norwegianMap, absIndex };
-  return window.__suEraNorwegian;
+  const result = { eraSet, norwegianMap, absIndex };
+  // A failed fetch leaves every list empty; keep that answer for this render only, so the next one tries again.
+  if (eraSet.size || norwegianMap.size || absIndex.size) window.__suEraNorwegian = result;
+  return result;
 }
 
 export async function loadH5Index() {
   if (window.__suH5Index) return window.__suH5Index;
   try {
     const data = (await fetchDataJson("src/data/venue_h5_index.json.gz")) || {};
-    window.__suH5Index = data;
+    if (Object.keys(data).length) window.__suH5Index = data;
     return data;
   } catch (_) {
-    window.__suH5Index = {};
     return {};
   }
 }
@@ -78,7 +79,7 @@ export async function loadVhbIndex() {
       }
     }
   } catch (_) {}
-  window.__suVhbIndex = map;
+  if (map.size) window.__suVhbIndex = map;
   return map;
 }
 
@@ -99,7 +100,7 @@ export async function loadImpactIndex() {
       if (n) map.set(n, val);
     }
   } catch (_) {}
-  window.__suImpactIndex = map;
+  if (map.size) window.__suImpactIndex = map;
   return map;
 }
 

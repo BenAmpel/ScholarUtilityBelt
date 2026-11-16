@@ -150,6 +150,13 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.3.0 (paste into the dashboard's "What's new")
+
+Fixed: the Q1, Q2 and impact factor badges could be missing after you searched or filtered on Google Scholar,
+especially on the first page loaded after the browser started. They now appear as soon as the journal lists are ready.
+The impact factor and quartile popovers now say the values come from a yearly published list, not live data, and the
+edition is named in the source table. No permission changed.
+
 ## Release notes for 1.2.0 (paste into the dashboard's "What's new")
 
 New on author profiles: a Career citation rank panel shows where the researcher ranks in their sub-field in the
