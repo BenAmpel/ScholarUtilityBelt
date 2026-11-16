@@ -3849,6 +3849,11 @@
         ? `<span class="su-badge-near">Close match, not exact. ${meta.nearMatchCount} list entries begin with "${read}" (one is "${escapeHtml(meta.nearMatch)}") and all give this value.</span>`
         : `<span class="su-badge-near">Close match, not exact. This result's venue reads "${read}"; the list entry is "${escapeHtml(meta.nearMatch)}". If those are different venues, ignore this badge.</span>`);
     }
+    // Impact factor and quartile values come from published yearly lists, not a live feed. The source table below
+    // names the edition; this line says why a recent change in a journal's value will not show yet.
+    if (["if", "quartile", "jcr"].includes(badge.kind)) {
+      parts.push(`<span class="su-badge-near">Yearly published list, not live data. The edition is named below.</span>`);
+    }
     tooltip.innerHTML = parts.join("<br>");
     // Which list, which edition, the quartile's subject category, and Scholar's venue against the matched entry.
     const source = renderBadgeExplanation?.(document, badge, sourceMeta);
@@ -5563,7 +5568,9 @@
         norwegianMap: eraNorwegian.norwegianMap,
         h5Index
       });
-      state.qIndexCache = { qIndex: state.qIndex, settingsHash };
+      // Do not keep an index built while a bundled list failed to load: the next render rebuilds it with the list.
+      const listsLoaded = impactIndex.size > 0 && eraNorwegian.eraSet.size > 0;
+      state.qIndexCache = listsLoaded ? { qIndex: state.qIndex, settingsHash } : null;
       // No cross-page cache: the compiled index is larger than chrome.storage.session's 10 MB quota, so the old
       // session cache never stored anything, and serializing it on every page cost more than it could save.
     } else if (!qIndexResolved) {
@@ -15845,7 +15852,10 @@
               if (area !== "local") return;
               if (changes.readingQueue) await ensureReadingQueueSidebar();
               const hiddenChanged = changes.hiddenPapers || changes.hiddenVenues || changes.hiddenAuthors;
-              if (!changes.savedPapers && !changes.settings && !changes.customVenueList && !hiddenChanged) return;
+              // The quartile and impact lists are written by the service worker (first install, update, Options import),
+              // often after this page has already rendered. Without this, badges stay without Q1/Q2 until a reload.
+              const listsChanged = changes.qualityQuartilesIndex || changes.qualityQuartilesMeta || changes.qualityJcrIndex || changes.qualityJcrMeta;
+              if (!changes.savedPapers && !changes.settings && !changes.customVenueList && !hiddenChanged && !listsChanged) return;
               await refreshState(state);
               if (changes.savedPapers || changes.settings) await ensureSemanticExpansionPanel(state);
               scheduleProcess({ full: true });
