@@ -150,6 +150,12 @@ Version 0.7.0 adds two optional flows that touch user data, and 0.7.1 adds the i
 
 ---
 
+## Release notes for 1.3.1 (paste into the dashboard's "What's new")
+
+Fixed: on the first page loaded after the browser started, some results could keep a partial badge (for example only a
+Norwegian level) until you reloaded. Every result now updates once the journal lists are ready, including rows lower
+on the page. No permission changed.
+
 ## Release notes for 1.3.0 (paste into the dashboard's "What's new")
 
 Fixed: the Q1, Q2 and impact factor badges could be missing after you searched or filtered on Google Scholar,
